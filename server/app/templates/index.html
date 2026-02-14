@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1>Dashboard</h1>
+  <p>Quick links and recent items.</p>
+
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Accounts (sample)</h4>
+      <ul class="list-group">
+        {% for a in accounts %}
+          <li class="list-group-item">{{ a.code }} — {{ a.name }} ({{ a.type }})</li>
+        {% else %}
+          <li class="list-group-item">No accounts yet</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="col-md-6">
+      <h4>Recent invoices</h4>
+      <ul class="list-group">
+        {% for inv in invoices %}
+          <li class="list-group-item">#{{ inv.number or inv.id }} — {{ inv.customer }} — {{ inv.total }}</li>
+        {% else %}
+          <li class="list-group-item">No invoices</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endblock %}

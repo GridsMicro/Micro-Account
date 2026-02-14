@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Balance Sheet</h2>
+  <table class="table table-sm">
+    <tr><th>Assets</th><td>{{ assets }}</td></tr>
+    <tr><th>Liabilities</th><td>{{ liabilities }}</td></tr>
+    <tr><th>Equity</th><td>{{ equity }}</td></tr>
+  </table>
+{% endblock %}

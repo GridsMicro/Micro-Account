@@ -1,0 +1,9 @@
+Flask
+Flask-SQLAlchemy
+psycopg2-binary
+Flask-Migrate
+Flask-Login
+Flask-Babel
+python-dotenv
+pandas
+Flask-Cors

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Chart of Accounts</h2>
+
+  <form method="post" class="row g-2 mb-3">
+    <div class="col-md-2"><input class="form-control" name="code" placeholder="Code" required></div>
+    <div class="col-md-6"><input class="form-control" name="name" placeholder="Name" required></div>
+    <div class="col-md-2">
+      <select class="form-select" name="type" required>
+        <option value="asset">Asset</option>
+        <option value="liability">Liability</option>
+        <option value="equity">Equity</option>
+        <option value="revenue">Revenue</option>
+        <option value="expense">Expense</option>
+      </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-success" type="submit">Add</button></div>
+  </form>
+
+  <table class="table table-sm">
+    <thead><tr><th>Code</th><th>Name</th><th>Type</th></tr></thead>
+    <tbody>
+      {% for a in accounts %}
+        <tr><td>{{ a.code }}</td><td>{{ a.name }}</td><td>{{ a.type }}</td></tr>
+      {% else %}
+        <tr><td colspan="3">No accounts</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

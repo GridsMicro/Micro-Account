@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Invoices</h2>
+  <table class="table table-sm">
+    <thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Paid</th></tr></thead>
+    <tbody>
+      {% for inv in invoices %}
+        <tr><td>{{ inv.number or inv.id }}</td><td>{{ inv.customer }}</td><td>{{ inv.date }}</td><td>{{ inv.total }}</td><td>{{ inv.paid }}</td></tr>
+      {% else %}
+        <tr><td colspan="5">No invoices</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
