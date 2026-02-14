@@ -111,3 +111,93 @@ curl http://<server-ip-or-localhost>:5000/health
 
 ---
 ไฟล์นี้อัปเดตเพื่อรวมคำสั่งการดีพลอยและคำแนะนำสำหรับการแยก Server/Client
+
+## คำสั่งที่ผมให้คุณรัน (บันทึก)
+ด้านล่างคือคำสั่งที่ผมแจ้งให้รันในกระบวนการดีบักและรันระบบ — เก็บไว้เป็นบันทึกหรือคัดลอกไปรันตามลำดับ
+
+- รีบิวด์และรันทั้งสแต็ก:
+```bash
+docker compose up --build -d
+```
+
+- ตรวจสอบสถานะคอนเทนเนอร์:
+```bash
+docker compose ps
+```
+
+- ดู logs ของ `web` แบบต่อเนื่อง (แก้ปัญหาเมื่อ web crash):
+```bash
+docker compose logs -f web
+```
+
+- ดู logs ล่าสุดของ `web` (200 บรรทัดสุดท้าย):
+```bash
+docker compose logs --no-color web | tail -n 200
+```
+
+- ตรวจสอบ exit code ของคอนเทนเนอร์ (ตัวอย่าง):
+```bash
+docker inspect <container_id_or_name> --format '{{.State.ExitCode}}'
+```
+
+- ตรวจสอบว่า Postgres พร้อม (จาก host โดยเข้าผ่าน container):
+```bash
+docker exec -it $(docker compose ps -q db) pg_isready -U account -d account_db
+```
+
+- เรียก health endpoint เพื่อตรวจสถานะของแอป:
+```bash
+curl http://localhost:5000/health
+```
+
+- รันสคริปต์เช็คสุขภาพ (HTTP และ/หรือ DB):
+```bash
+# ตรวจสอบ HTTP
+python server/health_check.py --url http://localhost:5000/health
+
+# ตรวจสอบ DB (ตั้ง DATABASE_URL ก่อน)
+export DATABASE_URL=postgresql+psycopg2://account:account@localhost:5432/account_db
+python server/health_check.py --db
+```
+
+- ดู logs ของ `frontend` หาก UI ไม่ขึ้น:
+```bash
+docker compose logs -f frontend
+docker compose logs --no-color frontend | tail -n 200
+```
+
+เก็บคำสั่งเหล่านี้ไว้เป็น reference — ถ้าคุณรันคำสั่งแล้วเจอข้อผิดพลาด ให้คัดลอกเอาท์พุตมาให้ผมวิเคราะห์ต่อได้ทันที
+
+## คำสั่ง Migration และ Seed (ตัวอย่าง)
+
+- สร้าง/รัน migration และ upgrade (จากโฟลเดอร์ `server`):
+```bash
+# หากยังไม่เคย init
+python manage.py db_init
+python manage.py db_migrate
+python manage.py db_upgrade
+```
+
+- หรือใช้ Flask-Migrate ผ่าน `FLASK_APP`:
+```bash
+export FLASK_APP=run.py
+flask db migrate
+flask db upgrade
+```
+
+- รัน seed ข้อมูลตัวอย่าง (สร้างผู้ใช้ `admin`, บัญชีตัวอย่าง, ใบแจ้งหนี้, รายการบัญชี):
+```bash
+# จากโฟลเดอร์ server
+python manage.py seed
+```
+
+หลังรัน `seed` ให้เปลี่ยนรหัสผ่าน `admin` ทันทีเพื่อความปลอดภัย
+
+## ข้อกำหนด Frontend (แก้ไข)
+
+- เปลี่ยน Frontend เป็น Next.js เวอร์ชัน 16+ (ต้องใช้ Next 16 ขึ้นไป)
+- ใช้ TypeScript 5 และ Tailwind CSS 4
+- ให้ใช้ App Router (โครงสร้าง `app/`) ไม่ใช้ `src/` และไม่ใช้ `pages/`
+- Docker compose ต้องไม่ผูก/ทับ `node_modules` ของโฮสต์โดยตรง — ให้ใช้ named volume `frontend_node_modules` หรือให้คอนเทนเนอร์จัดการ `node_modules` เอง
+
+การแก้ไขใน repo: ผมได้แทนที่โครงสร้าง `client/` ด้วย scaffold ของ Next 16+ (TypeScript 5 + Tailwind 4) และอัปเดต `docker-compose.yml` เพื่อใช้ `frontend_node_modules` volume

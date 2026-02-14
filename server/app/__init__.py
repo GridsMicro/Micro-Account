@@ -23,9 +23,20 @@ def create_app():
     babel.init_app(app)
     CORS(app)
 
-    @babel.localeselector
     def get_locale():
         return request.accept_languages.best_match(['en', 'th']) or 'th'
+
+    # Register locale selector in a way that supports multiple Flask-Babel versions
+    if hasattr(babel, 'localeselector'):
+        babel.localeselector(get_locale)
+    elif hasattr(babel, 'locale_selector'):
+        babel.locale_selector(get_locale)
+    else:
+        # fallback: try to attach to babel if decorator API differs
+        try:
+            babel.localeselector(get_locale)
+        except Exception:
+            pass
 
     with app.app_context():
         # import routes and models so they register with app
