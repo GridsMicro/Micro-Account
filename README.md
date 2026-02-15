@@ -1,46 +1,33 @@
-Micro Account — Run & Deploy (short)
+# Micro-Account (Pure Python Edition)
 
-Overview
-- Backend: Flask app in `server/` (port 5000)
-- Database: Postgres (container)
-- Frontend: Next.js in `client/` (port 3000)
+แอปพลิเคชันจัดการบัญชีและเอกสารบริษัทแบบ "คลิกเดียวจบ" ไม่ต้องใช้ Docker ไม่ต้องลงฐานข้อมูลแยก
 
-Quick start (recommended, from repo root)
+## 🚀 จุดเด่น (Features)
+- **One-Click Startup:** ดับเบิลคลิกไฟล์เดียว ระบบจัดการสภาพแวดล้อมให้ทั้งหมด
+- **Pure Python:** ใช้เทคโนโลยี NiceGUI + SQLAlchemy + SQLite (เบาและพกพาง่าย)
+- **Startup Wizard:** ระบบตั้งค่าบริษัทครั้งแรกแบบ Step-by-Step
+- **Admin Dashboard:** จัดการข้อมูลบริษัท, ภาษี, พนักงาน และโลโก้ได้ในที่เดียว
+- **Secure:** ระบบล็อกอินและสิทธิ์การใช้งานแยกตามตำแหน่ง (Admin/Staff)
 
-1) Build and run with docker compose (compose will create the network):
+## 🛠️ วิธีการใช้งาน (How to use)
 
-```bash
-docker compose up --build -d
-```
+### สำหรับ Windows:
+1.  ตรวจสอบว่ามีการติดตั้ง **Python 3.10 ขึ้นไป**
+2.  ดับเบิลคลิกไฟล์ `start.bat`
+3.  ในครั้งแรก ระบบจะทำการติดตั้งเครื่องมือที่จำเป็น (รอสักครู่)
+4.  หน้าจอเบราว์เซอร์จะเปิดขึ้นมาที่ `http://localhost:8080` เพื่อเริ่มต้นตั้งค่า
 
-2) Check containers and logs
+### สำหรับ Linux:
+1.  เปิด Terminal และไปที่โฟลเดอร์โปรเจกต์
+2.  พิมพ์ `chmod +x run.sh`
+3.  รันด้วยคำสั่ง `./run.sh`
 
-```bash
-docker compose ps
-docker compose logs -f web
-```
+## 📁 โครงสร้างไฟล์ปัจจุบัน (Slim Structure)
+- `pure_app.py` - โค้ดหลักของแอปพลิเคชัน (UI/Logic/Database)
+- `database.db` - ฐานข้อมูล SQLite (เก็บข้อมูลบริษัทและการเงินทั้งหมด)
+- `start.bat` - ตัวช่วยรันสำหรับ Windows (Smart Launcher)
+- `run.sh` - ตัวช่วยรันสำหรับ Linux
+- `Plan.md` - แผนการพัฒนาและประวัติโครงการ
 
-3) Health check
-
-```bash
-# from the host that can reach the server container
-curl http://localhost:5000/health
-```
-
-Notes
-- `docker-compose.yml` now creates an internal `sharednet` network (no external network required).
-- If you want to run the client on a separate machine, expose port 3000 on the server host and set `NEXT_PUBLIC_API_URL` (or `API_URL`) to `http://<server-ip>:5000`.
-- Do not use `FLASK_ENV=development` in production and keep `SECRET_KEY` secure.
-
-Troubleshooting
-- If DB migrations are needed:
-
-```bash
-cd server
-flask db init   # only first time
-flask db migrate
-flask db upgrade
-```
-
-Contact
-- Repo workspace: this folder
+---
+**พัฒนาโดย Antigravity AI | 2026**

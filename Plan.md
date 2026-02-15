@@ -1,203 +1,43 @@
-# บันทึกบทสนทนาและแผนงานระบบ Micro Account
+# แผนงานโครงการ Micro Account (Smart Python Experience)
 
-## สรุปบทสนทนา
-- โครงการนี้ประกอบด้วย Backend (Python + Flask/FastAPI), Frontend (Next.js), และ Database (PostgreSQL)
-- มีการแยกโครงสร้างโฟลเดอร์ชัดเจน และรองรับ Docker
-- มีความต้องการให้สามารถรันระบบทั้งหมดด้วย Python ไฟล์เดียว (แต่ Next.js ต้องใช้ Node.js แยก)
-- มีแนวคิดแยกสภาพแวดล้อม Server กับ Client โดยใช้ Docker และ network เดียวกัน
-
-## แผนงานระบบ (Server/Client แยกกัน)
-1. **ฝั่ง Server**
-    - ใช้ docker-compose.yml เดิมสำหรับ Backend (web), Database (db), และ Frontend (frontend)
-    - เปิด port 5432 (db), 5000 (web), 3000 (frontend) ให้เครื่องอื่นเข้าถึง
-    - Container ทั้งหมดอยู่ใน network เดียวกัน
-
-2. **ฝั่ง Client**
-    - สามารถเข้าถึง UI/Backend ผ่าน IP ของ Server ได้ทันที (เช่น http://<ip-server>:3000)
-    - ถ้าต้องการแยก Client เป็น container ให้สร้าง docker-compose.client.yml และเชื่อม network ให้ตรงกัน
-
-## ตัวอย่าง docker-compose.client.yml
-```yaml
-version: '3.8'
-services:
-  client:
-    image: node:20
-    command: sh -c "npm install -g http-server && http-server"
-    volumes:
-      - ./client:/usr/src/app
-    working_dir: /usr/src/app
-    ports:
-      - "8080:8080"
-    environment:
-      - API_URL=http://<ip-server>:5000
-    networks:
-      - sharednet
-
-networks:
-  sharednet:
-    external: true
-```
-
-> หมายเหตุ: ต้องสร้าง network sharednet ล่วงหน้าด้วย `docker network create --driver bridge sharednet`
-
-## หมายเหตุสำคัญ
-- ถ้าต้องการให้ Client container เชื่อมต่อกับ Server container ข้ามเครื่อง ให้ใช้ custom network (เช่น overlay network)
-- สามารถปรับแต่ง compose file และ network ตามโครงสร้างจริงของระบบ
+## 📌 สถานะปัจจุบัน (Current Status)
+โครงการถูกเปลี่ยนจากระบบ Next.js/Docker ที่ซับซ้อน มาเป็น **Pure Python Desktop-Web Hybrid** ที่รันได้แบบ "คลิกเดียว" ทำให้ผู้ใช้ทั่วไปเข้าถึงง่ายและเบาสมองเครื่องมากขึ้น
 
 ---
-บันทึกโดย GitHub Copilot | วันที่ 14 กุมภาพันธ์ 2026
 
-## คำสั่งเตรียมและรัน (แนะนำ)
-
-- สร้าง Docker network ชื่อ `sharednet` (ถ้ายังไม่มี):
-```bash
-docker network create sharednet
-```
-
-- รันทั้งระบบ (จากโฟลเดอร์โปรเจกต์):
-```bash
-docker compose up --build -d
-```
-
-- รันเฉพาะฝั่ง Server (ตัวอย่างใช้ไฟล์ `.env` ใน `server/`):
-```bash
-cd server
-docker build -t microaccount-server .
-docker run --rm -p 5000:5000 --env-file .env --network sharednet microaccount-server
-```
-
-- รัน Client แยกเป็น container บน host อื่นที่เชื่อม `sharednet` ได้ (หรือแก้ `API` ให้ชี้ไปยัง `http://<server-ip>:5000`):
-```bash
-docker compose -f docker-compose.client.yml up --build -d
-```
-
-## ข้อควรระวัง / คำแนะนำเพิ่มเติม
-- Compose ใน repo ใช้ `networks.sharednet.external: true` — ถ้าไม่ต้องการ network ภายนอก ให้ลบส่วน `external` เพื่อให้ Compose สร้าง network ของตัวเอง
-- ใน `client/Dockerfile` มีการเขียน `.env.local` เป็น `NEXT_PUBLIC_API_URL=http://web:5000` ซึ่งใช้ได้เมื่อ `client` อยู่ใน network เดียวกับ `web`. ถ้ารัน client บนโฮสต์แยก ให้เปลี่ยนเป็น `http://<server-ip>:5000` หรือใช้ environment variable ใน Compose
-- สำหรับ production:
-  - อย่าใช้ `FLASK_ENV=development` ใน production
-  - ควรตั้งค่า `SECRET_KEY` ให้แข็งแรงและไม่เก็บใน repo
-
-## เพิ่มเติม: สร้าง endpoint ตรวจสอบสถานะ (optional)
-แนะนำเพิ่ม endpoint เล็ก ๆ เพื่อเช็คสถานะแอปและการเชื่อมต่อ DB เช่น `/health` ใน `server/app/routes.py`:
-
-```python
-from flask import Blueprint, jsonify
-from . import db
-
-bp = Blueprint('main', __name__)
-
-@bp.route('/health')
-def health():
-    try:
-        # simple DB call
-        db.session.execute('SELECT 1')
-        return jsonify(status='ok')
-    except Exception:
-        return jsonify(status='error'), 500
-```
-
-การทดสอบหลังรัน:
-```bash
-# ตรวจสอบ container
-docker compose ps
-
-# ดู logs
-docker compose logs -f web
-
-# ทดสอบ health (จาก host ที่เข้าถึง web ได้)
-curl http://<server-ip-or-localhost>:5000/health
-```
+## ✅ สิ่งที่ดำเนินการเสร็จสิ้น (Completed)
+- [x] **Clean-up:** ลบโครงสร้าง Docker/Next.js/Flask เก่าออกทั้งหมด (Repo สะอาด 100%)
+- [x] **Smart Launcher:** พัฒนา `start.bat` ที่ตรวจสอบเวอร์ชัน Python และอัปเดต Library อัตโนมัติ
+- [x] **Onboarding System:** สร้างหน้า Setup Wizard สำหรับให้บริษัทกรอกข้อมูลครั้งแรก
+- [x] **Auth System:** ระบบ Login และจัดการ Session สำหรับ Admin/Staff
+- [x] **Admin Settings:** หน้าจัดการข้อมูลบริษัท ภาษี พนักงาน และโลโก้
+- [x] **Database Migration:** เปลี่ยนไปใช้ SQLite เพื่อลดภาระการรัน Server
 
 ---
-ไฟล์นี้อัปเดตเพื่อรวมคำสั่งการดีพลอยและคำแนะนำสำหรับการแยก Server/Client
 
-## คำสั่งที่ผมให้คุณรัน (บันทึก)
-ด้านล่างคือคำสั่งที่ผมแจ้งให้รันในกระบวนการดีบักและรันระบบ — เก็บไว้เป็นบันทึกหรือคัดลอกไปรันตามลำดับ
+## � แผนพัฒนาต่อยอด (Future Roadmap)
 
-- รีบิวด์และรันทั้งสแต็ก:
-```bash
-docker compose up --build -d
-```
+### 📂 1. ระบบจัดการเอกสาร (Document Management)
+- [ ] ระบบสร้างใบเสนอราคา / ใบกำกับภาษี PDF (ใช้ Library `fpdf2`)
+- [ ] ระบบค้นหาเอกสารย้อนหลัง (Filter by Date/Customer)
+- [ ] ระบบบันทึกเลขที่เอกสารอัตโนมัติ (Running Number)
 
-- ตรวจสอบสถานะคอนเทนเนอร์:
-```bash
-docker compose ps
-```
+### � 2. ระบบบัญชีเต็มรูปแบบ (Double Entry)
+- [ ] เพิ่มหน้าบันทึก Journal Voucher (สมุดรายวัน)
+- [ ] ระบบ General Ledger (สมุดแยกประเภท)
+- [ ] รายงานงบกำไรขาดทุน (P&L) แบบเลือกช่วงเวลาได้
 
-- ดู logs ของ `web` แบบต่อเนื่อง (แก้ปัญหาเมื่อ web crash):
-```bash
-docker compose logs -f web
-```
+### 👥 3. ระบบพนักงานและสิทธิ์ (HR & Access Control)
+- [ ] เพิ่ม/ลบ พนักงานในระบบได้จริง
+- [ ] กำหนดสิทธิ์รายบุคคล (เช่น Staff ดูได้อย่างเดียว, Admin แก้ไขได้)
+- [ ] บันทึก Log การใช้งาน (ใครแก้ไขข้อมูลไหน เมื่อไหร่)
 
-- ดู logs ล่าสุดของ `web` (200 บรรทัดสุดท้าย):
-```bash
-docker compose logs --no-color web | tail -n 200
-```
+---
 
-- ตรวจสอบ exit code ของคอนเทนเนอร์ (ตัวอย่าง):
-```bash
-docker inspect <container_id_or_name> --format '{{.State.ExitCode}}'
-```
+## 📖 คู่มือสำหรับนักพัฒนา (Dev Manual)
+- **UI Framework:** NiceGUI (Fast, Native-look, Python-only)
+- **Database:** SQLAlchemy (SQLite)
+- **Security:** PBKDF2 Hashing (สำหรับรหัสผ่าน)
+- **Port:** 8080 (เริ่มต้น)
 
-- ตรวจสอบว่า Postgres พร้อม (จาก host โดยเข้าผ่าน container):
-```bash
-docker exec -it $(docker compose ps -q db) pg_isready -U account -d account_db
-```
-
-- เรียก health endpoint เพื่อตรวจสถานะของแอป:
-```bash
-curl http://localhost:5000/health
-```
-
-- รันสคริปต์เช็คสุขภาพ (HTTP และ/หรือ DB):
-```bash
-# ตรวจสอบ HTTP
-python server/health_check.py --url http://localhost:5000/health
-
-# ตรวจสอบ DB (ตั้ง DATABASE_URL ก่อน)
-export DATABASE_URL=postgresql+psycopg2://account:account@localhost:5432/account_db
-python server/health_check.py --db
-```
-
-- ดู logs ของ `frontend` หาก UI ไม่ขึ้น:
-```bash
-docker compose logs -f frontend
-docker compose logs --no-color frontend | tail -n 200
-```
-
-เก็บคำสั่งเหล่านี้ไว้เป็น reference — ถ้าคุณรันคำสั่งแล้วเจอข้อผิดพลาด ให้คัดลอกเอาท์พุตมาให้ผมวิเคราะห์ต่อได้ทันที
-
-## คำสั่ง Migration และ Seed (ตัวอย่าง)
-
-- สร้าง/รัน migration และ upgrade (จากโฟลเดอร์ `server`):
-```bash
-# หากยังไม่เคย init
-python manage.py db_init
-python manage.py db_migrate
-python manage.py db_upgrade
-```
-
-- หรือใช้ Flask-Migrate ผ่าน `FLASK_APP`:
-```bash
-export FLASK_APP=run.py
-flask db migrate
-flask db upgrade
-```
-
-- รัน seed ข้อมูลตัวอย่าง (สร้างผู้ใช้ `admin`, บัญชีตัวอย่าง, ใบแจ้งหนี้, รายการบัญชี):
-```bash
-# จากโฟลเดอร์ server
-python manage.py seed
-```
-
-หลังรัน `seed` ให้เปลี่ยนรหัสผ่าน `admin` ทันทีเพื่อความปลอดภัย
-
-## ข้อกำหนด Frontend (แก้ไข)
-
-- เปลี่ยน Frontend เป็น Next.js เวอร์ชัน 16+ (ต้องใช้ Next 16 ขึ้นไป)
-- ใช้ TypeScript 5 และ Tailwind CSS 4
-- ให้ใช้ App Router (โครงสร้าง `app/`) ไม่ใช้ `src/` และไม่ใช้ `pages/`
-- Docker compose ต้องไม่ผูก/ทับ `node_modules` ของโฮสต์โดยตรง — ให้ใช้ named volume `frontend_node_modules` หรือให้คอนเทนเนอร์จัดการ `node_modules` เอง
-
-การแก้ไขใน repo: ผมได้แทนที่โครงสร้าง `client/` ด้วย scaffold ของ Next 16+ (TypeScript 5 + Tailwind 4) และอัปเดต `docker-compose.yml` เพื่อใช้ `frontend_node_modules` volume
+บันทึกโดย Antigravity | 15 กุมภาพันธ์ 2026
