@@ -26,17 +26,11 @@ def create_app():
     def get_locale():
         return request.accept_languages.best_match(['en', 'th']) or 'th'
 
-    # Register locale selector in a way that supports multiple Flask-Babel versions
-    if hasattr(babel, 'localeselector'):
-        babel.localeselector(get_locale)
-    elif hasattr(babel, 'locale_selector'):
-        babel.locale_selector(get_locale)
-    else:
-        # fallback: try to attach to babel if decorator API differs
-        try:
-            babel.localeselector(get_locale)
-        except Exception:
-            pass
+    babel.init_app(app, locale_selector=get_locale)
+
+    @app.context_processor
+    def inject_conf_var():
+        return dict(get_locale=get_locale)
 
     with app.app_context():
         # import routes and models so they register with app

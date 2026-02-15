@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Environment checker/installer for Docker and Node (Windows and Ubuntu).
+"""Environment checker/installer for Docker and Node (Windows and Linux).
 
 Features:
  - check presence of Docker and Node
- - install on Ubuntu (official repos / NodeSource) and Windows (winget)
+ - install on Ubuntu/Debian (official repos / NodeSource) and Windows (winget)
  - check latest versions (Node LTS via nodejs.org, Docker via moby/moby GitHub)
  - optional non-interactive install/upgrade with `--yes` and `--upgrade`
 
@@ -15,7 +15,7 @@ Usage:
 
 Notes:
  - On Windows this script prefers `winget` to install Docker Desktop and Node LTS.
- - On Ubuntu it installs Docker using the official repo and Node via NodeSource (Node 20 LTS).
+ - On Linux it installs Docker using the official repo and Node via NodeSource (Node 22 LTS).
  - Some operations require admin/sudo. The script will prompt or fail with guidance.
 """
 from __future__ import annotations
@@ -51,9 +51,11 @@ def parse_version(v: str) -> Tuple[int, ...]:
 
 def http_get_json(url: str, timeout=5) -> Optional[dict]:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as r:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.load(r)
-    except Exception:
+    except Exception as e:
+        print(f"Warning: Failed to fetch {url}: {e}")
         return None
 
 
@@ -71,28 +73,42 @@ def ubuntu_install_docker(yes: bool):
     if which('docker'):
         print('Docker already installed:', shutil.which('docker'))
         return True
-    print('\nWill install Docker Engine (Ubuntu).')
+    print('\nWill install Docker Engine (Linux).')
     if not yes:
-        ok = input('Proceed to install Docker on Ubuntu? [y/N] ').lower() == 'y'
+        ok = input('Proceed to install Docker on Linux? [y/N] ').lower() == 'y'
         if not ok:
             print('Skipping Docker install.')
             return False
+    
+    # Check for curl
+    if not which('curl'):
+        run(['sudo', 'apt-get', 'update'], check=True)
+        run(['sudo', 'apt-get', 'install', '-y', 'curl'], check=True)
+
     cmds = [
         ['sudo','apt-get','update'],
         ['sudo','apt-get','install','-y','ca-certificates','curl','gnupg','lsb-release'],
         ['sudo','mkdir','-p','/etc/apt/keyrings'],
         # use shell for pipe/redirect operations
-        'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmour -o /etc/apt/keyrings/docker.gpg',
-        'sudo bash -c "mkdir -p /etc/apt/sources.list.d && printf \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\\n\" > /etc/apt/sources.list.d/docker.list"',
+        'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmour --yes -o /etc/apt/keyrings/docker.gpg',
+        'sudo chmod a+r /etc/apt/keyrings/docker.gpg',
+        'echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null',
         ['sudo','apt-get','update'],
-        ['sudo','apt-get','install','-y','docker-ce','docker-ce-cli','containerd.io','docker-compose-plugin'],
+        ['sudo','apt-get','install','-y','docker-ce','docker-ce-cli','containerd.io','docker-buildx-plugin','docker-compose-plugin'],
     ]
     for c in cmds:
         if isinstance(c, str):
             run(c, check=True, shell=True)
         else:
             run(c, check=True)
-    print('Docker install steps completed. You may need to logout/login for group changes.')
+            
+    # Add user to docker group
+    user = os.getenv('USER')
+    if user:
+         print(f"Adding user {user} to docker group...")
+         run(['sudo', 'usermod', '-aG', 'docker', user], check=False)
+
+    print('Docker install steps completed. You need to logout/login for group changes to take effect.')
     return which('docker')
 
 
@@ -100,15 +116,22 @@ def ubuntu_install_node(yes: bool):
     if which('node'):
         print('Node already installed:', shutil.which('node'))
         return True
-    print('\nWill install Node.js (LTS) via NodeSource.')
+    print('\nWill install Node.js (LTS v22) via NodeSource.')
     if not yes:
-        ok = input('Proceed to install Node.js LTS on Ubuntu? [y/N] ').lower() == 'y'
+        ok = input('Proceed to install Node.js LTS on Linux? [y/N] ').lower() == 'y'
         if not ok:
             print('Skipping Node install.')
             return False
-    run(['curl','-fsSL','https://deb.nodesource.com/setup_20.x','-o','/tmp/nodesource_setup.sh'], check=True)
+            
+    # Using NodeSource setup script for Node 22
+    run(['curl','-fsSL','https://deb.nodesource.com/setup_22.x','-o','/tmp/nodesource_setup.sh'], check=True)
     run(['sudo','bash','/tmp/nodesource_setup.sh'], check=True)
     run(['sudo','apt-get','install','-y','nodejs'], check=True)
+    
+    # Check install
+    run(['node', '-v'], check=False)
+    run(['npm', '-v'], check=False)
+    
     return which('node')
 
 
@@ -158,10 +181,14 @@ def get_latest_node_lts() -> Optional[str]:
     data = http_get_json('https://nodejs.org/dist/index.json')
     if not data:
         return None
+    
+    # Filter for LTS versions
     lts_versions = [d for d in data if d.get('lts')]
     if not lts_versions:
         return None
-    latest = max(lts_versions, key=lambda d: parse_version(d.get('version','')))
+        
+    # Get the latest version string
+    latest = max(lts_versions, key=lambda d: parse_version(d.get('version','0.0.0')))
     return latest.get('version','').lstrip('v')
 
 
@@ -169,13 +196,16 @@ def get_installed_docker_version() -> Optional[str]:
     try:
         p = run(['docker','--version'], check=False, capture=True)
         out = p.stdout.strip() if p.stdout else ''
-        m = re.search(r"(\d+\.\d+\.\d+)", out)
+        # Output format: Docker version 24.0.5, build ced0996
+        m = re.search(r"version\s+(\d+\.\d+\.\d+)", out)
         return m.group(1) if m else None
     except Exception:
         return None
 
 
 def get_latest_moby_version() -> Optional[str]:
+    # Docker version checks are tricky as moby/moby tags might not match Docker Desktop versions exactly
+    # but it gives a good baseline for the engine.
     data = http_get_json('https://api.github.com/repos/moby/moby/releases/latest')
     if not data:
         return None
@@ -190,10 +220,11 @@ def check_updates(yes: bool):
     print('\nChecking for updates...')
     node_inst = get_installed_node_version()
     node_latest = get_latest_node_lts()
+    
     if node_inst:
-        print('Node installed:', node_inst)
+        print(f'Node installed: {node_inst}')
         if node_latest:
-            print('Latest Node LTS:', node_latest)
+            print(f'Latest Node LTS: {node_latest}')
             if parse_version(node_latest) > parse_version(node_inst):
                 print('Node update available')
                 if yes:
@@ -204,29 +235,20 @@ def check_updates(yes: bool):
                         windows_install_node(True)
             else:
                 print('Node is up-to-date')
-        else:
-            print('Could not determine latest Node LTS')
     else:
         print('Node not installed')
 
     docker_inst = get_installed_docker_version()
     docker_latest = get_latest_moby_version()
     if docker_inst:
-        print('Docker installed:', docker_inst)
+        print(f'Docker installed: {docker_inst}')
         if docker_latest:
-            print('Latest moby/moby release:', docker_latest)
+            print(f'Latest moby/moby release: {docker_latest}')
+            # Note: Docker Desktop versions track differently than Moby engine versions
             if parse_version(docker_latest) > parse_version(docker_inst):
-                print('Docker update available')
-                if yes:
-                    print('Attempting to upgrade Docker...')
-                    if platform.system() == 'Linux':
-                        ubuntu_install_docker(True)
-                    elif platform.system() == 'Windows':
-                        windows_install_docker(True)
+                 print('Newer Docker Engine version available (Note: Docker Desktop manages its own updates on Windows)')
             else:
-                print('Docker is up-to-date')
-        else:
-            print('Could not determine latest Docker release')
+                 print('Docker Engine appears up-to-date')
     else:
         print('Docker not installed')
 
@@ -235,20 +257,33 @@ def check_and_install(yes: bool):
     osys = platform.system()
     print('Detected OS:', osys)
     results = {}
+    
     if osys == 'Linux':
+        distro_id = "linux"
         try:
             with open('/etc/os-release') as f:
                 data = f.read()
-            if 'ubuntu' not in data.lower():
-                print('This script currently supports Ubuntu (detected different Linux). Exiting.')
-                return 1
+            if 'ubuntu' in data.lower() or 'debian' in data.lower() or 'mint' in data.lower():
+                distro_id = "debian_based"
+            else:
+                print('Warning: Detected non-Debian based Linux. Install scripts may fail.')
         except FileNotFoundError:
-            print('Cannot detect Linux distribution. Exiting.')
-            return 1
+            pass
+            
         print('\nChecking Docker...')
-        results['docker'] = which('docker') or ubuntu_install_docker(yes)
+        if distro_id == "debian_based":
+             results['docker'] = which('docker') or ubuntu_install_docker(yes)
+        else:
+             results['docker'] = which('docker')
+             if not results['docker']:
+                 print("Please install Docker manually for your distribution.")
+
         print('\nChecking Node...')
-        results['node'] = which('node') or ubuntu_install_node(yes)
+        if distro_id == "debian_based":
+            results['node'] = which('node') or ubuntu_install_node(yes)
+        else:
+            results['node'] = which('node')
+
     elif osys == 'Windows':
         print('\nChecking Docker...')
         results['docker'] = which('docker') or windows_install_docker(yes)
@@ -271,7 +306,7 @@ def check_and_install(yes: bool):
 
 
 def main():
-    p = argparse.ArgumentParser(description='Check/install Docker and Node (Windows and Ubuntu)')
+    p = argparse.ArgumentParser(description='Check/install Docker and Node (Windows and Linux)')
     p.add_argument('--yes', '-y', action='store_true', help='Run non-interactive and accept installs')
     p.add_argument('--check-updates', action='store_true', help='Check for newer versions online')
     p.add_argument('--upgrade', action='store_true', help='Attempt to upgrade if newer versions available')
@@ -279,14 +314,19 @@ def main():
     try:
         if args.check_updates:
             check_updates(args.yes or args.upgrade)
-            # still run installation checks if requested
+            
         rc = check_and_install(args.yes)
+        
         if args.upgrade:
             check_updates(True)
+            
         sys.exit(rc)
     except subprocess.CalledProcessError as e:
         print('Command failed:', e)
         sys.exit(3)
+    except KeyboardInterrupt:
+        print("\nOperation cancelled.")
+        sys.exit(130)
 
 
 if __name__ == '__main__':
