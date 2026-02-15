@@ -39,22 +39,9 @@ Windows — ติดตั้ง Docker อัตโนมัติ
   ```
 
 - คำสั่งข้างต้นจะ: ติดตั้ง/ตั้งค่า WSL2 (ถ้ายังไม่มี), ติดตั้ง Docker Desktop (winget), และสร้าง `docker-compose` shim.
-  
-Frontend (Next.js + Tailwind)
 
-- A minimal Next.js + Tailwind scaffold was added under `frontend/`. To run locally:
-
-   ```powershell
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-- Or run via Docker Compose:
-
-   ```powershell
-   docker compose up --build frontend
-   ```
+Frontend (removed)
+- This repository no longer includes a separate Next.js/Tailwind frontend. The UI is served by Flask templates under `server/templates`. If you need a separate SPA, maintain it in a dedicated repository and point its API to `http://<server-ip>:5000`.
 
 Notes
 - DB: PostgreSQL service `db` in docker-compose; production-ready configuration and backups required before real use.

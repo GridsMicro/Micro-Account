@@ -6,46 +6,25 @@
 - มีความต้องการให้สามารถรันระบบทั้งหมดด้วย Python ไฟล์เดียว (แต่ Next.js ต้องใช้ Node.js แยก)
 - มีแนวคิดแยกสภาพแวดล้อม Server กับ Client โดยใช้ Docker และ network เดียวกัน
 
-## แผนงานระบบ (Server/Client แยกกัน)
+## แผนงานระบบ (Server-only)
 1. **ฝั่ง Server**
-    - ใช้ docker-compose.yml เดิมสำหรับ Backend (web), Database (db), และ Frontend (frontend)
-    - เปิด port 5432 (db), 5000 (web), 3000 (frontend) ให้เครื่องอื่นเข้าถึง
-    - Container ทั้งหมดอยู่ใน network เดียวกัน
+    - ใช้ `docker-compose.yml` สำหรับ Backend (`web`) และ Database (`db`)
+    - เปิด port 5432 (db) และ 5000 (web) ให้เครื่องอื่นเข้าถึง
+    - UI ถูกย้ายไปอยู่ใน `server/templates` และถูกเสิร์ฟโดย Flask บนพอร์ต 5000
 
-2. **ฝั่ง Client**
-    - สามารถเข้าถึง UI/Backend ผ่าน IP ของ Server ได้ทันที (เช่น http://<ip-server>:3000)
-    - ถ้าต้องการแยก Client เป็น container ให้สร้าง docker-compose.client.yml และเชื่อม network ให้ตรงกัน
+2. **ฝั่ง Client (ลบแล้ว)**
+    - โฟลเดอร์ `client/` ถูกลบออกจากรีโปแล้ว — ไม่มี frontend แยกเป็น Next.js อีกต่อไป
+    - หากต้องการ UI แบบ SPA ภายนอก ให้สร้างโปรเจ็กต์แยกต่างหากนอกรีโปนี้ และชี้ API ไปที่ `http://<server-ip>:5000`.
 
-## ตัวอย่าง docker-compose.client.yml
-```yaml
-version: '3.8'
-services:
-  client:
-    image: node:20
-    command: sh -c "npm install -g http-server && http-server"
-    volumes:
-      - ./client:/usr/src/app
-    working_dir: /usr/src/app
-    ports:
-      - "8080:8080"
-    environment:
-      - API_URL=http://<ip-server>:5000
-    networks:
-      - sharednet
-
-networks:
-  sharednet:
-    external: true
-```
-
-> หมายเหตุ: ต้องสร้าง network sharednet ล่วงหน้าด้วย `docker network create --driver bridge sharednet`
+## ตัวอย่าง docker-compose.client.yml (ลบแล้ว)
+This example was removed because the separate `client/` frontend has been deleted from this repository. Use the server-side UI (Flask templates) or maintain a separate frontend project outside this repo.
 
 ## หมายเหตุสำคัญ
 - ถ้าต้องการให้ Client container เชื่อมต่อกับ Server container ข้ามเครื่อง ให้ใช้ custom network (เช่น overlay network)
 - สามารถปรับแต่ง compose file และ network ตามโครงสร้างจริงของระบบ
 
 ---
-บันทึกโดย GitHub Copilot | วันที่ 14 กุมภาพันธ์ 2026
+บันทึกโดย GitHub Copilot | วันที่ 15 กุมภาพันธ์ 2026
 
 ## คำสั่งเตรียมและรัน (แนะนำ)
 
@@ -66,10 +45,7 @@ docker build -t microaccount-server .
 docker run --rm -p 5000:5000 --env-file .env --network sharednet microaccount-server
 ```
 
-- รัน Client แยกเป็น container บน host อื่นที่เชื่อม `sharednet` ได้ (หรือแก้ `API` ให้ชี้ไปยัง `http://<server-ip>:5000`):
-```bash
-docker compose -f docker-compose.client.yml up --build -d
-```
+- ไม่มี `client/` แยกอีกต่อไป — ใช้ UI ที่อยู่ใน `server/templates` (Flask) หรือรันโปรเจ็กต์ frontend แยกต่างหากนอกรีโปนี้
 
 ## ข้อควรระวัง / คำแนะนำเพิ่มเติม
 - Compose ใน repo ใช้ `networks.sharednet.external: true` — ถ้าไม่ต้องการ network ภายนอก ให้ลบส่วน `external` เพื่อให้ Compose สร้าง network ของตัวเอง
@@ -197,6 +173,7 @@ python manage.py seed
 
 - เปลี่ยน Frontend เป็น Next.js เวอร์ชัน 16+ (ต้องใช้ Next 16 ขึ้นไป)
 - ใช้ TypeScript 5 และ Tailwind CSS 4
+- สำหรับ Tailwind CSS v4+: ต้องเพิ่ม devDependency `@tailwindcss/postcss` และเปลี่ยน `postcss.config.js` ให้ใช้ `'@tailwindcss/postcss'` แทน `tailwindcss` เพื่อให้การ build ของ Next.js (Turbopack) สำเร็จ
 - ให้ใช้ App Router (โครงสร้าง `app/`) ไม่ใช้ `src/` และไม่ใช้ `pages/`
 - Docker compose ต้องไม่ผูก/ทับ `node_modules` ของโฮสต์โดยตรง — ให้ใช้ named volume `frontend_node_modules` หรือให้คอนเทนเนอร์จัดการ `node_modules` เอง
 

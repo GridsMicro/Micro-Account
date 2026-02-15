@@ -1,9 +1,9 @@
 Micro Account — Run & Deploy (short)
 
 Overview
-- Backend: Flask app in `server/` (port 5000)
+- Backend: Flask app in `server/` (port 5000) — serves server-side UI from `server/templates`
 - Database: Postgres (container)
-- Frontend: Next.js in `client/` (port 3000)
+- Note: the separate Next.js `client/` frontend has been removed; use the built-in server UI (port 5000).
 
 Quick start (recommended, from repo root)
 
@@ -29,7 +29,7 @@ curl http://localhost:5000/health
 
 Notes
 - `docker-compose.yml` now creates an internal `sharednet` network (no external network required).
-- If you want to run the client on a separate machine, expose port 3000 on the server host and set `NEXT_PUBLIC_API_URL` (or `API_URL`) to `http://<server-ip>:5000`.
+- This repository no longer includes a separate `client/` frontend; the UI is served by Flask from `server/templates` on port 5000.
 - Do not use `FLASK_ENV=development` in production and keep `SECRET_KEY` secure.
 
 Troubleshooting
@@ -41,6 +41,9 @@ flask db init   # only first time
 flask db migrate
 flask db upgrade
 ```
+
+
+
 
 Contact
 - Repo workspace: this folder
