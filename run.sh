@@ -19,5 +19,7 @@ else
 fi
 
 # รันแอป
+echo "[System] Installing additional dependencies..."
+pip install fpdf2
 echo "[System] Launching Micro-Account..."
 python3 pure_app.py
