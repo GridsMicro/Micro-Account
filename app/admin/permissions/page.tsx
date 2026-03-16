@@ -13,9 +13,39 @@ export default function PermissionsPage() {
       permissions: ["Quotations", "Invoices", "Inventory", "Contacts"] 
     },
     { 
+      name: "Sales (ฝ่ายขาย)", 
+      desc: "จัดการลูกค้าและใบเสนอราคาสำหรับปิดการขาย", 
+      permissions: ["View Inventory", "Create Quotations", "Manage Contacts"] 
+    },
+    { 
+      name: "Service (ฝ่ายบริการ)", 
+      desc: "จัดการข้อมูลผู้ติดต่อและรับเรื่องแจ้งซ่อม", 
+      permissions: ["View Contacts", "Support Tickets"] 
+    },
+    { 
+      name: "Stock (ฝ่ายคลังสินค้า)", 
+      desc: "จัดการนำเข้า/ส่งออกสินค้า เช็คสต็อก ตัดสต็อก", 
+      permissions: ["Manage Inventory", "Stock Adjustments"] 
+    },
+    { 
+      name: "Finance (ฝ่ายการเงิน)", 
+      desc: "จัดการใบแจ้งหนี้ การชำระเงิน และออกใบเสร็จรับเงิน", 
+      permissions: ["Manage Invoices", "Process Payments", "Tax Reports"] 
+    },
+    { 
+      name: "Production (ฝ่ายผลิต)", 
+      desc: "เบิกจ่ายวัตถุดิบและยืนยันการผลิตเข้าคลังสินค้า", 
+      permissions: ["View Inventory", "Production Orders"] 
+    },
+    { 
+      name: "Dev / Debugger", 
+      desc: "กลุ่มพิเศษสำหรับทดสอบระบบ (Bypass สิทธิ์ปกติ)", 
+      permissions: ["System Logs", "Test Mode", "API Access", "Bypass Rules"] 
+    },
+    { 
       name: "Staff", 
-      desc: "ดูข้อมูลและสร้างใบเสนอราคา", 
-      permissions: ["View Inventory", "Create Quotations", "View Contacts"] 
+      desc: "ดูข้อมูลคลังสินค้าเบื้องต้น", 
+      permissions: ["View Inventory"] 
     },
   ];
 
