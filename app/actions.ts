@@ -174,6 +174,20 @@ export async function exportJournalsToExcel() {
   }
 }
 
+// ฟังก์ชันดึงข้อมูลทั้งหมดสำหรับสร้าง PDF/รายงานหน้าบ้าน
+export async function getJournalEntries() {
+  try {
+    const { rows } = await sql`
+      SELECT entry_date, reference_no, account_name, description, debit, credit 
+      FROM journal_entries 
+      ORDER BY entry_date DESC, id ASC
+    `;
+    return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateContact(id: string, data: {
   name: string;
   type: string;
