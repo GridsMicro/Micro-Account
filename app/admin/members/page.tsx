@@ -86,16 +86,16 @@ export default async function MembersPage() {
                                 {user.status || 'Unknown'}
                              </span>
                           </td>
-                          <td className="px-8 py-5 text-right">
-                             <div className="flex justify-end gap-2">
-                                <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
-                                   <Edit size={16} />
-                                </button>
-                                <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                                   <Trash2 size={16} />
-                                </button>
-                             </div>
-                          </td>
+                           <td className="px-8 py-5 text-right">
+                              <div className="flex justify-end gap-2">
+                                 <Link href={`/admin/members/edit/${user.id}`} className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                                    <Edit size={16} />
+                                 </Link>
+                                 <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 size={16} />
+                                 </button>
+                              </div>
+                           </td>
                        </tr>
                     ))}
                  </tbody>
