@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+export const dynamic = 'force-dynamic';
 import { 
   Building2, 
   Users, 
