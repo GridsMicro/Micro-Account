@@ -52,25 +52,39 @@ export async function exportJournalsToSheets() {
     const memberRes = await query("SELECT email FROM members WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
     const targetEmail = memberRes.rows[0]?.email || "grids@microtronic.biz";
 
-    // 6. ตั้งค่าสิทธิ์แบบใครมีลิงก์ก็ดูได้ (เพื่อเทสว่าสร้างไฟล์ได้ไหม)
-    await googleDrive.permissions.create({
-      fileId: spreadsheetId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
+    // 6. ตั้งค่าสิทธิ์แบบใครมีลิงก์ก็ดูได้ (เทสเข้มข้น)
+    try {
+      await googleDrive.permissions.create({
+        fileId: spreadsheetId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
+    } catch (permError: any) {
+      console.warn("Permission Error (Non-fatal):", permError.message);
+      // ถ้าแชร์ไม่ได้ ไม่เป็นไร แต่อย่างน้อยไฟล์ต้องสร้างสำเร็จ
+    }
 
     return { 
       success: true, 
       url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
-      message: "สร้างรายงานสำเร็จ (แบบเปิดลิงก์)"
+      message: `สร้างรายงานสำเร็จที่ ID: ${spreadsheetId}`
     };
   } catch (error: any) {
-    console.error("Export Error:", error);
-    return { success: false, error: error.message };
+    console.error("❌ Google API Error:", error);
+    let errorMsg = "เกิดข้อผิดพลาด: " + error.message;
+    
+    if (error.message.includes("permission") || error.message.includes("access_denied")) {
+      errorMsg = "❌ สิทธิ์ไม่พอ: กรุณาเช็คว่า Google Sheets API และ Drive API ถูกเปิด (Enable) ใน Google Cloud Console หรือยัง?";
+    } else if (error.message.includes("invalid_grant") || error.message.includes("Key unreadable")) {
+      errorMsg = "❌ กุญแจ JSON ผิดพลาด: กรุณาเช็คค่าใน GOOGLE_SERVICE_ACCOUNT_JSON บน Vercel ว่าถูกต้องครบถ้วนไหม (มีปีกกาครบไหม)";
+    }
+    
+    return { success: false, error: errorMsg };
   }
 }
+
 export async function updateContact(id: string, data: {
   name: string;
   type: string;
