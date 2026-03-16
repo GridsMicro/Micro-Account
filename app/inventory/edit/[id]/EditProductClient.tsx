@@ -21,6 +21,7 @@ export default function EditProductClient({ product }: { product: any }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: product.name,
+    type: product.type || "ในสต็อก (Physical)",
     sku_number: product.sku_number || "",
     source_info: product.source_info || "",
     storage_location: product.storage_location || "",
@@ -38,7 +39,7 @@ export default function EditProductClient({ product }: { product: any }) {
       router.push("/inventory");
       router.refresh();
     } else {
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลสินค้า");
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลสินค้า: " + (res.error || "Unknown error"));
     }
   };
 
@@ -99,6 +100,19 @@ export default function EditProductClient({ product }: { product: any }) {
                               onChange={e => setFormData({...formData, sku_number: e.target.value})}
                               className="w-full h-11 px-4 bg-blue-50 border border-blue-200 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-blue-700" 
                             />
+                         </div>
+                         <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">ประเภทสินค้า</label>
+                            <select 
+                              value={formData.type}
+                              onChange={(e) => setFormData({...formData, type: e.target.value})}
+                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold"
+                            >
+                               <option value="ในสต็อก (Physical)">สินค้าในสต็อก (Physical)</option>
+                               <option value="Dropship">สินค้า Dropship</option>
+                               <option value="License Online">License Online</option>
+                               <option value="งานบริการ (Service)">งานบริการ (Service)</option>
+                            </select>
                          </div>
                          <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -171,6 +185,12 @@ export default function EditProductClient({ product }: { product: any }) {
              </div>
           </div>
         </form>
+
+        {/* Footer Text */}
+        <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6 mt-12">
+           <p className="font-bold mb-1">© 2026 สงวนลิขสิทธิ์โดย บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด</p>
+           <p className="italic opacity-80">เราสร้าง Software เฉพาะทาง เพื่อขับเคลื่อนธุรกิจให้ก้าวล้ำ</p>
+        </div>
       </div>
     </main>
   );

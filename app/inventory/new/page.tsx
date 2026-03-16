@@ -23,6 +23,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [sku, setSku] = useState("SKU-" + Math.floor(100000 + Math.random() * 900000));
+  const [type, setType] = useState("ในสต็อก (Physical)");
   const [name, setName] = useState("");
   const [source, setSource] = useState("");
   const [location, setLocation] = useState("");
@@ -35,6 +36,7 @@ export default function NewProductPage() {
     setLoading(true);
     const res = await createProduct({
       name,
+      type,
       sku_number: sku,
       source_info: source,
       storage_location: location,
@@ -114,6 +116,20 @@ export default function NewProductPage() {
                               className="w-full h-11 px-4 bg-blue-50 border border-blue-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-blue-700 shadow-inner" 
                            />
                         </div>
+
+                        <div className="space-y-2">
+                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">ประเภทสินค้า</label>
+                           <select 
+                             value={type}
+                             onChange={(e) => setType(e.target.value)}
+                             className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700"
+                           >
+                              <option value="ในสต็อก (Physical)">สินค้าในสต็อก (Physical)</option>
+                              <option value="Dropship">สินค้า Dropship</option>
+                              <option value="License Online">License Online</option>
+                              <option value="งานบริการ (Service)">งานบริการ (Service)</option>
+                           </select>
+                        </div>
                         
                         <div className="space-y-2">
                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-2 font-black">
@@ -160,7 +176,7 @@ export default function NewProductPage() {
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
                               className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
-                              placeholder="โกดัง A, ชั้น 2"
+                              placeholder="โกดัง A, ชั้น 2 (เว้นว่างได้ถ้าไม่ใช่ Physical)"
                            />
                         </div>
                      </div>
@@ -228,7 +244,8 @@ export default function NewProductPage() {
 
         {/* Footer Text */}
         <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6">
-           © 2026 Microtronic Thailand.
+           <p className="font-bold mb-1">© 2026 สงวนลิขสิทธิ์โดย บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด</p>
+           <p className="italic opacity-80">เราสร้าง Software เฉพาะทาง เพื่อขับเคลื่อนธุรกิจให้ก้าวล้ำ</p>
         </div>
       </div>
     </main>

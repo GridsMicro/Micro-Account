@@ -42,6 +42,7 @@ export default async function InventoryPage() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">สินค้า / SKU</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">ประเภท</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">แหล่งที่มา</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">จำนวนสต็อก</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">ราคาต่อหน่วย</th>
@@ -61,6 +62,11 @@ export default async function InventoryPage() {
                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{p.sku_number || 'NO-SKU'}</span>
                             </div>
                          </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold text-gray-600">
+                        <span className="px-2 py-1 bg-gray-100 rounded border border-gray-200">
+                          {p.type || 'ในสต็อก (Physical)'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 font-medium">{p.source_info || 'ไม่ระบุข้อมูล'}</td>
                       <td className="px-6 py-4 text-center">
@@ -85,7 +91,7 @@ export default async function InventoryPage() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={5} className="py-20 text-center text-gray-400 font-bold italic">
+                      <td colSpan={6} className="py-20 text-center text-gray-400 font-bold italic">
                          ไม่มีสินค้าในคลัง
                       </td>
                     </tr>
@@ -96,8 +102,9 @@ export default async function InventoryPage() {
         </div>
 
         {/* Footer Text */}
-        <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6">
-           © 2026 Microtronic Thailand.
+        <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6 mt-12">
+           <p className="font-bold mb-1">© 2026 สงวนลิขสิทธิ์โดย บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด</p>
+           <p className="italic opacity-80">เราสร้าง Software เฉพาะทาง เพื่อขับเคลื่อนธุรกิจให้ก้าวล้ำ</p>
         </div>
       </div>
     </main>
