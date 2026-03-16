@@ -14,7 +14,7 @@ export default async function MembersPage() {
     // If table doesn't exist, we'll show dummy for demonstration
     users = [
       { id: 1, name: "Administrator", email: "admin@microtronic.biz", role: "Super Admin", status: "Active" },
-      { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "Editor", status: "Active" },
+      { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "Manager", status: "Active" },
       { id: 3, name: "New Member", email: "pending@example.com", role: "Pending", status: "Inactive" },
     ];
   }
