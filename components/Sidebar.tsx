@@ -15,7 +15,9 @@ import {
   ChevronLeft,
   Menu,
   ShieldCheck,
-  UserCog
+  UserCog,
+  Repeat,
+  ScrollText
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -24,7 +26,9 @@ const menuItems = [
   { icon: Home, label: "หน้าแรก", href: "/" },
   { icon: FileText, label: "ใบเสนอราคา", href: "/quotations" },
   { icon: Receipt, label: "ใบแจ้งหนี้", href: "/invoices" },
+  { icon: Repeat, label: "รอบบิลอัตโนมัติ", href: "/recurring" },
   { icon: CreditCard, label: "การชำระเงิน", href: "/payments" },
+  { icon: ScrollText, label: "ใบสำคัญจ่าย", href: "/vouchers" },
   { icon: Package, label: "คลังสินค้า", href: "/inventory" },
   { icon: Users, label: "ลูกค้า/คู่ค้า", href: "/contacts" },
   { icon: BarChart3, label: "รายงานภาษี", href: "/tax-reports" },
