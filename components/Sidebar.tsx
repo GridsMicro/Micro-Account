@@ -105,42 +105,8 @@ export default function Sidebar() {
         </ul>
 
         {!isCollapsed && (
-          <div className="mt-6 mb-2 px-6">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Administrator</span>
-          </div>
-        )}
-
-        <ul className="space-y-1 px-3">
-          {adminItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded transition-colors group relative",
-                    isActive 
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
-                      : "hover:bg-gray-700 hover:text-white"
-                  )}
-                >
-                  <item.icon size={20} className={cn(isActive ? "text-white" : "text-gray-400 group-hover:text-white")} />
-                  {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-                  
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-4 px-3 py-1 bg-gray-800 text-white text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700">
-                      {item.label}
-                    </div>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-
-        {!isCollapsed && (
-          <div className="mt-6 mb-2 px-6">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Administrator</span>
+          <div className="mt-8 mb-2 px-6">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 opacity-50">Administrator</span>
           </div>
         )}
 
