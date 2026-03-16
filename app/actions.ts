@@ -140,22 +140,23 @@ export async function exportJournalsToSheets() {
 export async function exportJournalsToExcel() {
   try {
     const { rows: entries } = await sql`
-      SELECT date, reference, description, debit_amount, credit_amount 
+      SELECT entry_date, reference_no, account_name, description, debit, credit 
       FROM journal_entries 
-      ORDER BY date DESC
+      ORDER BY entry_date DESC, id ASC
     `;
 
     if (entries.length === 0) {
       throw new Error("ไม่มีข้อมูลสำหรับส่งออก");
     }
 
-    // สร้าง Header และข้อมูล
+    // สร้าง Header และข้อมูลให้ตรงกับที่แสดงหน้าเว็บ
     const data = entries.map(entry => ({
-      "วันที่": new Date(entry.date).toLocaleDateString('th-TH'),
-      "เอกสารอ้างอิง": entry.reference,
+      "วันที่": new Date(entry.entry_date).toLocaleDateString('th-TH'),
+      "เอกสารอ้างอิง": entry.reference_no || "-",
+      "ชื่อบัญชี": entry.account_name,
       "รายการ": entry.description,
-      "เดบิต (Dr.)": entry.debit_amount || 0,
-      "เครดิต (Cr.)": entry.credit_amount || 0
+      "เดบิต (Dr.)": Number(entry.debit) || 0,
+      "เครดิต (Cr.)": Number(entry.credit) || 0
     }));
 
     // สร้าง Workbook
