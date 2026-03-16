@@ -48,3 +48,35 @@ export async function updateProduct(id: string, data: {
     return { success: false, error: "Failed to update database" };
   }
 }
+
+export async function updateInvoice(id: string, data: {
+  status: string;
+}) {
+  try {
+    await query(
+      `UPDATE invoices SET status = $1 WHERE id = $2`,
+      [data.status, id]
+    );
+    revalidatePath("/invoices");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update invoice:", error);
+    return { success: false, error: "Failed to update database" };
+  }
+}
+
+export async function updateQuotation(id: string, data: {
+  status: string;
+}) {
+  try {
+    await query(
+      `UPDATE quotations SET status = $1 WHERE id = $2`,
+      [data.status, id]
+    );
+    revalidatePath("/quotations");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update quotation:", error);
+    return { success: false, error: "Failed to update database" };
+  }
+}
