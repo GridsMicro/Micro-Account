@@ -7,7 +7,8 @@ import {
   ChevronRight,
   Save,
   Globe,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -19,22 +20,25 @@ export default function EditContactClient({ contact }: { contact: any }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: contact.name,
-    contact_type: contact.contact_type || "Customer",
+    type: contact.type || "Customer",
     email: contact.email || "",
     phone: contact.phone || "",
-    address: contact.address || ""
+    address: contact.address || "",
+    tax_id: contact.tax_id || ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const res = await updateContact(contact.id, formData);
+    // Ensure id is passed correctly
+    const res = await updateContact(String(contact.id), formData);
     setLoading(false);
     if (res.success) {
+      alert("บันทึกข้อมูลเรียบร้อยแล้ว");
       router.push("/contacts");
       router.refresh();
     } else {
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + (res.error || "Unknown error"));
     }
   };
 
@@ -84,37 +88,52 @@ export default function EditContactClient({ contact }: { contact: any }) {
                               required
                               value={formData.name}
                               onChange={e => setFormData({...formData, name: e.target.value})}
-                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold" 
+                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
                             />
                          </div>
                          <div className="space-y-1">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">ประเภท</label>
                             <select 
-                              value={formData.contact_type}
-                              onChange={e => setFormData({...formData, contact_type: e.target.value})}
-                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold"
+                              value={formData.type}
+                              onChange={e => setFormData({...formData, type: e.target.value})}
+                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700"
                             >
-                               <option value="Customer">Customer (ลูกค้า)</option>
-                               <option value="Vendor">Vendor (ซัพพลายเออร์)</option>
-                               <option value="Internal">Internal (ภายใน)</option>
+                               <option value="customer">Customer (ลูกค้า)</option>
+                               <option value="vendor">Vendor (ซัพพลายเออร์)</option>
+                               <option value="internal">Internal (ภายใน)</option>
                             </select>
                          </div>
                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">อีเมล (Email)</label>
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                               <CreditCard size={12} /> TAX ID (เลขที่ผู้เสียภาษี)
+                            </label>
+                            <input 
+                              type="text" 
+                              value={formData.tax_id}
+                              onChange={e => setFormData({...formData, tax_id: e.target.value})}
+                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
+                            />
+                         </div>
+                         <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                               <Mail size={12} /> อีเมล (Email)
+                            </label>
                             <input 
                               type="email" 
                               value={formData.email}
                               onChange={e => setFormData({...formData, email: e.target.value})}
-                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm" 
+                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
                             />
                          </div>
-                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">เบอร์โทรศัพท์ (Phone)</label>
+                         <div className="md:col-span-2 space-y-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                               <Phone size={12} /> เบอร์โทรศัพท์ (Phone)
+                            </label>
                             <input 
                               type="text" 
                               value={formData.phone}
                               onChange={e => setFormData({...formData, phone: e.target.value})}
-                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm" 
+                              className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
                             />
                          </div>
                       </div>
@@ -124,7 +143,7 @@ export default function EditContactClient({ contact }: { contact: any }) {
                           rows={4} 
                           value={formData.address}
                           onChange={e => setFormData({...formData, address: e.target.value})}
-                          className="w-full p-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm resize-none leading-relaxed" 
+                          className="w-full p-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700 resize-none leading-relaxed" 
                          ></textarea>
                       </div>
                    </div>

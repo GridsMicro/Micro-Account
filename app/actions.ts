@@ -5,17 +5,18 @@ import { revalidatePath } from "next/cache";
 
 export async function updateContact(id: string, data: {
   name: string;
-  contact_type: string;
+  type: string;
   email: string;
   phone: string;
   address: string;
+  tax_id?: string;
 }) {
   try {
     await query(
       `UPDATE contacts 
-       SET name = $1, contact_type = $2, email = $3, phone = $4, address = $5 
-       WHERE id = $6`,
-      [data.name, data.contact_type, data.email, data.phone, data.address, id]
+       SET name = $1, type = $2, email = $3, phone = $4, address = $5, tax_id = $6
+       WHERE id = $7`,
+      [data.name, data.type, data.email, data.phone, data.address, data.tax_id || null, id]
     );
     revalidatePath("/contacts");
     return { success: true };
@@ -24,6 +25,7 @@ export async function updateContact(id: string, data: {
     return { success: false, error: "Failed to update database" };
   }
 }
+
 
 export async function updateProduct(id: string, data: {
   name: string;
@@ -122,3 +124,47 @@ export async function updateCompanySettings(data: {
   }
 }
 
+export async function createContact(data: {
+  name: string;
+  type: string;
+  email: string;
+  phone: string;
+  address: string;
+  tax_id?: string;
+}) {
+  try {
+    const res = await query(
+      `INSERT INTO contacts (name, type, email, phone, address, tax_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [data.name, data.type, data.email, data.phone, data.address, data.tax_id || null]
+    );
+    revalidatePath("/contacts");
+    return { success: true, id: res.rows[0].id };
+  } catch (error) {
+    console.error("Failed to create contact:", error);
+    return { success: false, error: "Failed to create database entry" };
+  }
+}
+
+export async function createProduct(data: {
+  name: string;
+  sku_number: string;
+  source_info: string;
+  storage_location: string;
+  stock_quantity: number;
+  price: number;
+  product_notes: string;
+}) {
+  try {
+    const res = await query(
+      `INSERT INTO products (name, sku_number, source_info, storage_location, stock_quantity, price, product_notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [data.name, data.sku_number, data.source_info, data.storage_location, data.stock_quantity, data.price, data.product_notes]
+    );
+    revalidatePath("/inventory");
+    return { success: true, id: res.rows[0].id };
+  } catch (error) {
+    console.error("Failed to create product:", error);
+    return { success: false, error: "Failed to create database entry" };
+  }
+}
