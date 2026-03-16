@@ -124,7 +124,7 @@ export async function exportJournalsToSheets() {
     let errorMsg = "❌ เกิดปัญหา: " + rawMsg;
     
     if (rawMsg.includes("permission") || rawMsg.includes("access_denied")) {
-      errorMsg = "❌ สิทธิ์ไม่พอ (Permission Denied): กรุณาเช็คว่า Google API เปิดแล้ว และ Service Account มีสิทธิ์สร้างไฟล์ [" + rawMsg + "]";
+      errorMsg = "❌ สิทธิ์ไม่พอ (Permission Denied): บอทยังไม่มีสิทธิ์สร้างไฟล์ใน Domain ของพี่ [" + rawMsg + "]\n💡 วิธีแก้: รบกวนพี่ไปที่หน้า IAM แล้วเพิ่ม Role 'Editor' ให้กับ finance-sync-bot@microtronic-finance-bot.iam.gserviceaccount.com ครับ";
     } else if (rawMsg.includes("invalid_grant")) {
       errorMsg = "❌ กุญแจ JSON มีปัญหา: กรุณาตรวจสอบค่าใน Vercel [" + rawMsg + "]";
     }
