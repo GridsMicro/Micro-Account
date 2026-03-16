@@ -1,5 +1,5 @@
 import { query } from "@/lib/db";
-import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck } from "lucide-react";
+import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
@@ -14,86 +14,74 @@ export default async function ContactsPage() {
   }
 
   return (
-    <main className="p-10 font-sans min-h-screen bg-[#020617] text-slate-50">
+    <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
       <div className="max-w-7xl mx-auto">
         
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-8 text-indigo-400 font-black text-xs uppercase tracking-widest">
-           <Link href="/" className="hover:text-white transition-colors">Dashboard</Link>
-           <ArrowRight size={14} className="text-slate-700" />
-           <span className="text-slate-500">Contacts</span>
-        </div>
-
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-16">
-          <div className="space-y-2">
-            <h1 className="text-5xl lg:text-6xl font-black text-white italic tracking-tighter">
-               CONTACT<span className="text-indigo-500">S</span>
-            </h1>
-            <p className="text-slate-400 font-bold text-lg uppercase tracking-wider">จัดการข้อมูลผู้ติดต่อ ลูกค้า และซัพพลายเออร์</p>
+        {/* Content Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">จัดการข้อมูลลูกค้า/คู่ค้า</h1>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+              <span>รายชื่อทั้งหมดในระบบ</span>
+            </div>
           </div>
-          <Link href="/contacts/new" className="h-16 px-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] shadow-2xl shadow-indigo-900/40 transition-all flex items-center gap-3 active:scale-95 group text-lg">
-            <Plus size={24} className="group-hover:rotate-12 transition-transform" />
+          <Link href="/contacts/new" className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm">
+            <Plus size={18} />
             เพิ่มรายชื่อใหม่
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {contacts.length > 0 ? contacts.map((contact: any) => (
-            <div key={contact.id} className="bg-[#0f172a] p-10 rounded-[3rem] border border-white/5 shadow-2xl hover:border-indigo-500/30 transition-all group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/[0.03] rounded-bl-[4rem] -mr-8 -mt-8 transition-all group-hover:scale-110" />
-              
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="w-20 h-20 bg-slate-950 border border-white/10 rounded-[1.5rem] flex items-center justify-center text-indigo-400 font-black text-3xl uppercase italic shadow-2xl group-hover:border-indigo-500 transition-colors">
-                    {contact.name.charAt(0)}
+            <div key={contact.id} className="bg-white rounded shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+               <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                     <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center text-blue-600 text-xl font-bold border border-gray-200">
+                        {contact.name.charAt(0)}
+                     </div>
+                     <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded border border-blue-100">
+                        {contact.contact_type || 'General'}
+                     </span>
                   </div>
-                  <UserCheck size={28} className="text-slate-800 group-hover:text-indigo-600 transition-colors" />
-                </div>
 
-                <h3 className="text-2xl font-black text-white mb-2 italic tracking-tighter uppercase">{contact.name}</h3>
-                <span className="inline-block px-4 py-1.5 bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-[0.25em] rounded-xl mb-10 border border-indigo-500/20">
-                  {contact.contact_type || 'General'}
-                </span>
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">{contact.name}</h3>
 
-                <div className="space-y-6">
-                  <div className="flex items-center gap-5 text-slate-400 group-hover:text-slate-200 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-600 group-hover:text-cyan-400 transition-all">
-                        <Mail size={18} />
-                    </div>
-                    <span className="text-sm font-bold truncate tracking-wide">{contact.email || '-'}</span>
+                  <div className="space-y-3 text-sm text-gray-600">
+                     <div className="flex items-center gap-3">
+                        <Mail size={14} className="text-gray-400" />
+                        <span className="truncate">{contact.email || '-'}</span>
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <Phone size={14} className="text-gray-400" />
+                        <span>{contact.phone || '-'}</span>
+                     </div>
+                     <div className="flex items-start gap-3">
+                        <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{contact.address || '-'}</span>
+                     </div>
                   </div>
-                  <div className="flex items-center gap-5 text-slate-400 group-hover:text-slate-200 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-600 group-hover:text-cyan-400 transition-all">
-                        <Phone size={18} />
-                    </div>
-                    <span className="text-sm font-bold tracking-wide">{contact.phone || '-'}</span>
-                  </div>
-                  <div className="flex items-start gap-5 text-slate-400 group-hover:text-slate-200 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-600 group-hover:text-cyan-400 transition-all shrink-0">
-                        <MapPin size={18} />
-                    </div>
-                    <span className="text-sm font-bold leading-relaxed line-clamp-2">{contact.address || '-'}</span>
-                  </div>
-                </div>
-
-                <div className="mt-10 pt-8 border-t border-white/5 flex justify-end">
-                   <button className="text-[10px] font-black text-slate-700 uppercase tracking-widest hover:text-indigo-400 transition-colors flex items-center gap-2">
-                      View History <ArrowRight size={14} />
-                   </button>
-                </div>
-              </div>
+               </div>
+               
+               <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-between items-center">
+                  <Link href={`/contacts/edit/${contact.id}`} className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline">
+                     <Edit size={14} /> แก้ไขข้อมูล
+                  </Link>
+                  <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                     <ArrowRight size={16} />
+                  </button>
+               </div>
             </div>
           )) : (
-            <div className="col-span-full py-40 text-center bg-[#0f172a] rounded-[4rem] border border-dashed border-white/10 flex flex-col items-center gap-8">
-               <div className="w-24 h-24 bg-slate-900 rounded-[2rem] flex items-center justify-center text-slate-700">
-                  <Users size={48} />
-               </div>
-               <div className="space-y-2">
-                  <p className="text-white font-black italic text-2xl uppercase tracking-widest">No Contacts Found</p>
-                  <p className="text-slate-500 font-bold uppercase text-xs tracking-[0.5em]">Network Status: Active</p>
-               </div>
+            <div className="col-span-full py-24 text-center bg-white rounded border border-dashed border-gray-300">
+               <Users size={48} className="text-gray-200 mx-auto mb-4" />
+               <p className="text-gray-500 font-bold">ไม่พบข้อมูลรายชื่อในระบบ</p>
             </div>
           )}
+        </div>
+
+        {/* Footer Text */}
+        <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6">
+           © 2026 Microtronic Thailand.
         </div>
       </div>
     </main>

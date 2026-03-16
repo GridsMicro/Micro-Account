@@ -1,29 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { 
   Home, 
+  FileText, 
   Receipt, 
-  Users, 
+  CreditCard, 
   Package, 
-  Settings, 
+  Users, 
   BarChart3, 
-  FileText,
-  CreditCard,
+  Settings,
   LogOut,
-  Menu,
-  ChevronRight,
-  Sparkles,
-  X
+  ChevronLeft,
+  Menu
 } from "lucide-react";
 import { useState } from "react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from "@/lib/utils";
 
 const menuItems = [
   { icon: Home, label: "หน้าแรก", href: "/" },
@@ -38,98 +31,90 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [isOpen, setIsOpen] = useState(true);
-
-  if (pathname === "/login") return null;
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <>
-      <aside className={cn(
-        "fixed left-0 top-0 h-screen bg-[#0f172a] border-r border-[#1e293b] z-40 transition-all duration-500 ease-in-out font-sans flex flex-col shadow-2xl shadow-black",
-        isOpen ? "w-[280px]" : "w-[88px]"
-      )}>
-        {/* Header Logo */}
-        <div className="h-24 flex items-center px-6 gap-4 border-b border-[#1e293b] bg-gradient-to-r from-indigo-950/20 to-transparent">
-          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform hover:rotate-12 duration-300">
-            <Sparkles size={24} />
-          </div>
-          {isOpen && (
-            <div className="overflow-hidden animate-in fade-in slide-in-from-left-4 duration-500">
-              <h1 className="text-xl font-black text-white tracking-tight italic">MICRO<span className="text-indigo-400">ACCOUNT</span></h1>
-              <p className="text-[10px] text-cyan-400 uppercase font-black tracking-[0.2em] leading-none">Intelligence 2026</p>
-            </div>
-          )}
+    <aside 
+      className={cn(
+        "h-screen bg-[#343a40] text-[#c2c7d0] transition-all duration-300 flex flex-col shadow-xl",
+        isCollapsed ? "w-20" : "w-64"
+      )}
+    >
+      {/* Brand Logo */}
+      <div className="h-16 flex items-center px-6 border-b border-gray-700 bg-[#343a40]">
+        <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold shrink-0">
+          M
         </div>
+        {!isCollapsed && (
+          <span className="ml-3 font-bold text-white text-lg tracking-tight truncate">
+            MICRO ACCOUNT
+          </span>
+        )}
+      </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden pt-8">
+      {/* Profile */}
+      {!isCollapsed && (
+        <div className="px-6 py-6 border-b border-gray-700 hidden md:block">
+           <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white border border-gray-500">
+                 N
+              </div>
+              <div className="flex flex-col truncate">
+                 <span className="text-sm font-semibold text-white">Administrator</span>
+                 <span className="text-xs text-gray-400">Online</span>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
+        <ul className="space-y-1 px-3">
           {menuItems.map((item) => {
-            const active = pathname === item.href;
+            const isActive = pathname === item.href;
             return (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-300 group relative",
-                  active 
-                    ? "bg-indigo-600/10 text-white border border-indigo-500/20 shadow-[inset_0_0_15px_rgba(99,102,241,0.1)]" 
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
-                )}
-              >
-                <item.icon size={22} className={cn(
-                  "transition-all duration-300",
-                  active ? "text-indigo-400 scale-110" : "text-slate-500 group-hover:text-cyan-400 group-hover:scale-110"
-                )} />
-                {isOpen && (
-                  <span className={cn(
-                    "font-black text-sm transition-all",
-                    active ? "text-white" : "group-hover:translate-x-1"
-                  )}>
-                    {item.label}
-                  </span>
-                )}
-                
-                {active && isOpen && (
-                  <ChevronRight size={16} className="ml-auto text-indigo-400 animate-pulse" />
-                )}
-                
-                {active && (
-                  <div className="absolute left-0 w-1.5 h-6 bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
-                )}
-              </Link>
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded transition-colors group relative",
+                    isActive 
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
+                      : "hover:bg-gray-700 hover:text-white"
+                  )}
+                >
+                  <item.icon size={20} className={cn(isActive ? "text-white" : "text-gray-400 group-hover:text-white")} />
+                  {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+                  
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-4 px-3 py-1 bg-gray-800 text-white text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700">
+                      {item.label}
+                    </div>
+                  )}
+                </Link>
+              </li>
             );
           })}
-        </nav>
+        </ul>
+      </nav>
 
-        {/* Toggle & Logout */}
-        <div className="p-4 border-t border-[#1e293b] space-y-2">
-           <button 
-             onClick={() => setIsOpen(!isOpen)}
-             className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-800 transition-all group"
-           >
-             {isOpen ? <X size={20} /> : <Menu size={20} />}
-             {isOpen && <span className="font-bold text-xs uppercase tracking-widest text-slate-400">หุบแถบเมนู</span>}
-           </button>
-           
-           <button 
-             onClick={() => router.push("/login")}
-             className={cn(
-               "w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all group",
-               !isOpen && "justify-center"
-             )}
-           >
-            <LogOut size={22} className="group-hover:rotate-180 transition-transform duration-500" />
-            {isOpen && <span className="font-black italic">ออกจากระบบ</span>}
-           </button>
-        </div>
-      </aside>
-
-      {/* Content Offset */}
-      <div className={cn(
-        "hidden lg:block transition-all duration-500",
-        isOpen ? "w-[280px]" : "w-[88px]"
-      )} />
-    </>
+      {/* Footer Actions */}
+      <div className="p-4 border-t border-gray-700 space-y-2 bg-[#2f343a]">
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="w-full h-10 flex items-center justify-center gap-3 hover:bg-gray-700 rounded transition-colors"
+        >
+          {isCollapsed ? <Menu size={18} /> : <div className="flex items-center gap-3"><ChevronLeft size={18} /> <span className="text-sm">หุบแถบเมนู</span></div>}
+        </button>
+        
+        <Link 
+          href="/login"
+          className="w-full h-10 flex items-center justify-center gap-3 hover:bg-red-600 hover:text-white rounded transition-colors group"
+        >
+          <LogOut size={18} className="text-gray-400 group-hover:text-white" />
+          {!isCollapsed && <span className="text-sm">ออกจากระบบ</span>}
+        </Link>
+      </div>
+    </aside>
   );
 }

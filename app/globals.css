@@ -1,52 +1,51 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
-  --background: #020617; /* Slate 950 */
-  --foreground: #f8fafc; /* Slate 50 */
-  --card: #0f172a; /* Slate 900 */
-  --card-foreground: #f8fafc;
-  --popover: #0f172a;
-  --popover-foreground: #f8fafc;
-  --primary: #6366f1; /* Indigo 500 */
+  --background: #f4f6f9; /* AdminLTE Light Gray Body */
+  --foreground: #212529;
+  --card: #ffffff;
+  --card-foreground: #212529;
+  --primary: #007bff; /* AdminLTE Blue */
   --primary-foreground: #ffffff;
-  --secondary: #1e293b; /* Slate 800 */
-  --secondary-foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8; /* Slate 400 */
-  --accent: #38bdf8; /* Cyan 400 */
-  --accent-foreground: #020617;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #6366f1;
+  --secondary: #6c757d;
+  --muted: #e9ecef;
+  --border: #dee2e6;
+  --sidebar-bg: #343a40; /* AdminLTE Dark Sidebar */
+  --sidebar-text: #c2c7d0;
+  --sidebar-active: #ffffff;
 }
 
 body {
+  background-color: var(--background);
   color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-geist-sans), Inter, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-sans);
+  margin: 0;
 }
 
-@layer base {
-  * {
-    border-color: var(--border);
-  }
-}
-
-/* Custom Scrollbar for Dark Mode */
+/* Simplified Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #f1f1f1;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 10px;
+  background: #ccc;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #bbb;
+}
+
+/* AdminLTE Card Style */
+.admin-card {
+  background: #fff;
+  border-top: 3px solid var(--primary);
+  box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+  border-radius: 0.25rem;
+  margin-bottom: 1rem;
 }

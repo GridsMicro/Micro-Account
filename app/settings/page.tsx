@@ -1,41 +1,41 @@
 import { query } from "@/lib/db";
 import SettingsClient from "@/components/SettingsClient";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-async function getSettingsData() {
-  const companyRes = await query('SELECT * FROM company LIMIT 1');
-  return {
-    company: companyRes.rows[0]
-  };
+async function getCompanyData() {
+  try {
+    const res = await query('SELECT * FROM company_settings LIMIT 1');
+    return res.rows[0];
+  } catch (e) {
+    return null;
+  }
 }
 
 export default async function SettingsPage() {
-  const { company } = await getSettingsData();
+  const company = await getCompanyData();
 
   return (
-    <main className="p-10 font-sans min-h-screen bg-[#020617] text-slate-50 pb-20">
+    <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
       <div className="max-w-7xl mx-auto">
         
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-8 text-indigo-400 font-black text-xs uppercase tracking-widest">
-           <Link href="/" className="hover:text-white transition-colors">Dashboard</Link>
-           <ArrowRight size={14} className="text-slate-700" />
-           <span className="text-slate-500">Settings</span>
+        {/* Content Header */}
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-tight">ตั้งค่าระบบ (Settings)</h1>
+              <p className="text-sm text-gray-500 mt-1">จัดการข้อมูลพื้นฐานและความปลอดภัยขององค์กร</p>
+           </div>
+           <div className="bg-white px-4 py-2 rounded shadow-sm border border-gray-200 text-xs font-bold text-gray-500 flex items-center gap-4">
+              <span className="text-blue-600">Enterprise Edition</span>
+              <span>v1.0.4</span>
+           </div>
         </div>
 
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-16">
-          <div className="space-y-2">
-            <h1 className="text-5xl lg:text-6xl font-black text-white italic tracking-tighter">
-               CONFIGURATION<span className="text-indigo-500">S</span>
-            </h1>
-            <p className="text-slate-400 font-bold text-lg uppercase tracking-wider">จัดการโครงสร้างองค์กร ความปลอดภัย และระบบ Cloud</p>
-          </div>
-        </div>
+        <SettingsClient initialData={company} />
 
-        <SettingsClient initialCompany={company} />
+        <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6 mt-12">
+           © 2026 Microtronic Thailand.
+        </div>
       </div>
     </main>
   );
