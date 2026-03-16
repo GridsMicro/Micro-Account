@@ -2,7 +2,7 @@ import { query } from "@/lib/db";
 import { BookOpen, Plus, Calendar } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import JournalRowActions from "./JournalRowActions";
+import JournalEntryRow from "./JournalEntryRow";
 import ExportButton from "./ExportButton";
 
 export const dynamic = 'force-dynamic';
@@ -77,29 +77,7 @@ export default async function JournalsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {entries.length > 0 ? entries.map((entry: any) => (
-                    <tr key={entry.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-6 py-4 text-sm font-bold text-gray-700">
-                         {entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('th-TH') : '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                         <span className="text-[10px] font-black tracking-widest bg-gray-100 text-gray-600 px-2 py-1 rounded border border-gray-200">
-                            {entry.reference_no || '-'}
-                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                         <div className={cn("flex flex-col", Number(entry.credit) > 0 ? "ml-8" : "")}>
-                            <span className="font-bold text-gray-800">{entry.account_name}</span>
-                            <span className="text-xs text-gray-500 italic mt-0.5">{entry.description}</span>
-                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-blue-700">
-                         {Number(entry.debit) > 0 ? `฿${Number(entry.debit).toLocaleString()}` : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-green-700">
-                         {Number(entry.credit) > 0 ? `฿${Number(entry.credit).toLocaleString()}` : '-'}
-                      </td>
-                      <JournalRowActions entry={entry} />
-                    </tr>
+                    <JournalEntryRow key={entry.id} entry={entry} />
                   )) : (
                     <tr>
                       <td colSpan={6} className="py-24 text-center text-gray-400 font-bold italic">
