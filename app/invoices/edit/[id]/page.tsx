@@ -30,8 +30,9 @@ async function getInvoice(id: string) {
   }
 }
 
-export default async function EditInvoicePage({ params }: { params: { id: string } }) {
-  const invoice = await getInvoice(params.id);
+export default async function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const invoice = await getInvoice(id);
 
   if (!invoice) {
     notFound();

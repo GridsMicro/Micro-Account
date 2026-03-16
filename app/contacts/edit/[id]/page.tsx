@@ -23,8 +23,9 @@ async function getContact(id: string) {
   }
 }
 
-export default async function EditContactPage({ params }: { params: { id: string } }) {
-  const contact = await getContact(params.id);
+export default async function EditContactPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const contact = await getContact(id);
 
   if (!contact) {
     notFound();
