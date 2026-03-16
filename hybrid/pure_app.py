@@ -427,6 +427,20 @@ def log_action(user, action, detail):
 def get_current_user():
     return app.storage.user.get('username')
 
+def verify_access(allowed_roles):
+    curr_user = get_current_user()
+    if not curr_user:
+        ui.navigate.to('/login')
+        return False
+    curr_role = app.storage.user.get('role', 'pending')
+    if curr_role == 'admin': # Admin accesses everything
+        return True
+    if curr_role not in allowed_roles:
+        ui.notify('❌ คุณไม่มีสิทธิ์เข้าถึงส่วนนี้', color='red')
+        ui.navigate.to('/')
+        return False
+    return True
+
 def login(username, password):
     with Session() as session:
         user = session.query(User).filter_by(username=username).first()
@@ -529,6 +543,48 @@ def login_page():
                 ui.notify('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง', color='red')
         
         ui.button('Login', on_click=try_login).classes('w-full mt-4 bg-blue-600')
+        with ui.row().classes('w-full justify-center mt-4 text-sm'):
+            ui.label('ยังไม่มีบัญชี?').classes('text-slate-500')
+            ui.link('สมัครสมาชิก', '/register').classes('text-blue-600 font-bold ml-1')
+
+@ui.page('/register')
+def register_page():
+    if get_current_user():
+        ui.navigate.to('/')
+        return
+
+    with ui.card().classes('fixed-center p-8 w-[400px] shadow-2xl rounded-2xl'):
+        ui.label('สมัครสมาชิกใหม่').classes('text-2xl font-black mb-2 w-full text-center text-blue-900')
+        ui.label('กรอกข้อมูลเพื่อลงทะเบียน ขอเข้าสิทธิ์ใช้งาน').classes('text-sm text-slate-500 mb-6 text-center w-full')
+        
+        user_input = ui.input('ชื่อผู้ใช้งาน (Username)').classes('w-full mb-4').props('outlined')
+        pass_input = ui.input('รหัสผ่าน', password=True).classes('w-full mb-4').props('outlined')
+        confirm_pass = ui.input('ยืนยันรหัสผ่าน', password=True).classes('w-full mb-6').props('outlined')
+        
+        async def try_register():
+            if not user_input.value or not pass_input.value:
+                ui.notify('กรุณากรอกข้อมูลให้ครบถ้วน', color='orange')
+                return
+            if pass_input.value != confirm_pass.value:
+                ui.notify('รหัสผ่านไม่ตรงกัน', color='red')
+                return
+            
+            with Session() as session:
+                if session.query(User).filter_by(username=user_input.value).first():
+                    ui.notify('ชื่อผู้ใช้งานนี้มีในระบบแล้ว', color='red')
+                    return
+                # กำหนดให้สมาชิคใหม่มี Role เป็น pending รอการอนุมัติ
+                u = User(username=user_input.value, password_hash=pbkdf2_sha256.hash(pass_input.value), role='pending')
+                session.add(u)
+                session.commit()
+            
+            ui.notify('ลงทะเบียนสำเร็จ! กรุณารอ Admin อนุมัติสิทธิ์', color='green', timeout=5000)
+            ui.timer(2.0, lambda: ui.navigate.to('/login'))
+        
+        ui.button('ลงทะเบียน', on_click=try_register).classes('w-full h-12 bg-blue-700 text-white font-bold rounded-xl mb-4 shadow-lg')
+        with ui.row().classes('w-full justify-center text-sm'):
+            ui.label('มีบัญชีอยู่แล้ว?').classes('text-slate-500')
+            ui.link('คลิกเพื่อเข้าสู่ระบบ', '/login').classes('text-blue-600 font-bold ml-1')
 
 @ui.page('/setup')
 def setup_wizard():
@@ -596,9 +652,21 @@ def index():
                 ui.navigate.to('/login')
         return
 
+    # Check for Pending User
+    role = app.storage.user.get('role', 'pending')
+    if role == 'pending':
+        ui.query('body').style('background-color: #f8fafc;')
+        with ui.column().classes('fixed-center items-center gap-6 p-12 bg-white shadow-2xl rounded-3xl border-t-8 border-orange-500 w-[500px]'):
+            ui.icon('hourglass_empty', size='100px', color='orange-500').classes('animate-pulse')
+            ui.label('รอยืนยันสิทธิ์การใช้งาน').classes('text-3xl font-black text-slate-800')
+            ui.label('บัญชีของคุณสมัครสมาชิกเรียบร้อยแล้ว แต่ต้องรอให้ "Admin" กำหนดสิทธิ์ก่อนเข้าใช้งานตามแผนกของคุณ').classes('text-center text-slate-500 leading-relaxed')
+            with ui.row().classes('gap-4 mt-4'):
+                ui.button('ออกจากการระบบ', on_click=logout, icon='logout').props('outline color=red')
+                ui.button('ดูคู่มือเบื้องต้น', icon='help', on_click=lambda: ui.notify('คู่มือยังไม่พร้อมใช้งานชั่วคราว', color='info'))
+        return
+
     # Dashboard 
     ui.query('body').style('background-color: #f1f5f9;')
-    role = app.storage.user.get('role', 'staff')
     
     with ui.header().classes('bg-slate-900 text-white p-4 justify-between shadow-md'):
         with ui.row().classes('items-center gap-4'):
@@ -760,9 +828,7 @@ def profile_page():
 
 @ui.page('/settings')
 def settings_page():
-    if not get_current_user() or app.storage.user.get('role') != 'admin':
-        ui.notify('สิทธิ์เข้าใช้งานเฉพาะ Admin เท่านั้น', color='red')
-        ui.navigate.to('/')
+    if not verify_access(['admin']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -870,6 +936,7 @@ def settings_page():
                     'billing': 'เจ้าหน้าที่ออกบิล (Billing)',
                     'sales': 'พนักงานขาย (Sales)',
                     'inventory': 'เจ้าหน้าที่เครื่องมือ/สต็อก (Inventory/Asset)',
+                    'pending': 'รอกำหนดสิทธิ์ (Pending)'
                 }
                 ui.label('จัดการสิทธิ์การเข้าถึง').classes('text-2xl font-black mb-6 text-slate-800')
 
@@ -1562,8 +1629,7 @@ def catalog_page():
 
 @ui.page('/contacts')
 def contacts_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant', 'billing', 'sales']):
         return
 
     role = app.storage.user.get('role', 'staff')
@@ -1707,14 +1773,7 @@ def contacts_page():
         # เพิ่มสไตล์ให้ประเภท
 @ui.page('/invoices')
 def invoices_list_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
-        return
-
-    role = app.storage.user.get('role', 'staff')
-    if role not in ['admin', 'accountant', 'billing']:
-        ui.notify('ไม่มีสิทธิ์เข้าถึงหน้านี้', color='red')
-        ui.navigate.to('/')
+    if not verify_access(['admin', 'accountant', 'billing']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -2003,14 +2062,7 @@ def generate_pdf_v2(data):
 
 @ui.page('/quotations')
 def quotations_list_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
-        return
-
-    role = app.storage.user.get('role', 'staff')
-    if role not in ['admin', 'accountant', 'billing', 'sales']:
-        ui.notify('ไม่มีสิทธิ์เข้าถึงหน้านี้', color='red')
-        ui.navigate.to('/')
+    if not verify_access(['admin', 'sales']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -2622,8 +2674,7 @@ def invoice_page():
 
 @ui.page('/journal')
 def journal_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -2644,8 +2695,7 @@ def journal_page():
 
 @ui.page('/ledger')
 def ledger_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -2676,8 +2726,7 @@ def ledger_page():
 
 @ui.page('/reports')
 def reports_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant']):
         return
 
     ui.query('body').style('background-color: #f8fafc;')
@@ -2808,8 +2857,7 @@ def reports_page():
 
 @ui.page('/inventory')
 def inventory_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'inventory']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -2874,8 +2922,7 @@ def inventory_in_page():
 
 @ui.page('/payments')
 def payments_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant', 'finance']):
         return
 
     role = app.storage.user.get('role', 'staff')
@@ -2938,8 +2985,7 @@ def payments_page():
 
 @ui.page('/receipts')
 def receipts_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant', 'finance']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -2974,8 +3020,7 @@ def receipts_page():
 
 @ui.page('/expenses')
 def expenses_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'accountant', 'finance']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -3136,8 +3181,7 @@ def expenses_page():
 
 @ui.page('/assets')
 def assets_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
+    if not verify_access(['admin', 'inventory']):
         return
 
     ui.query('body').style('background-color: #f1f5f9;')
@@ -3471,13 +3515,7 @@ def expense_summary_page():
 # ===== B) หน้ารายงานภาษีรายเดือน =====
 @ui.page('/tax-report')
 def tax_report_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
-        return
-    role = app.storage.user.get('role', 'staff')
-    if role not in ['admin', 'accountant', 'finance']:
-        ui.notify('สิทธิ์เฉพาะ Admin / บัญชี / การเงิน', color='red')
-        ui.navigate.to('/')
+    if not verify_access(['admin', 'accountant']):
         return
 
     ui.query('body').style('background-color: #f8fafc;')
@@ -3672,13 +3710,7 @@ def tax_report_page():
 # ===== WHT Records page =====
 @ui.page('/wht-records')
 def wht_records_page():
-    if not get_current_user():
-        ui.navigate.to('/login')
-        return
-    role = app.storage.user.get('role', 'staff')
-    if role not in ['admin', 'accountant', 'finance']:
-        ui.notify('สิทธิ์เฉพาะ Admin / บัญชี', color='red')
-        ui.navigate.to('/')
+    if not verify_access(['admin', 'accountant', 'finance']):
         return
 
     ui.query('body').style('background-color: #f8fafc;')
