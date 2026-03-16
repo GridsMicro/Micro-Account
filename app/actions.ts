@@ -170,3 +170,25 @@ export async function createProduct(data: {
     return { success: false, error: error.message || "Failed to create database entry" };
   }
 }
+
+export async function createJournalEntry(data: {
+  entry_date: string;
+  reference_no: string;
+  account_name: string;
+  description: string;
+  debit: number;
+  credit: number;
+}) {
+  try {
+    const res = await query(
+      `INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit]
+    );
+    revalidatePath("/journals");
+    return { success: true, id: res.rows[0].id };
+  } catch (error: any) {
+    console.error("Failed to create journal entry:", error);
+    return { success: false, error: error.message || "Failed to create journal entry" };
+  }
+}
