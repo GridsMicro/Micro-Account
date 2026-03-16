@@ -1,6 +1,9 @@
 "use server";
 
 import { query } from "@/lib/db";
+import { sql } from "@vercel/postgres";
+import { google } from "googleapis";
+import * as xlsx from "xlsx";
 import { revalidatePath } from "next/cache";
 import { googleSheets, googleDrive } from "@/lib/google-server";
 import { Readable } from "stream";
@@ -130,6 +133,43 @@ export async function exportJournalsToSheets() {
     }
     
     return { success: false, error: errorMsg };
+  }
+}
+
+// ฟังก์ชันส่งออกเป็น Excel (ดาวน์โหลดลงเครื่อง)
+export async function exportJournalsToExcel() {
+  try {
+    const { rows: entries } = await sql`
+      SELECT date, reference, description, debit_amount, credit_amount 
+      FROM journal_entries 
+      ORDER BY date DESC
+    `;
+
+    if (entries.length === 0) {
+      throw new Error("ไม่มีข้อมูลสำหรับส่งออก");
+    }
+
+    // สร้าง Header และข้อมูล
+    const data = entries.map(entry => ({
+      "วันที่": new Date(entry.date).toLocaleDateString('th-TH'),
+      "เอกสารอ้างอิง": entry.reference,
+      "รายการ": entry.description,
+      "เดบิต (Dr.)": entry.debit_amount || 0,
+      "เครดิต (Cr.)": entry.credit_amount || 0
+    }));
+
+    // สร้าง Workbook
+    const worksheet = xlsx.utils.json_to_sheet(data);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, "Journal Entries");
+
+    // แปลงเป็น Base64 หรือ Buffer
+    const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const base64 = buffer.toString("base64");
+
+    return { success: true, data: base64, filename: `Journal_Export_${new Date().toISOString().split('T')[0]}.xlsx` };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
