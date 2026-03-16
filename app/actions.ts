@@ -52,20 +52,19 @@ export async function exportJournalsToSheets() {
     const memberRes = await query("SELECT email FROM members WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
     const targetEmail = memberRes.rows[0]?.email || "grids@microtronic.biz";
 
-    // 6. ตั้งค่าสิทธิ์แชร์ตรงไปที่ผู้ใช้ (แบบ Writer - แก้ไขได้)
+    // 6. ตั้งค่าสิทธิ์แบบใครมีลิงก์ก็ดูได้ (เพื่อเทสว่าสร้างไฟล์ได้ไหม)
     await googleDrive.permissions.create({
       fileId: spreadsheetId,
       requestBody: {
-        role: 'writer',
-        type: 'user',
-        emailAddress: targetEmail,
+        role: 'reader',
+        type: 'anyone',
       },
     });
 
     return { 
       success: true, 
       url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
-      message: `สร้างรายงานและแชร์ไปยัง ${targetEmail} สำเร็จแล้ว`
+      message: "สร้างรายงานสำเร็จ (แบบเปิดลิงก์)"
     };
   } catch (error: any) {
     console.error("Export Error:", error);
