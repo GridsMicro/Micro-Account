@@ -1,7 +1,8 @@
 import { query } from "@/lib/db";
-import { BookOpen, Plus, Search, Calendar, ChevronDown, Filter, FileSpreadsheet } from "lucide-react";
+import { BookOpen, Plus, Calendar, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import JournalRowActions from "./JournalRowActions";
 
 export const dynamic = 'force-dynamic';
 
@@ -72,11 +73,12 @@ export default async function JournalsPage() {
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">ชื่อบัญชีและคำอธิบาย</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">เดบิต (Dr.)</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">เครดิต (Cr.)</th>
+                    <th className="px-4 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-28">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {entries.length > 0 ? entries.map((entry: any) => (
-                    <tr key={entry.id} className="hover:bg-blue-50/30 transition-colors">
+                    <tr key={entry.id} className="hover:bg-blue-50/30 transition-colors group">
                       <td className="px-6 py-4 text-sm font-bold text-gray-700">
                          {entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('th-TH') : '-'}
                       </td>
@@ -97,10 +99,11 @@ export default async function JournalsPage() {
                       <td className="px-6 py-4 text-right font-bold text-green-700">
                          {Number(entry.credit) > 0 ? `฿${Number(entry.credit).toLocaleString()}` : '-'}
                       </td>
+                      <JournalRowActions entry={entry} />
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={5} className="py-24 text-center text-gray-400 font-bold italic">
+                      <td colSpan={6} className="py-24 text-center text-gray-400 font-bold italic">
                          ยังไม่มีการบันทึกรายการบัญชีรายวัน
                       </td>
                     </tr>

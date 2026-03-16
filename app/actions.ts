@@ -193,3 +193,39 @@ export async function createJournalEntry(data: {
     return { success: false, error: error.message || "Failed to create journal entry" };
   }
 }
+
+// ลบรายการบัญชีรายวัน
+export async function deleteJournalEntry(id: number) {
+  try {
+    await query(`DELETE FROM journal_entries WHERE id = $1`, [id]);
+    revalidatePath("/journals");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// แก้ไขรายการบัญชีรายวัน
+export async function updateJournalEntry(id: number, data: {
+  entry_date: string;
+  reference_no: string;
+  account_name: string;
+  description: string;
+  debit: number;
+  credit: number;
+  receipt_url?: string | null;
+}) {
+  try {
+    await query(
+      `UPDATE journal_entries 
+       SET entry_date=$1, reference_no=$2, account_name=$3, description=$4, debit=$5, credit=$6, receipt_url=$7
+       WHERE id=$8`,
+      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit, data.receipt_url || null, id]
+    );
+    revalidatePath("/journals");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
