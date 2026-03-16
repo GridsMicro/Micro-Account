@@ -3,6 +3,51 @@
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { googleSheets, googleDrive } from "@/lib/google-server";
+import { Readable } from "stream";
+
+/**
+ * Server Action: อัปโหลดไฟล์จากเครื่องขึ้น Google Drive (Autonomous Storage)
+ */
+export async function uploadToGoogleDrive(base64Data: string, fileName: string, mimeType: string) {
+  try {
+    // 1. แปลงไฟล์จาก Base64 เป็น Buffer
+    const buffer = Buffer.from(base64Data.split(",")[1] || base64Data, "base64");
+    const stream = Readable.from(buffer);
+
+    // 2. ยิงขึ้น Drive
+    const response = await googleDrive.files.create({
+      requestBody: {
+        name: `Receipt_${Date.now()}_${fileName}`,
+        mimeType: mimeType,
+      },
+      media: {
+        mimeType: mimeType,
+        body: stream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    const fileId = response.data.id;
+
+    // 3. ปรับสิทธิ์ให้ดูได้ (หรือแชร์เฉพาะคนตามระบบเรา)
+    await googleDrive.permissions.create({
+      fileId: fileId!,
+      requestBody: {
+        role: "reader",
+        type: "anyone",
+      },
+    });
+
+    return { 
+      success: true, 
+      url: `https://drive.google.com/file/d/${fileId}/view`,
+      fileName: fileName 
+    };
+  } catch (error: any) {
+    console.error("Upload Error:", error);
+    return { success: false, error: error.message };
+  }
+}
 
 // ส่งออกรายการสมุดรายวันไปยัง Google Sheets
 export async function exportJournalsToSheets() {

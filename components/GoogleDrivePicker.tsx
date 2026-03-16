@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { FolderOpen, X, ExternalLink, CheckCircle, Upload } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { FolderOpen, X, ExternalLink, CheckCircle, Upload, MonitorUp } from "lucide-react";
+import { uploadToGoogleDrive } from "@/app/actions";
 
 interface GoogleDrivePickerProps {
   value?: string;
@@ -24,6 +25,35 @@ const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
 export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDrivePickerProps) {
   const [loading, setLoading] = useState(false);
   const [pickerFileName, setPickerFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- ฟังก์ชันอัปโหลดจากเครื่อง ---
+  const handleLocalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    try {
+      // อ่านไฟล์เป็น Base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const res = await uploadToGoogleDrive(base64, file.name, file.type);
+        
+        if (res.success && res.url) {
+          setPickerFileName(file.name);
+          onChange(res.url, file.name);
+        } else {
+          alert("❌ อัปโหลดไม่สำเร็จ: " + res.error);
+        }
+        setLoading(false);
+      };
+    } catch (err) {
+      console.error("Local upload error:", err);
+      setLoading(false);
+    }
+  };
 
   const loadGoogleAPIs = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
@@ -102,15 +132,15 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
         <CheckCircle size={18} className="text-green-600 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-green-800 truncate">
-            {pickerFileName || "ไฟล์แนบ (Google Drive)"}
+            {pickerFileName || "ไฟล์ที่เลือกไว้"}
           </p>
           <a
             href={value}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
+            className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-0.5 font-bold"
           >
-            <ExternalLink size={10} /> เปิดดูไฟล์ใน Google Drive
+            <ExternalLink size={10} /> เปิดดูไฟล์ที่เก็บไว้ใน Google Drive
           </a>
         </div>
         <button
@@ -125,35 +155,54 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
   }
 
   return (
-    <div className="flex gap-2">
-      {/* Google Drive Picker */}
-      <button
-        type="button"
-        onClick={openPicker}
-        disabled={loading}
-        className="flex-1 h-11 border-2 border-dashed border-blue-300 rounded flex items-center justify-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-500 transition-all disabled:opacity-50"
-      >
-        {loading ? (
-          <span className="animate-spin text-lg">⏳</span>
-        ) : (
-          <>
-            <FolderOpen size={18} />
-            เลือกจาก Google Drive
-          </>
-        )}
-      </button>
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-2">
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleLocalUpload}
+          className="hidden"
+          accept="image/*,application/pdf"
+        />
 
-      {/* Manual URL paste fallback */}
-      <div className="relative flex-1">
+        {/* Local Machine Upload */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
+          className="flex-1 h-12 bg-white border-2 border-blue-600 rounded-xl flex items-center justify-center gap-2 text-sm font-black text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-50"
+        >
+          {loading ? (
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <MonitorUp size={18} />
+          )}
+          {loading ? "กำลังอัพโหลด..." : "อัพโหลดจากเครื่อง"}
+        </button>
+
+        {/* Google Drive Picker */}
+        <button
+          type="button"
+          onClick={openPicker}
+          disabled={loading}
+          className="flex-1 h-12 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-gray-500 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-50"
+        >
+          <FolderOpen size={18} />
+          เลือกจาก Drive
+        </button>
+      </div>
+
+      <div className="relative">
         <input
           type="url"
-          placeholder="หรือวาง URL ลิงค์ไฟล์ที่นี่..."
+          placeholder="หรือวาง URL ลิงค์ไฟล์ตรงนี้..."
           onChange={(e) => {
-            if (e.target.value) onChange(e.target.value, "ลิงค์อ้างอิง");
+            if (e.target.value) onChange(e.target.value, "Link อ้างอิง");
           }}
-          className="w-full h-11 px-3 pr-10 bg-gray-50 border border-gray-300 rounded text-sm focus:border-blue-500 focus:bg-white"
+          className="w-full h-11 px-4 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all italic"
         />
-        <Upload size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Upload size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
       </div>
     </div>
   );
