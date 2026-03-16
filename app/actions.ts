@@ -118,12 +118,15 @@ export async function exportJournalsToSheets() {
     };
   } catch (error: any) {
     console.error("❌ Google API Error:", error);
-    let errorMsg = "เกิดข้อผิดพลาด: " + error.message;
     
-    if (error.message.includes("permission") || error.message.includes("access_denied")) {
-      errorMsg = "❌ สิทธิ์ไม่พอ: กรุณาเช็คว่า Google Sheets API และ Drive API ถูกเปิด (Enable) ใน Google Cloud Console หรือยัง?";
-    } else if (error.message.includes("invalid_grant") || error.message.includes("Key unreadable")) {
-      errorMsg = "❌ กุญแจ JSON ผิดพลาด: กรุณาเช็คค่าใน GOOGLE_SERVICE_ACCOUNT_JSON บน Vercel ว่าถูกต้องครบถ้วนไหม (มีปีกกาครบไหม)";
+    // พ่น Raw Error ออกมาให้พี่เห็นชัดๆ
+    let rawMsg = error.message;
+    let errorMsg = "❌ เกิดปัญหา: " + rawMsg;
+    
+    if (rawMsg.includes("permission") || rawMsg.includes("access_denied")) {
+      errorMsg = "❌ สิทธิ์ไม่พอ (Permission Denied): กรุณาเช็คว่า Google API เปิดแล้ว และ Service Account มีสิทธิ์สร้างไฟล์ [" + rawMsg + "]";
+    } else if (rawMsg.includes("invalid_grant")) {
+      errorMsg = "❌ กุญแจ JSON มีปัญหา: กรุณาตรวจสอบค่าใน Vercel [" + rawMsg + "]";
     }
     
     return { success: false, error: errorMsg };
