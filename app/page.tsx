@@ -32,35 +32,9 @@ export default async function Home() {
   const { company, stats } = data;
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      {/* Header */}
-      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-              <Building2 size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Micro-Account</h1>
-              <p className="text-[10px] text-blue-600 uppercase font-bold tracking-widest leading-none">Powered by Antigravity</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-px bg-slate-200 mx-2" />
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-800">Administrator</p>
-              <p className="text-xs text-slate-500">Global Control Mode</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden shadow-inner">
-              <Users size={20} className="text-slate-400" />
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Content */}
-      <div className="max-w-7xl mx-auto px-6 py-10">
+    <main className="min-h-screen py-10">
+      {/* Content Area */}
+      <div className="max-w-7xl mx-auto px-6">
         <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
           {/* Decorative shapes */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -mr-20 -mt-20 blur-3xl transition-all duration-700 group-hover:scale-125" />
