@@ -1,5 +1,5 @@
 import { query } from "@/lib/db";
-import { ScrollText, Plus, Printer, CheckCircle2, ChevronDown, ListFilter, MapPin } from "lucide-react";
+import { ScrollText, Plus, Printer, CheckCircle2, ChevronDown, ListFilter, MapPin, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +25,13 @@ export default async function PaymentVouchersPage() {
                <ScrollText className="text-blue-600" /> ใบสำคัญจ่าย (Payment Vouchers)
             </h1>
             <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-              <span>พิมพ์เอกสารสรุปยอดปลายเดือนสำหรับการทำบัญชี</span>
+              <span>พิมพ์เอกสารสรุปยอดปลายเดือนสำหรับการทำบัญชี และลงสมุดรายวัน (Journal)</span>
             </div>
           </div>
           <div className="flex gap-2">
-             <button className="h-11 px-6 bg-white border border-gray-300 text-gray-700 font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm hover:bg-gray-50">
-                <ListFilter size={18} /> Filter
-             </button>
+             <Link href="/journals" className="h-11 px-6 bg-white border border-gray-300 text-blue-700 font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm hover:bg-blue-50">
+                <BookOpen size={18} /> สมุดบัญชีรายวัน
+             </Link>
              <button className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm">
                 <Plus size={18} />
                 ออกใบสำคัญจ่าย
@@ -103,6 +103,9 @@ export default async function PaymentVouchersPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2">
+                            <button className="px-3 py-1.5 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white rounded transition-all shadow-sm flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest" title="ลงบันทึกสมุดรายวัน">
+                               <BookOpen size={12} /> Post GL
+                            </button>
                             <button className="p-2 border border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white rounded transition-all shadow-sm" title="พิมพ์ใบสำคัญจ่าย">
                                <Printer size={14} />
                             </button>

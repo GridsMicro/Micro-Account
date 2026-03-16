@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   UserCog,
   Repeat,
-  ScrollText
+  ScrollText,
+  BookOpen
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const menuItems = [
   { icon: Repeat, label: "รอบบิลอัตโนมัติ", href: "/recurring" },
   { icon: CreditCard, label: "การชำระเงิน", href: "/payments" },
   { icon: ScrollText, label: "ใบสำคัญจ่าย", href: "/vouchers" },
+  { icon: BookOpen, label: "สมุดรายวันทั่วไป", href: "/journals" },
   { icon: Package, label: "คลังสินค้า", href: "/inventory" },
   { icon: Users, label: "ลูกค้า/คู่ค้า", href: "/contacts" },
   { icon: BarChart3, label: "รายงานภาษี", href: "/tax-reports" },
