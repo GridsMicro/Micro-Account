@@ -14,8 +14,13 @@ const authOptions: any = {
 
 if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
   // สำหรับ Production บน Vercel: ใช้ JSON String จาก Env Var
-  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  authOptions.credentials = credentials;
+  try {
+    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    authOptions.credentials = credentials;
+  } catch (err) {
+    console.error("❌ GOOGLE_SERVICE_ACCOUNT_JSON Parse Error:", err);
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not a valid JSON string. Please check Vercel environment variables.");
+  }
 } else {
   // สำหรับ Local: ใช้ไฟล์ JSON ในเครื่อง
   authOptions.keyFile = SERVICE_ACCOUNT_FILE;
