@@ -2,7 +2,72 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { googleSheets, googleDrive } from "@/lib/google-server";
 
+// ส่งออกรายการสมุดรายวันไปยัง Google Sheets
+export async function exportJournalsToSheets() {
+  try {
+    // 1. ดึงข้อมูลจาก DB
+    const res = await query('SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC');
+    const entries = res.rows;
+
+    if (entries.length === 0) {
+      throw new Error("ไม่มีข้อมูลให้ส่งออก");
+    }
+
+    // 2. สร้าง Spreadsheet ใหม่
+    const spreadsheet = await googleSheets.spreadsheets.create({
+      requestBody: {
+        properties: {
+          title: `Micro Account - รายงานสมุดรายวัน (${new Date().toLocaleDateString('th-TH')})`,
+        },
+      },
+    });
+
+    const spreadsheetId = spreadsheet.data.spreadsheetId;
+    if (!spreadsheetId) throw new Error("ไม่สามารถสร้างไฟล์ได้");
+
+    // 3. เตรียมข้อมูล
+    const values = [
+      ["วันที่", "เลขที่เอกสาร", "ชื่อบัญชี", "หมายเหตุ", "เดบิต (Dr.)", "เครดิต (Cr.)"],
+      ...entries.map((e: any) => [
+        new Date(e.entry_date).toLocaleDateString('th-TH'),
+        e.reference_no || "-",
+        e.account_name,
+        e.description,
+        Number(e.debit) || 0,
+        Number(e.credit) || 0
+      ])
+    ];
+
+    // 4. เขียนข้อมูลลงใน Sheet
+    await googleSheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: 'Sheet1!A1',
+      valueInputOption: 'RAW',
+      requestBody: { values },
+    });
+
+    // 5. ตั้งค่าสิทธิ์ให้ "ใครก็ได้ที่มีลิงค์ดูได้" (หรือแชร์เฉพาะคน)
+    // หมายเหตุ: โดยปกติ Service Account จะเป็นเจ้าของไฟล์ ถ้าอยากให้เราเห็นต้องแชร์
+    await googleDrive.permissions.create({
+      fileId: spreadsheetId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+    });
+
+    return { 
+      success: true, 
+      url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+      message: "สร้างรายงานใน Google Sheets สำเร็จแล้ว"
+    };
+  } catch (error: any) {
+    console.error("Export Error:", error);
+    return { success: false, error: error.message };
+  }
+}
 export async function updateContact(id: string, data: {
   name: string;
   type: string;

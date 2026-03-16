@@ -1,8 +1,9 @@
 import { query } from "@/lib/db";
-import { BookOpen, Plus, Calendar, FileSpreadsheet } from "lucide-react";
+import { BookOpen, Plus, Calendar } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import JournalRowActions from "./JournalRowActions";
+import ExportButton from "./ExportButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -34,9 +35,7 @@ export default async function JournalsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-             <button className="h-11 px-6 bg-white border border-gray-300 text-gray-700 font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm hover:bg-gray-50 opacity-50 cursor-not-allowed">
-                <FileSpreadsheet size={18} className="text-green-600" /> Export Excel
-             </button>
+             <ExportButton />
              <Link href="/journals/new" className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm">
                 <Plus size={18} />
                 ลงบัญชีใหม่ (New Entry)
