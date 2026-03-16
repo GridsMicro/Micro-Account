@@ -33,7 +33,7 @@ export default async function ContactsPage() {
           </div>
           <Link href="/contacts/new" className="h-16 px-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[2rem] shadow-2xl shadow-indigo-900/40 transition-all flex items-center gap-3 active:scale-95 group text-lg">
             <Plus size={24} className="group-hover:rotate-12 transition-transform" />
-            เพิ่มรายชื่อใหม่่
+            เพิ่มรายชื่อใหม่
           </Link>
         </div>
 
