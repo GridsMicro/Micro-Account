@@ -80,3 +80,27 @@ export async function updateQuotation(id: string, data: {
     return { success: false, error: "Failed to update database" };
   }
 }
+
+export async function updateCompanySettings(data: {
+  name: string;
+  tax_id: string;
+  phone: string;
+  email: string;
+  address: string;
+}) {
+  try {
+    await query(
+      `UPDATE company_settings 
+       SET name = $1, tax_id = $2, phone = $3, email = $4, address = $5 
+       WHERE id = (SELECT id FROM company_settings LIMIT 1)`,
+      [data.name, data.tax_id, data.phone, data.email, data.address]
+    );
+    revalidatePath("/settings");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update company settings:", error);
+    return { success: false, error: "Failed to update database" };
+  }
+}
+

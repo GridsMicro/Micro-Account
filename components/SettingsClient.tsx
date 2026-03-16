@@ -14,6 +14,8 @@ import {
   Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { updateCompanySettings } from "@/app/actions";
+import { useRouter } from "next/navigation";
 
 const menuItems = [
   { id: 'company', icon: Building2, label: "ข้อมูลบริษัท (Profile)" },
@@ -23,7 +25,28 @@ const menuItems = [
 ];
 
 export default function SettingsClient({ initialData }: { initialData: any }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('company');
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: initialData?.name || "",
+    tax_id: initialData?.tax_id || "",
+    phone: initialData?.phone || "",
+    email: initialData?.email || "",
+    address: initialData?.address || "",
+  });
+
+  const handleSave = async () => {
+    setLoading(true);
+    const res = await updateCompanySettings(formData);
+    setLoading(false);
+    if (res.success) {
+      alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+      router.refresh();
+    } else {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -61,8 +84,12 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                <h3 className="font-bold text-gray-800 text-lg uppercase tracking-tight">
                   {menuItems.find(m => m.id === activeTab)?.label}
                </h3>
-               <button className="h-10 px-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded flex items-center gap-2 text-sm transition-all shadow-sm">
-                  <Save size={16} /> บันทึกข้อมูล
+               <button 
+                onClick={handleSave}
+                disabled={loading}
+                className="h-10 px-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded flex items-center gap-2 text-sm transition-all shadow-sm disabled:opacity-50"
+               >
+                  <Save size={16} /> {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
                </button>
             </div>
 
@@ -72,23 +99,48 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                        <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">ชื่อบริษัท (ไทย)</label>
-                          <input type="text" defaultValue={initialData?.name} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" />
+                          <input 
+                            type="text" 
+                            value={formData.name} 
+                            onChange={e => setFormData({...formData, name: e.target.value})}
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" 
+                          />
                        </div>
                        <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">TAX ID (เลขที่ผู้เสียภาษี)</label>
-                          <input type="text" defaultValue={initialData?.tax_id} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" />
+                          <input 
+                            type="text" 
+                            value={formData.tax_id} 
+                            onChange={e => setFormData({...formData, tax_id: e.target.value})}
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" 
+                          />
                        </div>
                        <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">เบอร์โทรศัพท์</label>
-                          <input type="text" defaultValue={initialData?.phone} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" />
+                          <input 
+                            type="text" 
+                            value={formData.phone} 
+                            onChange={e => setFormData({...formData, phone: e.target.value})}
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" 
+                          />
                        </div>
                        <div className="space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">อีเมลติดต่อ</label>
-                          <input type="email" defaultValue={initialData?.email} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" />
+                          <input 
+                            type="email" 
+                            value={formData.email} 
+                            onChange={e => setFormData({...formData, email: e.target.value})}
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium" 
+                          />
                        </div>
                        <div className="md:col-span-2 space-y-2">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">ที่อยู่จดทะเบียน (Address)</label>
-                          <textarea rows={4} defaultValue={initialData?.address} className="w-full p-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium resize-none leading-relaxed"></textarea>
+                          <textarea 
+                            rows={4} 
+                            value={formData.address} 
+                            onChange={e => setFormData({...formData, address: e.target.value})}
+                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-medium resize-none leading-relaxed"
+                          ></textarea>
                        </div>
                     </div>
                  </div>
