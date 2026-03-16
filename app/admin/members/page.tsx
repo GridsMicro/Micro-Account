@@ -31,9 +31,9 @@ export default async function MembersPage() {
             </h1>
             <p className="text-gray-500 text-sm mt-1">จัดการผู้ใช้งานและสิทธิ์การเข้าถึงระบบ</p>
           </div>
-          <button className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm">
+          <Link href="/admin/members/new" className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm">
             <Plus size={18} /> เพิ่มสมาชิกใหม่
-          </button>
+          </Link>
         </div>
 
         {/* Member Table Card */}
