@@ -5,7 +5,7 @@ import { BookOpen, Save, ChevronRight, Plus, Trash2, ArrowRightLeft } from "luci
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { createJournalEntry } from "@/app/actions"; // Assuming this will exist
+import { createJournalEntry } from "@/app/actions";
 
 export default function NewJournalClient() {
   const router = useRouter();
@@ -16,7 +16,6 @@ export default function NewJournalClient() {
   const [referenceNo, setReferenceNo] = useState("");
   const [description, setDescription] = useState("");
   
-  // Rows for accounts
   const [lines, setLines] = useState([
     { id: 1, account_name: "", type: "debit", amount: "" },
     { id: 2, account_name: "", type: "credit", amount: "" }
@@ -49,14 +48,13 @@ export default function NewJournalClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isBalanced) {
-      alert("ยอดรวมด้านเดบิต (Dr.) และเครดิต (Cr.) ต้องเท่ากันและมากกว่า 0");
+      alert("ยอดรวมด้านรายจ่ายและรายรับต้องเท่ากัน และมากกว่า 0 บาท");
       return;
     }
     
     setLoading(true);
 
     try {
-      // Loop create lines
       for (const line of lines) {
         if (!line.account_name || !line.amount) continue;
 
@@ -77,7 +75,7 @@ export default function NewJournalClient() {
       router.refresh();
 
     } catch (error: any) {
-      alert("เกิดข้อผิดพลาดในการบันทึกบัญชี: " + error.message);
+      alert("เกิดข้อผิดพลาดในการบันทึกรายการ: " + error.message);
       setLoading(false);
     }
   };
@@ -90,12 +88,12 @@ export default function NewJournalClient() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-2xl font-bold text-gray-800 tracking-tight flex items-center gap-3">
-                 <BookOpen className="text-blue-600" /> ลงรายการบัญชีรายวัน (New Entry)
+                 <BookOpen className="text-blue-600" /> บันทึกรายการรายรับ-รายจ่าย
               </h1>
-              <div className="flex items-center gap-2 text-sm text-gray-400 mt-1 uppercase tracking-widest font-black text-[10px]">
-                 <Link href="/journals" className="text-blue-500 hover:underline">General Journal</Link>
-                 <ChevronRight size={10} />
-                 <span>New Entry</span>
+              <div className="flex items-center gap-2 text-sm text-gray-400 mt-1 font-medium">
+                 <Link href="/journals" className="text-blue-500 hover:underline">สมุดรายวัน</Link>
+                 <ChevronRight size={12} />
+                 <span>เพิ่มรายการใหม่</span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -105,19 +103,27 @@ export default function NewJournalClient() {
               <button 
                 type="submit" 
                 disabled={loading || !isBalanced}
-                className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 shadow-sm transition-all text-sm disabled:opacity-50"
+                className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 shadow-sm transition-all text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Save size={18} /> {loading ? "กำลังบันทึก..." : "โพสต์ลงบัญชี (Post GL)"}
+                <Save size={18} /> {loading ? "กำลังบันทึก..." : "บันทึกรายการ"}
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Tip Banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6 text-sm text-blue-800">
+            <p className="font-bold mb-1">💡 วิธีใช้งาน:</p>
+            <p>• บรรทัด <span className="font-bold text-blue-700">รายจ่าย</span> → ใส่ชื่อค่าใช้จ่าย เช่น <span className="italic">ค่าไปรษณีย์</span>, <span className="italic">ค่าน้ำมัน</span>, <span className="italic">ค่าโทรศัพท์</span></p>
+            <p>• บรรทัด <span className="font-bold text-green-700">จ่ายออกจาก</span> → ใส่ช่องทางที่จ่าย เช่น <span className="italic">เงินสด</span>, <span className="italic">ธนาคารกสิกรไทย</span></p>
+            <p>• ทั้งสองบรรทัด <span className="font-bold text-red-600">ต้องมียอดเงินเท่ากัน</span> ถึงจะกดบันทึกได้</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
              {/* General Info */}
-             <div className="col-span-1 lg:col-span-4 bg-white rounded shadow-sm border border-gray-200 p-6 space-y-6">
+             <div className="bg-white rounded shadow-sm border border-gray-200 p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">วันที่ (Date)</label>
+                   <div className="space-y-2">
+                      <label className="text-sm font-bold text-gray-600">📅 วันที่เกิดรายการ</label>
                       <input 
                         type="date" 
                         required
@@ -126,24 +132,24 @@ export default function NewJournalClient() {
                         className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold" 
                       />
                    </div>
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">เอกสารอ้างอิง (Ref. No)</label>
+                   <div className="space-y-2">
+                      <label className="text-sm font-bold text-gray-600">🧾 เลขที่ใบเสร็จ / เอกสารอ้างอิง</label>
                       <input 
                         type="text" 
                         value={referenceNo}
                         onChange={e => setReferenceNo(e.target.value)}
-                        placeholder="เช่น PV-001, INV-001"
+                        placeholder="เช่น เลขที่ใบเสร็จ, PV-001"
                         className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm" 
                       />
                    </div>
-                   <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">คำอธิบายรายการ (Description)</label>
+                   <div className="space-y-2">
+                      <label className="text-sm font-bold text-gray-600">📝 หมายเหตุ / คำอธิบาย</label>
                       <input 
                         type="text" 
                         required
                         value={description}
                         onChange={e => setDescription(e.target.value)}
-                        placeholder="คำอธิบายสั้นๆ ของรายการค้านี้"
+                        placeholder="เช่น ค่าส่งพัสดุลูกค้า มี.ค. 69"
                         className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm" 
                       />
                    </div>
@@ -151,17 +157,17 @@ export default function NewJournalClient() {
              </div>
 
              {/* Booking Lines */}
-             <div className="col-span-1 lg:col-span-4 bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-                <div className="bg-blue-50/50 px-6 py-4 border-b border-gray-200 font-bold text-blue-900 flex items-center justify-between">
+             <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 font-bold text-gray-800 flex items-center justify-between">
                    <div className="flex items-center gap-2">
-                      <ArrowRightLeft size={18} /> รายการผังบัญชี (Account Lines)
+                      <ArrowRightLeft size={18} className="text-blue-500" /> รายการค่าใช้จ่าย
                    </div>
                    <button 
                       type="button" 
                       onClick={addLine}
-                      className="text-xs flex items-center gap-1 bg-white border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition-colors uppercase tracking-widest"
+                      className="text-sm flex items-center gap-1 bg-white border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-100 transition-colors font-bold"
                    >
-                      <Plus size={12} /> เพิ่มรายการบรรทัด
+                      <Plus size={14} /> เพิ่มบรรทัด
                    </button>
                 </div>
 
@@ -169,53 +175,51 @@ export default function NewJournalClient() {
                    <table className="w-full text-left">
                      <thead>
                        <tr className="bg-gray-50/50 border-b border-gray-200">
-                         <th className="px-6 py-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">ชื่อบัญชี (Account)</th>
-                         <th className="px-6 py-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] w-32">ประเภท (Dr/Cr)</th>
-                         <th className="px-6 py-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] w-48 text-right">จำนวนเงิน (Amount)</th>
-                         <th className="px-6 py-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] w-16 text-center"></th>
+                         <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">ชื่อบัญชี / รายการ</th>
+                         <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-44">ประเภท</th>
+                         <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-48 text-right">จำนวนเงิน (บาท)</th>
+                         <th className="px-6 py-3 w-16 text-center"></th>
                        </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100">
-                        {lines.map((line, index) => (
-                          <tr key={line.id}>
-                            <td className="px-4 py-2">
+                        {lines.map((line) => (
+                          <tr key={line.id} className={cn(line.type === 'credit' ? "bg-green-50/30" : "bg-blue-50/20")}>
+                            <td className="px-4 py-3">
                                <input 
                                  type="text" 
                                  required
-                                 placeholder="ค้นหาชื่อบัญชี หรือ รหัสบัญชี"
+                                 placeholder={line.type === 'debit' ? "เช่น ค่าไปรษณีย์, ค่าน้ำมัน, ค่าโฆษณา" : "เช่น เงินสด, ธนาคารกสิกรไทย"}
                                  value={line.account_name}
                                  onChange={e => updateLine(line.id, 'account_name', e.target.value)}
-                                 className={cn(
-                                   "w-full h-10 px-3 border border-transparent hover:border-gray-300 focus:border-blue-500 bg-transparent focus:bg-gray-50 rounded text-sm font-bold transition-all",
-                                   line.type === 'credit' ? "ml-8" : ""
-                                 )} 
+                                 className="w-full h-10 px-3 border border-gray-200 bg-white focus:border-blue-500 rounded text-sm font-bold transition-all" 
                                />
                             </td>
-                            <td className="px-4 py-2">
+                            <td className="px-4 py-3">
                                <select 
                                  value={line.type}
                                  onChange={e => updateLine(line.id, 'type', e.target.value)}
                                  className={cn(
-                                    "w-full h-10 px-3 bg-transparent border border-transparent hover:border-gray-300 rounded text-xs font-black uppercase tracking-widest focus:border-blue-500 focus:bg-gray-50",
-                                    line.type === 'debit' ? "text-blue-600" : "text-green-600"
+                                    "w-full h-10 px-3 bg-white border border-gray-200 rounded text-sm font-bold focus:border-blue-500",
+                                    line.type === 'debit' ? "text-blue-700" : "text-green-700"
                                  )}
                                >
-                                  <option value="debit">เดบิต (Dr.)</option>
-                                  <option value="credit">เครดิต (Cr.)</option>
+                                  <option value="debit">💸 รายจ่าย (ค่าใช้จ่าย)</option>
+                                  <option value="credit">🏦 จ่ายออกจาก (เงินสด/ธนาคาร)</option>
                                </select>
                             </td>
-                            <td className="px-4 py-2 text-right">
+                            <td className="px-4 py-3 text-right">
                                <input 
                                  type="number" 
                                  required
                                  min="0"
                                  step="0.01"
+                                 placeholder="0.00"
                                  value={line.amount}
                                  onChange={e => updateLine(line.id, 'amount', e.target.value)}
-                                 className="w-full text-right h-10 px-3 bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-gray-50 rounded text-sm font-black transition-all" 
+                                 className="w-full text-right h-10 px-3 bg-white border border-gray-200 focus:border-blue-500 rounded text-sm font-black transition-all" 
                                />
                             </td>
-                            <td className="px-4 py-2 text-center">
+                            <td className="px-4 py-3 text-center">
                                <button 
                                  type="button" 
                                  onClick={() => removeLine(line.id)}
@@ -228,29 +232,30 @@ export default function NewJournalClient() {
                           </tr>
                         ))}
                      </tbody>
-                     <tfoot className="bg-gray-50/80 border-t-2 border-gray-200">
+                     <tfoot className="border-t-2 border-gray-200 bg-gray-50">
                         <tr>
-                          <td colSpan={2} className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">
-                             ยอดสรุปบัญชี (Total Balance)
+                          <td colSpan={2} className="px-6 py-4 text-right text-sm font-bold text-gray-600">
+                             ยอดรวมทั้งหมด
                           </td>
-                          <td className="px-6 py-4 flex flex-col items-end gap-1">
-                             <div className="flex items-center justify-between w-full max-w-[200px] text-sm">
-                                <span className="text-gray-500 font-bold text-xs">Dr.</span>
-                                <span className="font-mono font-bold text-blue-700">฿{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <td className="px-4 py-4">
+                             <div className="flex flex-col items-end gap-1">
+                                <div className="flex items-center justify-between w-full text-sm">
+                                   <span className="text-blue-600 font-bold text-xs">💸 รายจ่าย</span>
+                                   <span className="font-mono font-bold text-blue-700">฿{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex items-center justify-between w-full text-sm">
+                                   <span className="text-green-600 font-bold text-xs">🏦 จ่ายออกจาก</span>
+                                   <span className="font-mono font-bold text-green-700">฿{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="w-full h-0.5 bg-gray-200 mt-1 mb-1 relative">
+                                   <div className={cn("absolute inset-y-0 left-0 transition-all duration-500", isBalanced ? "w-full bg-green-500" : "bg-red-400", !isBalanced && totalDebit > 0 ? "w-1/2" : "")}></div>
+                                </div>
+                                {isBalanced ? (
+                                  <span className="text-xs text-green-600 font-bold">✅ ยอดถูกต้อง กดบันทึกได้เลย!</span>
+                                ) : (
+                                  <span className="text-xs text-red-500 font-bold">⚠️ ยอดสองฝั่งยังไม่เท่ากัน</span>
+                                )}
                              </div>
-                             <div className="flex items-center justify-between w-full max-w-[200px] text-sm">
-                                <span className="text-gray-500 font-bold text-xs">Cr.</span>
-                                <span className="font-mono font-bold text-green-700">฿{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                             </div>
-                             {/* Line Indicator */}
-                             <div className="w-full max-w-[200px] h-0.5 bg-gray-200 mt-1 mb-1 relative">
-                                <div className={cn("absolute inset-y-0 left-0 transition-all", isBalanced ? "w-full bg-green-500" : "w-1/2 bg-red-500")}></div>
-                             </div>
-                             {!isBalanced && (
-                               <span className="text-[10px] text-red-500 font-bold uppercase tracking-widest">
-                                  ผลรวม Dr. / Cr. ไม่ดุลกัน
-                               </span>
-                             )}
                           </td>
                           <td></td>
                         </tr>
