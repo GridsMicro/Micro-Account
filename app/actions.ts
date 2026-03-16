@@ -87,13 +87,31 @@ export async function updateCompanySettings(data: {
   phone: string;
   email: string;
   address: string;
+  bank_name?: string;
+  bank_account_name?: string;
+  bank_account_number?: string;
+  bank_branch?: string;
+  vat_rate?: number;
+  withholding_tax_rate?: number;
+  is_vat_registered?: boolean;
+  currency?: string;
+  invoice_prefix?: string;
+  quotation_prefix?: string;
 }) {
   try {
     await query(
       `UPDATE company_settings 
-       SET name = $1, tax_id = $2, phone = $3, email = $4, address = $5 
+       SET name = $1, tax_id = $2, phone = $3, email = $4, address = $5,
+           bank_name = $6, bank_account_name = $7, bank_account_number = $8, bank_branch = $9,
+           vat_rate = $10, withholding_tax_rate = $11, is_vat_registered = $12,
+           currency = $13, invoice_prefix = $14, quotation_prefix = $15
        WHERE id = (SELECT id FROM company_settings LIMIT 1)`,
-      [data.name, data.tax_id, data.phone, data.email, data.address]
+      [
+        data.name, data.tax_id, data.phone, data.email, data.address,
+        data.bank_name, data.bank_account_name, data.bank_account_number, data.bank_branch,
+        data.vat_rate, data.withholding_tax_rate, data.is_vat_registered,
+        data.currency, data.invoice_prefix, data.quotation_prefix
+      ]
     );
     revalidatePath("/settings");
     revalidatePath("/");
