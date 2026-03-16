@@ -178,12 +178,13 @@ export async function createJournalEntry(data: {
   description: string;
   debit: number;
   credit: number;
+  receipt_url?: string | null;
 }) {
   try {
     const res = await query(
-      `INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit]
+      `INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit, receipt_url) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit, data.receipt_url || null]
     );
     revalidatePath("/journals");
     return { success: true, id: res.rows[0].id };

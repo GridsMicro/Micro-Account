@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Save, ChevronRight, Plus, Trash2, ArrowRightLeft } from "lucide-react";
+import { BookOpen, Save, ChevronRight, Plus, Trash2, ArrowRightLeft, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createJournalEntry } from "@/app/actions";
+import GoogleDrivePicker from "@/components/GoogleDrivePicker";
 
 export default function NewJournalClient() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function NewJournalClient() {
   );
   const [referenceNo, setReferenceNo] = useState("");
   const [description, setDescription] = useState("");
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
   
   const [lines, setLines] = useState([
     { id: 1, account_name: "", type: "debit", amount: "" },
@@ -64,7 +67,8 @@ export default function NewJournalClient() {
           account_name: line.account_name,
           description: description,
           debit: line.type === "debit" ? Number(line.amount) : 0,
-          credit: line.type === "credit" ? Number(line.amount) : 0
+          credit: line.type === "credit" ? Number(line.amount) : 0,
+          receipt_url: receiptUrl || null
         };
 
         const result = await createJournalEntry(payload);
@@ -154,6 +158,24 @@ export default function NewJournalClient() {
                       />
                    </div>
                 </div>
+             </div>
+
+             {/* Receipt Attachment Section */}
+             <div className="bg-white rounded shadow-sm border border-gray-200 p-6 space-y-3">
+                <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                   <Paperclip size={16} className="text-blue-500" />
+                   📎 แนบใบเสร็จ / ใบแจ้งหนี้ (จาก Google Drive)
+                </label>
+                <GoogleDrivePicker
+                   value={receiptUrl}
+                   onChange={(url, name) => { setReceiptUrl(url); setReceiptFileName(name); }}
+                   onClear={() => { setReceiptUrl(""); setReceiptFileName(""); }}
+                />
+                {!receiptUrl && (
+                  <p className="text-xs text-gray-400 italic">
+                    ไม่บังคับ — แต่แนะนำให้แนบใบเสร็จเพื่อใช้เป็นหลักฐานอ้างอิงทางบัญชี
+                  </p>
+                )}
              </div>
 
              {/* Booking Lines */}
