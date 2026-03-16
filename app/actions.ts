@@ -48,20 +48,24 @@ export async function exportJournalsToSheets() {
       requestBody: { values },
     });
 
-    // 5. ตั้งค่าสิทธิ์ให้ "ใครก็ได้ที่มีลิงค์ดูได้" (หรือแชร์เฉพาะคน)
-    // หมายเหตุ: โดยปกติ Service Account จะเป็นเจ้าของไฟล์ ถ้าอยากให้เราเห็นต้องแชร์
+    // 5. ดึงอีเมลผู้รับจากฐานข้อมูล (Member ที่เป็น admin คนแรก)
+    const memberRes = await query("SELECT email FROM members WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
+    const targetEmail = memberRes.rows[0]?.email || "grids@microtronic.biz";
+
+    // 6. ตั้งค่าสิทธิ์แชร์ตรงไปที่ผู้ใช้ (แบบ Writer - แก้ไขได้)
     await googleDrive.permissions.create({
       fileId: spreadsheetId,
       requestBody: {
-        role: 'reader',
-        type: 'anyone',
+        role: 'writer',
+        type: 'user',
+        emailAddress: targetEmail,
       },
     });
 
     return { 
       success: true, 
       url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
-      message: "สร้างรายงานใน Google Sheets สำเร็จแล้ว"
+      message: `สร้างรายงานและแชร์ไปยัง ${targetEmail} สำเร็จแล้ว`
     };
   } catch (error: any) {
     console.error("Export Error:", error);
