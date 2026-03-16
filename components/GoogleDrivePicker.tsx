@@ -34,7 +34,6 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
 
     setLoading(true);
     try {
-      // อ่านไฟล์เป็น Base64
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = async () => {
@@ -128,35 +127,37 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
 
   if (value) {
     return (
-      <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded p-3">
-        <CheckCircle size={18} className="text-green-600 shrink-0" />
+      <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl p-4 shadow-sm animate-in zoom-in-95">
+        <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-green-600 shrink-0">
+          <CheckCircle size={20} />
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-green-800 truncate">
-            {pickerFileName || "ไฟล์ที่เลือกไว้"}
+          <p className="text-sm font-black text-green-900 truncate">
+            {pickerFileName || "เตรียมพร้อมใช้งาน"}
           </p>
           <a
             href={value}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-0.5 font-bold"
+            className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-0.5 font-bold underline decoration-blue-200"
           >
-            <ExternalLink size={10} /> เปิดดูไฟล์ที่เก็บไว้ใน Google Drive
+            <ExternalLink size={10} /> ตรวจสอบไฟล์บน Cloud Storage
           </a>
         </div>
         <button
           type="button"
           onClick={() => { onClear(); setPickerFileName(""); }}
-          className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+          className="w-8 h-8 flex items-center justify-center text-red-300 hover:text-red-600 hover:bg-red-100/50 rounded-lg transition-all"
         >
-          <X size={16} />
+          <X size={18} />
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         {/* Hidden File Input */}
         <input
           type="file"
@@ -171,14 +172,14 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
-          className="flex-1 h-12 bg-white border-2 border-blue-600 rounded-xl flex items-center justify-center gap-2 text-sm font-black text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-50"
+          className="flex-1 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
         >
           {loading ? (
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           ) : (
-            <MonitorUp size={18} />
+            <MonitorUp size={20} />
           )}
-          {loading ? "กำลังอัพโหลด..." : "อัพโหลดจากเครื่อง"}
+          {loading ? "กำลังอัพโหลดเข้าระบบ..." : "อัพโหลดจากเครื่องคอมพิวเตอร์"}
         </button>
 
         {/* Google Drive Picker */}
@@ -186,23 +187,25 @@ export default function GoogleDrivePicker({ value, onChange, onClear }: GoogleDr
           type="button"
           onClick={openPicker}
           disabled={loading}
-          className="flex-1 h-12 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-gray-500 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-50"
+          className="flex-1 h-14 bg-white border-2 border-dashed border-gray-200 text-gray-400 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all disabled:opacity-50"
         >
-          <FolderOpen size={18} />
-          เลือกจาก Drive
+          <FolderOpen size={20} />
+          เลือกจากไฟล์ใน Google Drive
         </button>
       </div>
 
-      <div className="relative">
+      <div className="relative group">
+        <div className="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-blue-500 transition-colors">
+          <Upload size={14} />
+        </div>
         <input
           type="url"
-          placeholder="หรือวาง URL ลิงค์ไฟล์ตรงนี้..."
+          placeholder="หรือวาง URL ลิงค์ไฟล์ตรงนี้เพื่ออ้างอิง..."
           onChange={(e) => {
-            if (e.target.value) onChange(e.target.value, "Link อ้างอิง");
+            if (e.target.value) onChange(e.target.value, "Link อ้างอิงภายนอก");
           }}
-          className="w-full h-11 px-4 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all italic"
+          className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all italic text-gray-500 shadow-inner"
         />
-        <Upload size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
       </div>
     </div>
   );

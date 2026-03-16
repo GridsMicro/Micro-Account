@@ -18,7 +18,7 @@ export default function ExportButton() {
       const res = await exportJournalsToSheets();
       if (res.success && res.url) {
         setSuccessUrl(res.url);
-        // พยายามเปิดอัตโนมัติ (ถ้าโดนบล็อก จะมีปุ่มให้กดเองด้านล่าง)
+        // พยายามเปิดอัตโนมัติ
         window.open(res.url, "_blank");
       } else {
         setError(res.error || "ไม่ทราบสาเหตุแน่ชัด");
