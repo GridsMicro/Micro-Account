@@ -14,7 +14,8 @@ import {
   LogOut,
   Menu,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  X
 } from "lucide-react";
 import { useState } from "react";
 import { clsx, type ClassValue } from "clsx";

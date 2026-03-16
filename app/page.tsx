@@ -13,7 +13,9 @@ import {
   Plus,
   ArrowRight,
   ShieldCheck,
-  Zap
+  Zap,
+  BarChart3,
+  Settings
 } from "lucide-react";
 
 async function getDashboardData() {
