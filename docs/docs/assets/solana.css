@@ -1,0 +1,104 @@
+/* ============================================
+   Micro Account — Solana-inspired Dark Theme
+   บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด
+   ============================================ */
+
+:root {
+  --md-primary-fg-color: #9945FF;
+  --md-primary-fg-color--light: #14F195;
+  --md-primary-fg-color--dark: #7B2FBE;
+  --md-accent-fg-color: #14F195;
+}
+
+/* Gradient Hero Banner */
+.md-header {
+  background: linear-gradient(135deg, #1a0533 0%, #0d1b2a 50%, #0a1628 100%);
+  border-bottom: 2px solid #9945FF44;
+}
+
+/* Navbar glow */
+.md-header__title {
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  background: linear-gradient(90deg, #9945FF, #14F195);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Solana gradient hero text on index */
+.md-typeset h1 {
+  background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+
+/* Sidebar */
+[data-md-color-scheme="slate"] .md-sidebar {
+  background: #0d0d1a;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: #14F195 !important;
+  font-weight: 700;
+}
+
+/* Code blocks - dark terminal style */
+[data-md-color-scheme="slate"] .md-typeset pre {
+  background: #0d0d1a;
+  border: 1px solid #9945FF44;
+}
+
+/* Admonition colors */
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: #14F195;
+}
+
+.md-typeset .tip > .admonition-title,
+.md-typeset .tip > summary {
+  background-color: #14F19522;
+  border-color: #14F195;
+}
+
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: #9945FF;
+}
+
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary {
+  background-color: #9945FF22;
+  border-color: #9945FF;
+}
+
+/* Buttons */
+.md-typeset .md-button {
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.md-typeset .md-button--primary {
+  background: linear-gradient(135deg, #9945FF, #14F195);
+  border: none;
+  color: #fff;
+}
+
+/* Footer */
+.md-footer {
+  background: linear-gradient(135deg, #1a0533, #0a1628);
+  border-top: 1px solid #9945FF33;
+}
+
+/* Table */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: #9945FF22;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0d0d1a; }
+::-webkit-scrollbar-thumb { background: #9945FF; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #14F195; }

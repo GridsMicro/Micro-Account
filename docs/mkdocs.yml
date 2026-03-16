@@ -1,0 +1,105 @@
+site_name: Micro Account — คู่มือการใช้งาน
+site_url: https://gridsmicro.github.io/Micro-Account/
+site_author: บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด
+site_description: >-
+  ระบบบัญชีและบริหารธุรกิจอัจฉริยะ — คู่มือการใช้งานฉบับสมบูรณ์
+  สำหรับทีมงาน, นักบัญชี และผู้ดูแลระบบ
+
+repo_name: GridsMicro/Micro-Account
+repo_url: https://github.com/GridsMicro/Micro-Account
+edit_uri: edit/main/docs/docs/
+
+theme:
+  name: material
+  language: th
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: สลับเป็นโหมดสว่าง
+    - scheme: default
+      primary: deep purple
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: สลับเป็นโหมดมืด
+  font:
+    text: Noto Sans Thai
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  icon:
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/GridsMicro/Micro-Account
+    - icon: fontawesome/solid/globe
+      link: https://micro-account.vercel.app
+  generator: false
+  version:
+    provider: mike
+
+extra_css:
+  - assets/solana.css
+
+plugins:
+  - search:
+      lang: th
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - หน้าแรก: index.md
+  - เริ่มต้นใช้งาน:
+    - modules/getting-started.md
+    - modules/login.md
+  - โมดูลหลัก:
+    - modules/quotations.md
+    - modules/invoices.md
+    - modules/payments.md
+    - modules/inventory.md
+    - modules/contacts.md
+  - ระบบบัญชี:
+    - accounting/journals.md
+    - accounting/vouchers.md
+    - accounting/recurring.md
+    - accounting/tax.md
+  - ผู้ดูแลระบบ:
+    - admin/members.md
+    - admin/permissions.md
+  - อ้างอิง:
+    - reference/changelog.md

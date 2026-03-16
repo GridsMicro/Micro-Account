@@ -1,12 +1,17 @@
 # Sensitive Keys and Secrets
 microtronic-finance-bot-*.json
 service_account.json
+client_secret_*.json
 .env
+.env.local
+.env*.local
 *.db
 *.sqlite3
 **/microtronic-finance-bot-*.json
 **/service_account.json
+**/client_secret_*.json
 **/.env
+**/.env.local
 
 # Node / Next.js
 node_modules/

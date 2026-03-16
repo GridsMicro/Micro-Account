@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.4",
     "@vercel/postgres": "^0.10.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.36.0",
+    "googleapis": "^171.4.0",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "pg": "^8.20.0",
