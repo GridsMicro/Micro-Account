@@ -2,7 +2,7 @@ import { query } from "@/lib/db";
 import { 
   Building2, 
   Users, 
-  ReceiptThai, 
+  Receipt, 
   TrendingUp, 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -133,7 +133,7 @@ export default async function Home() {
           <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition-all group">
             <div className="flex items-center justify-between mb-6">
               <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                <ReceiptThai size={28} />
+                <Receipt size={28} />
               </div>
             </div>
             <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">ใบแจ้งหนี้รวม</h3>
