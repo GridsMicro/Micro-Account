@@ -1,7 +1,10 @@
+*.json
+microtronic-finance-bot-be4e2b265c1b.json
+database.db
 __pycache__/
-*.pyc
 .env
 venv/
+.nicegui/
 instance/
 *.sqlite3
 *.db
