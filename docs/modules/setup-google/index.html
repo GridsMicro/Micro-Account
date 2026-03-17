@@ -1,0 +1,921 @@
+
+<!doctype html>
+<html lang="th" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="คู่มือการใช้งานระบบบัญชีนวัตกรรมโลกใหม่ สำหรับธุรกิจยุค Autonomous">
+      
+      
+        <meta name="author" content="Microtronic Thailand">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>🔐 การตั้งค่า Google Workspace API - Micro-Account Expert Manual</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#google-workspace-api" class="md-skip">
+          ข้ามไปที่เนื้อหา
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="หัวข้อ">
+    <a href="../../.." title="Micro-Account Expert Manual" class="md-header__button md-logo" aria-label="Micro-Account Expert Manual" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Micro-Account Expert Manual
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              🔐 การตั้งค่า Google Workspace API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="ค้นหา" placeholder="ค้นหา" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="ค้นหา">
+        
+        <button type="reset" class="md-search__icon md-icon" title="ล้าง" aria-label="ล้าง" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            กำลังเริ่มต้นการค้นหา
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="แท็บ" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  หน้าแรก
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../invoice/" class="md-tabs__link">
+          
+  
+  
+  คู่มือการใช้งาน
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../settings.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  การตั้งค่าระบบ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ตัวนำทาง" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Micro-Account Expert Manual" class="md-nav__button md-logo" aria-label="Micro-Account Expert Manual" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Micro-Account Expert Manual
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    หน้าแรก
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    คู่มือการใช้งาน
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    คู่มือการใช้งาน
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../invoice/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    การออกใบแจ้งหนี้ (Invoice)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../payment.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    การรับชำระเงินและใบเสร็จ (Payment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tax.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ภาษีและการส่งออก (Tax & E-Filing)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../settings.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    การตั้งค่าระบบ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="สารบัญ">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      สารบัญ
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 ภาพรวมสิ่งที่ต้องทำ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-google-cloud-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 1 — Google Cloud Project
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-apis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 2 — เปิดใช้งาน APIs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-oauth-consent-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 3 — OAuth Consent Screen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-oauth-20-client-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 4 — สร้าง OAuth 2.0 Client ID
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 5 — สร้าง API Key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-environment-variables-vercel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 6 — ใส่ Environment Variables ใน Vercel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ขั้นตอนที่ 7 — ทดสอบ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔧 แก้ปัญหาที่พบบ่อย
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 แก้ปัญหาที่พบบ่อย">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#google-drive-error-client-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ปุ่ม Google Drive ขึ้น Error "Client ID ไม่ถูกต้อง"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#picker-error-access-blocked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ปุ่มเปิด Picker แล้วขึ้น Error "Access blocked"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ไฟล์แนบแล้วแต่เปิดไม่ได้
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="google-workspace-api">🔐 การตั้งค่า Google Workspace API</h1>
+<p>คู่มือนี้จะนำพาคุณตั้งค่า Google Cloud APIs สำหรับ Micro Account
+ตั้งแต่เริ่มต้นจนถึงการใช้งานจริงบน Vercel</p>
+<hr />
+<h2 id="_1">📋 ภาพรวมสิ่งที่ต้องทำ</h2>
+<div class="highlight"><pre><span></span><code>1. สร้าง Google Cloud Project (หรือใช้อันเดิม)
+2. เปิดใช้งาน APIs ที่จำเป็น
+3. สร้าง OAuth 2.0 Client ID
+4. สร้าง API Key
+5. ใส่ค่า Environment Variables ใน Vercel
+6. ทดสอบระบบ
+</code></pre></div>
+<hr />
+<h2 id="1-google-cloud-project">ขั้นตอนที่ 1 — Google Cloud Project</h2>
+<div class="admonition note">
+<p class="admonition-title">ใช้ Project ที่มีอยู่แล้วได้</p>
+<p>ถ้ามี Google Cloud Project อยู่แล้วข้ามขั้นตอนนี้ได้เลย</p>
+</div>
+<ol>
+<li>ไปที่ <a href="https://console.cloud.google.com">console.cloud.google.com</a></li>
+<li>คลิก <strong>"Select a project"</strong> ที่มุมบนซ้าย</li>
+<li>คลิก <strong>"New Project"</strong> หรือเลือก Project ที่มีอยู่</li>
+</ol>
+<hr />
+<h2 id="2-apis">ขั้นตอนที่ 2 — เปิดใช้งาน APIs</h2>
+<p>ไปที่ <strong>APIs &amp; Services → Library</strong> แล้วค้นหาและ Enable:</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>ใช้ทำอะไร</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Google Drive API</strong></td>
+<td>อ่าน/แสดงไฟล์ใบเสร็จ</td>
+</tr>
+<tr>
+<td><strong>Google Picker API</strong></td>
+<td>UI เลือกไฟล์จาก Drive</td>
+</tr>
+<tr>
+<td><strong>Gmail API</strong></td>
+<td>ส่งอีเมลบิลอัตโนมัติ</td>
+</tr>
+<tr>
+<td><strong>Google Sheets API</strong></td>
+<td>Export รายงานบัญชี</td>
+</tr>
+<tr>
+<td><strong>Google Calendar API</strong></td>
+<td>แจ้งเตือนรอบบิล</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-oauth-consent-screen">ขั้นตอนที่ 3 — OAuth Consent Screen</h2>
+<div class="admonition warning">
+<p class="admonition-title">ต้องทำก่อนสร้าง Client ID</p>
+</div>
+<ol>
+<li>ไปที่ <strong>APIs &amp; Services → OAuth consent screen</strong></li>
+<li>เลือก <strong>User Type: Internal</strong> (ใช้เฉพาะในองค์กร)</li>
+<li>กรอกข้อมูล:</li>
+<li><strong>App name</strong>: <code>Micro Account</code></li>
+<li><strong>User support email</strong>: อีเมลองค์กรของคุณ</li>
+<li>กด <strong>Save and Continue</strong> จนครบทุก Step</li>
+</ol>
+<hr />
+<h2 id="4-oauth-20-client-id">ขั้นตอนที่ 4 — สร้าง OAuth 2.0 Client ID</h2>
+<ol>
+<li>ไปที่ <strong>APIs &amp; Services → Credentials</strong></li>
+<li>คลิก <strong>+ Create Credentials → OAuth 2.0 Client ID</strong></li>
+<li>Application type: <strong>Web application</strong></li>
+<li>Name: <code>Micro Account Web</code></li>
+<li>เพิ่ม <strong>Authorized JavaScript origins</strong>:
+   <div class="highlight"><pre><span></span><code>https://your-project.vercel.app
+http://localhost:3000
+</code></pre></div></li>
+<li>คลิก <strong>Create</strong> → Copy <strong>Client ID</strong> ที่ได้</li>
+</ol>
+<hr />
+<h2 id="5-api-key">ขั้นตอนที่ 5 — สร้าง API Key</h2>
+<ol>
+<li>คลิก <strong>+ Create Credentials → API Key</strong></li>
+<li>Copy <strong>API Key</strong> ที่ได้</li>
+<li>คลิก <strong>Edit API Key</strong> เพื่อจำกัดการใช้งาน:</li>
+</ol>
+<p><strong>Website restrictions:</strong>
+<div class="highlight"><pre><span></span><code>https://your-project.vercel.app/*
+http://localhost:3000/*
+</code></pre></div></p>
+<p><strong>API restrictions → Restrict key → เลือก:</strong>
+- ✅ Google Drive API<br />
+- ✅ Google Picker API</p>
+<ol>
+<li>กด <strong>Save</strong></li>
+</ol>
+<hr />
+<h2 id="6-environment-variables-vercel">ขั้นตอนที่ 6 — ใส่ Environment Variables ใน Vercel</h2>
+<ol>
+<li>เปิด <a href="https://vercel.com/dashboard">vercel.com/dashboard</a></li>
+<li>เลือก Project <strong>micro-account</strong></li>
+<li>ไปที่ <strong>Settings → Environment Variables</strong></li>
+<li>เพิ่มค่าต่อไปนี้ทีละตัว:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Variable Name</th>
+<th>ค่าที่ต้องใส่</th>
+<th>Environment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>PostgreSQL connection string จาก Neon</td>
+<td>All</td>
+</tr>
+<tr>
+<td><code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code></td>
+<td>Client ID จากขั้นตอนที่ 4</td>
+<td>All</td>
+</tr>
+<tr>
+<td><code>GOOGLE_CLIENT_SECRET</code></td>
+<td>Client Secret จากขั้นตอนที่ 4</td>
+<td>All</td>
+</tr>
+<tr>
+<td><code>NEXT_PUBLIC_GOOGLE_API_KEY</code></td>
+<td>API Key จากขั้นตอนที่ 5</td>
+<td>All</td>
+</tr>
+<tr>
+<td><code>GMAIL_FROM</code></td>
+<td>อีเมลองค์กรที่ใช้ส่ง</td>
+<td>All</td>
+</tr>
+<tr>
+<td><code>GMAIL_APP_PASSWORD</code></td>
+<td>App Password จาก Google Account</td>
+<td>All</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>กด <strong>Save</strong> แล้วกด <strong>Redeploy</strong></li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">วิธีสร้าง Gmail App Password</p>
+<ol>
+<li>ไปที่ <a href="https://myaccount.google.com/apppasswords">myaccount.google.com/apppasswords</a></li>
+<li>ต้องเปิด <strong>2-Step Verification</strong> ก่อน</li>
+<li>Select app: <strong>Mail</strong> / Select device: <strong>Other</strong> → พิมพ์ <code>Micro Account</code></li>
+<li>Copy รหัส 16 ตัวอักษรที่ได้ → ใส่ใน <code>GMAIL_APP_PASSWORD</code></li>
+</ol>
+</div>
+<hr />
+<h2 id="7">ขั้นตอนที่ 7 — ทดสอบ</h2>
+<p>หลัง Redeploy แล้ว ทดสอบที่:</p>
+<ol>
+<li>ไปที่ <a href="/journals/new">สมุดรายวัน → ลงบัญชีใหม่</a></li>
+<li>ส่วน <strong>"📎 แนบใบเสร็จ"</strong> จะมีปุ่ม <strong>"เลือกจาก Google Drive"</strong></li>
+<li>คลิกปุ่ม → Login Google → เลือกไฟล์ → แนบสำเร็จ ✅</li>
+</ol>
+<hr />
+<h2 id="_2">🔧 แก้ปัญหาที่พบบ่อย</h2>
+<h3 id="google-drive-error-client-id">ปุ่ม Google Drive ขึ้น Error "Client ID ไม่ถูกต้อง"</h3>
+<ul>
+<li>ตรวจสอบว่า <strong>Authorized JavaScript origins</strong> มี URL ของ Vercel ถูกต้อง</li>
+<li>รอ 5 นาทีหลัง Save ใน Google Cloud (Settings ใช้เวลา propagate)</li>
+</ul>
+<h3 id="picker-error-access-blocked">ปุ่มเปิด Picker แล้วขึ้น Error "Access blocked"</h3>
+<ul>
+<li>OAuth Consent Screen ต้องเป็น <strong>Internal</strong> หรือ App ต้องผ่าน Verification</li>
+<li>ตรวจสอบว่า User ที่ Login เป็น Email ใน Organization เดียวกัน</li>
+</ul>
+<h3 id="_3">ไฟล์แนบแล้วแต่เปิดไม่ได้</h3>
+<ul>
+<li>ตรวจสอบว่าไฟล์ใน Google Drive มีสิทธิ์ <strong>"Anyone with the link can view"</strong></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  กลับไปด้านบนสุด
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e41\u0e25\u0e49\u0e27", "clipboard.copy": "\u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01", "search.result.more.one": "\u0e2d\u0e35\u0e01\u0e2b\u0e19\u0e36\u0e48\u0e07\u0e43\u0e19\u0e2b\u0e19\u0e49\u0e32\u0e19\u0e35\u0e49", "search.result.more.other": "# \u0e40\u0e1e\u0e34\u0e48\u0e21\u0e40\u0e15\u0e34\u0e21\u0e43\u0e19\u0e2b\u0e19\u0e49\u0e32\u0e19\u0e35\u0e49", "search.result.none": "\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e19", "search.result.one": "\u0e1e\u0e1a\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e19", "search.result.other": "\u0e1e\u0e1a # \u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e19", "search.result.placeholder": "\u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e23\u0e34\u0e48\u0e21\u0e04\u0e49\u0e19\u0e2b\u0e32", "search.result.term.missing": "\u0e44\u0e21\u0e48\u0e1e\u0e1a", "select.version": "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e40\u0e27\u0e2d\u0e23\u0e4c\u0e0a\u0e31\u0e19"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
