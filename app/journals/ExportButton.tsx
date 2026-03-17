@@ -11,6 +11,22 @@ const ExportButton = () => {
   const [loadingPDF, setLoadingPDF] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
 
+  // ฟังก์ชันดาวน์โหลด Blob แบบมาตรฐาน (ชัวร์ที่สุด)
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    
+    // ทำความสะอาดหลังดาวน์โหลด 1 วินาที
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
   const handlePDFExport = async () => {
     setLoadingPDF(true);
     setStatus({ type: null, message: '' });
@@ -49,12 +65,14 @@ const ExportButton = () => {
         margin: { top: 45 }
       });
 
-      // ชื่อไฟล์ PDF ที่ชัดเจน
+      // ดึง Blob ออกมาแล้วดาวน์โหลดเองเพื่อให้มั่นใจว่าลงเครื่อง
+      const pdfBlob = doc.output('blob');
       const filename = `Journal_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(filename);
+      downloadBlob(pdfBlob, filename);
       
-      setStatus({ type: 'success', message: `บันทึกไฟล์ ${filename} เรียบร้อย!` });
+      setStatus({ type: 'success', message: 'บันทึกไฟล์ PDF ลงเครื่องเรียบร้อยแล้ว!' });
     } catch (err: any) {
+      console.error(err);
       setStatus({ type: 'error', message: "PDF Error: " + err.message });
     } finally {
       setLoadingPDF(false);
@@ -67,20 +85,21 @@ const ExportButton = () => {
     try {
       const result = await exportJournalsToExcel();
       if (result.success && result.data) {
-        // บังคับดาวน์โหลดด้วยวิธีกำชับชื่อไฟล์
-        const base64Data = result.data;
-        const filename = result.filename || `Journal_Export_${Date.now()}.xlsx`;
+        // แปลง Base64 เป็น Blob
+        const byteCharacters = atob(result.data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const excelBlob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        const link = document.createElement('a');
-        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Data}`;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const filename = result.filename || `Journal_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        downloadBlob(excelBlob, filename);
 
-        setStatus({ type: 'success', message: `บันทึกไฟล์ ${filename} เรียบร้อย!` });
+        setStatus({ type: 'success', message: 'บันทึกไฟล์ Excel ลงเครื่องเรียบร้อยแล้ว!' });
       } else {
-        setStatus({ type: 'error', message: result.error || 'เกิดข้อผิดพลาด' });
+        setStatus({ type: 'error', message: result.error || 'เกิดข้อผิดพลาดในการสร้างไฟล์' });
       }
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message });
@@ -110,44 +129,47 @@ const ExportButton = () => {
   return (
     <div className="flex flex-col items-end gap-3">
       <div className="flex flex-wrap gap-2">
+        {/* Export PDF */}
         <button
           onClick={handlePDFExport}
           disabled={loadingPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-all shadow-sm font-medium disabled:opacity-50 active:scale-95"
+          className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-md font-bold disabled:opacity-50 active:scale-95"
         >
-          {loadingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+          {loadingPDF ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
           Export PDF
         </button>
 
+        {/* Export Excel */}
         <button
           onClick={handleExcelExport}
           disabled={loadingExcel}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all shadow-sm font-medium disabled:opacity-50 active:scale-95"
+          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-md font-bold disabled:opacity-50 active:scale-95"
         >
-          {loadingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          {loadingExcel ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
           Export Excel
         </button>
 
+        {/* Google Sheets */}
         <button
           onClick={handleSheetsExport}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl hover:shadow-md transition-all font-medium disabled:opacity-50 active:scale-95"
+          className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 border-2 border-gray-100 rounded-xl hover:border-green-500 hover:shadow-lg transition-all font-bold disabled:opacity-50 active:scale-95"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 text-green-600" />}
-          Export Google Sheets
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileSpreadsheet className="w-5 h-5 text-green-600" />}
+          Google Sheets
         </button>
       </div>
 
       {status.type && (
-        <div className={`flex items-start gap-2 text-sm p-4 rounded-xl animate-in fade-in shadow-sm border ${
-          status.type === 'success' ? 'bg-green-50 text-green-800 border-green-100' : 'bg-red-50 text-red-800 border-red-100'
-        } max-w-md w-full animation-in slide-in-from-top-1`}>
-          {status.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
+        <div className={`flex items-start gap-3 text-sm p-4 rounded-xl shadow-lg border-2 animate-in fade-in slide-in-from-top-2 w-full max-w-md ${
+          status.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'
+        }`}>
+          {status.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />}
           <div className="flex flex-col gap-1">
-            <span className="font-bold underline uppercase text-[10px] tracking-widest opacity-70">
-              {status.type === 'success' ? 'สำเร็จ' : 'แจ้งเตือน'}
+            <span className="font-black uppercase text-[10px] tracking-widest opacity-70">
+              สถานะ: {status.type === 'success' ? 'ดาวน์โหลดสำเร็จ' : 'แจ้งเตือน'}
             </span>
-            <span className="break-words font-medium leading-relaxed">{status.message}</span>
+            <span className="font-bold leading-relaxed">{status.message}</span>
           </div>
         </div>
       )}
