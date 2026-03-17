@@ -76,7 +76,13 @@ const forms = [
 
 export default async function TaxReportsPage() {
   const summaryRes = await getTaxSummary();
-  const taxData = summaryRes.success ? summaryRes.data : { vatSales: 0, vatPurchase: 0, wht: 0, netVat: 0 };
+  // ใช้ Destructuring และกำหนดค่าเริ่มต้น 0 ทันที เพื่อให้ TS มั่นใจ 100%
+  const { 
+    vatSales = 0, 
+    vatPurchase = 0, 
+    wht = 0, 
+    netVat = 0 
+  } = (summaryRes.success && summaryRes.data) ? summaryRes.data : {};
 
   return (
     <main className="p-6 md:p-8 min-h-screen bg-[#f8fafc]">
@@ -110,31 +116,31 @@ export default async function TaxReportsPage() {
                  <div className="p-2 bg-purple-50 rounded-lg"><TrendingUp size={18} /></div>
                  <span className="text-xs font-bold uppercase tracking-wider">ภาษีขายเดือนนี้</span>
               </div>
-              <p className="text-2xl font-black text-gray-800">฿{(taxData.vatSales || 0).toLocaleString()}</p>
+              <p className="text-2xl font-black text-gray-800">฿{vatSales.toLocaleString()}</p>
            </div>
            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3 mb-2 text-blue-600">
                  <div className="p-2 bg-blue-50 rounded-lg"><TrendingDown size={18} /></div>
                  <span className="text-xs font-bold uppercase tracking-wider">ภาษีซื้อเดือนนี้</span>
               </div>
-              <p className="text-2xl font-black text-gray-800">฿{(taxData.vatPurchase || 0).toLocaleString()}</p>
+              <p className="text-2xl font-black text-gray-800">฿{vatPurchase.toLocaleString()}</p>
            </div>
            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3 mb-2 text-green-600">
                  <div className="p-2 bg-green-50 rounded-lg"><Calculator size={18} /></div>
                  <span className="text-xs font-bold uppercase tracking-wider">ภาษีหัก ณ ที่จ่าย (WHT)</span>
               </div>
-              <p className="text-2xl font-black text-gray-800">฿{(taxData.wht || 0).toLocaleString()}</p>
+              <p className="text-2xl font-black text-gray-800">฿{wht.toLocaleString()}</p>
            </div>
-           <div className={cn("p-5 rounded-2xl border shadow-md", (taxData.netVat || 0) >= 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
+           <div className={cn("p-5 rounded-2xl border shadow-md", netVat >= 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
               <div className="flex items-center gap-3 mb-2 text-gray-700">
                  <span className="text-xs font-bold uppercase tracking-wider">ยอดภาษีที่ต้องชำระ (Net)</span>
               </div>
-              <p className={cn("text-2xl font-black", (taxData.netVat || 0) >= 0 ? "text-red-600" : "text-emerald-600")}>
-                 ฿{Math.abs(taxData.netVat || 0).toLocaleString()}
+              <p className={cn("text-2xl font-black", netVat >= 0 ? "text-red-600" : "text-emerald-600")}>
+                 ฿{Math.abs(netVat).toLocaleString()}
               </p>
               <p className="text-[10px] font-bold opacity-60 mt-1 uppercase italic">
-                 {(taxData.netVat || 0) >= 0 ? "*ต้องนำส่งสรรพากรเพิ่มเติม" : "*ได้รับเงินคืนภาษีจากสรรพากร"}
+                 {netVat >= 0 ? "*ต้องนำส่งสรรพากรเพิ่มเติม" : "*ได้รับเงินคืนภาษีจากสรรพากร"}
               </p>
            </div>
         </div>
