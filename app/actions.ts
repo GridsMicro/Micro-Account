@@ -175,6 +175,36 @@ export async function exportJournalsToExcel() {
 }
 
 // ฟังก์ชันดึงข้อมูลทั้งหมดสำหรับสร้าง PDF/รายงานหน้าบ้าน
+// ฟังก์ชันสรุปยอดภาษีสำหรับ Dashboard
+export async function getTaxSummary() {
+  try {
+    const { rows: vatSales } = await sql`
+      SELECT COALESCE(SUM(credit), 0) as total FROM journal_entries 
+      WHERE description ILIKE '%ภาษีขาย%' OR account_name ILIKE '%ภาษีขาย%'
+    `;
+    const { rows: vatPurchase } = await sql`
+      SELECT COALESCE(SUM(debit), 0) as total FROM journal_entries 
+      WHERE description ILIKE '%ภาษีซื้อ%' OR account_name ILIKE '%ภาษีซื้อ%'
+    `;
+    const { rows: wht } = await sql`
+      SELECT COALESCE(SUM(credit), 0) as total FROM journal_entries 
+      WHERE description ILIKE '%หัก ณ ที่จ่าย%' OR account_name ILIKE '%หัก ณ ที่จ่าย%'
+    `;
+
+    return {
+      success: true,
+      data: {
+        vatSales: Number(vatSales[0].total),
+        vatPurchase: Number(vatPurchase[0].total),
+        wht: Number(wht[0].total),
+        netVat: Number(vatSales[0].total) - Number(vatPurchase[0].total)
+      }
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getJournalEntries() {
   try {
     const { rows } = await sql`

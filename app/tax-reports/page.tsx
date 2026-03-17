@@ -10,10 +10,14 @@ import {
   ShieldCheck, 
   Star,
   ArrowRight,
-  Landmark
+  Landmark,
+  TrendingUp,
+  TrendingDown,
+  Calculator
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getTaxSummary } from "@/app/actions";
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +75,9 @@ const forms = [
 ];
 
 export default async function TaxReportsPage() {
+  const summaryRes = await getTaxSummary();
+  const taxData = summaryRes.success ? summaryRes.data : { vatSales: 0, vatPurchase: 0, wht: 0, netVat: 0 };
+
   return (
     <main className="p-6 md:p-8 min-h-screen bg-[#f8fafc]">
       <div className="max-w-7xl mx-auto">
@@ -92,8 +99,44 @@ export default async function TaxReportsPage() {
           </div>
           <div className="flex flex-col text-right">
              <span className="font-bold text-gray-700 text-sm">บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด</span>
-             <span className="text-xs text-gray-500">เลขประจำตัวผู้เสียภาษี: 0123456789012</span>
+             <span className="text-xs text-gray-500 font-mono tracking-widest">TAX ID: 0123456789012</span>
           </div>
+        </div>
+
+        {/* Real-time Tax Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-2 text-purple-600">
+                 <div className="p-2 bg-purple-50 rounded-lg"><TrendingUp size={18} /></div>
+                 <span className="text-xs font-bold uppercase tracking-wider">ภาษีขายเดือนนี้</span>
+              </div>
+              <p className="text-2xl font-black text-gray-800">฿{taxData?.vatSales.toLocaleString()}</p>
+           </div>
+           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-2 text-blue-600">
+                 <div className="p-2 bg-blue-50 rounded-lg"><TrendingDown size={18} /></div>
+                 <span className="text-xs font-bold uppercase tracking-wider">ภาษีซื้อเดือนนี้</span>
+              </div>
+              <p className="text-2xl font-black text-gray-800">฿{taxData?.vatPurchase.toLocaleString()}</p>
+           </div>
+           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-2 text-green-600">
+                 <div className="p-2 bg-green-50 rounded-lg"><Calculator size={18} /></div>
+                 <span className="text-xs font-bold uppercase tracking-wider">ภาษีหัก ณ ที่จ่าย (WHT)</span>
+              </div>
+              <p className="text-2xl font-black text-gray-800">฿{taxData?.wht.toLocaleString()}</p>
+           </div>
+           <div className={cn("p-5 rounded-2xl border shadow-md", taxData?.netVat >= 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
+              <div className="flex items-center gap-3 mb-2 text-gray-700">
+                 <span className="text-xs font-bold uppercase tracking-wider">ยอดภาษีที่ต้องชำระ (Net)</span>
+              </div>
+              <p className={cn("text-2xl font-black", taxData?.netVat >= 0 ? "text-red-600" : "text-emerald-600")}>
+                 ฿{Math.abs(taxData?.netVat).toLocaleString()}
+              </p>
+              <p className="text-[10px] font-bold opacity-60 mt-1 uppercase italic">
+                 {taxData?.netVat >= 0 ? "*ต้องนำส่งสรรพากรเพิ่มเติม" : "*ได้รับเงินคืนภาษีจากสรรพากร"}
+              </p>
+           </div>
         </div>
 
         {/* Highlight Banner for Software/License Tax */}
