@@ -1,22 +1,24 @@
 site_name: "Micro-Account Expert Manual"
 site_description: "คู่มือการใช้งานระบบบัญชีนวัตกรรมโลกใหม่ สำหรับธุรกิจยุค Autonomous"
 site_author: "Microtronic Thailand"
+site_url: "https://gridsmicro.github.io/Micro-Account/"
 
 theme:
   name: material
   language: th
+  favicon: assets/favicon.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: blue
+      accent: blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: blue
+      accent: blue
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -27,18 +29,27 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    - navigation.tracking
 
 nav:
-  - หน้าแรก: index.md
-  - คู่มือการใช้งาน:
+  - 🏠 หน้าแรก: index.md
+  - 📄 คู่มือการใช้งาน:
       - การออกใบแจ้งหนี้ (Invoice): invoice.md
       - การรับชำระเงินและใบเสร็จ (Payment): payment.md
       - ภาษีและการส่งออก (Tax & E-Filing): tax.md
-  - การตั้งค่าระบบ: settings.md
+  - ⚙️ การตั้งค่าระบบ: settings.md
 
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - attr_list
   - md_in_html
+  - pymdownx.tabbed:
+      alternate_style: true
+
+use_directory_urls: true
