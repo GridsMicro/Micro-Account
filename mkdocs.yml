@@ -1,0 +1,44 @@
+site_name: "Micro-Account Expert Manual"
+site_description: "คู่มือการใช้งานระบบบัญชีนวัตกรรมโลกใหม่ สำหรับธุรกิจยุค Autonomous"
+site_author: "Microtronic Thailand"
+
+theme:
+  name: material
+  language: th
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - หน้าแรก: index.md
+  - คู่มือการใช้งาน:
+      - การออกใบแจ้งหนี้ (Invoice): invoice.md
+      - การรับชำระเงินและใบเสร็จ (Payment): payment.md
+      - ภาษีและการส่งออก (Tax & E-Filing): tax.md
+  - การตั้งค่าระบบ: settings.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
