@@ -1,39 +1,28 @@
-name: Deploy MkDocs to GitHub Pages
-
+name: publish-docs
 on:
   push:
     branches:
       - main
-    paths:
-      - 'docs/**'
-  workflow_dispatch:
-
 permissions:
   contents: write
-  pages: write
-  id-token: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install MkDocs + Material Theme
+      - uses: actions/checkout@v4
+      - name: Configure Git Credentials
         run: |
-          pip install mkdocs-material mkdocs-minify-plugin pillow cairosvg
-
-      - name: Build and Deploy MkDocs
-        run: |
-          cd docs
-          mkdocs gh-deploy --force --clean --verbose
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: echo "cache_id=$(date --utc +%V)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+      - run: pip install mkdocs-material
+      - run: mkdocs gh-deploy --force
