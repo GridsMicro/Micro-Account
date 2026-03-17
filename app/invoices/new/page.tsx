@@ -178,11 +178,11 @@ export default function NewInvoicePage() {
             
             .doc-title-container { text-align: right; }
             .doc-title { 
-              margin: 0 0 10px 0; 
-              font-size: 28px; 
+              margin: 0 0 8px 0; 
+              font-size: 22px; 
               color: #1e40af; 
               font-weight: 700;
-              line-height: 1.1;
+              line-height: 1.2;
             }
             .doc-details { font-size: 15px; color: #1f2937; }
             .doc-details p { margin: 4px 0; }
@@ -278,7 +278,7 @@ export default function NewInvoicePage() {
               <p>โทร: ${company.phone} | TAX ID: ${company.tax_id}</p>
             </div>
             <div class="doc-title-container">
-              <h2 class="doc-title">ใบแจ้งหนี้<br/><span style="font-size: 18px;">(INVOICE)</span></h2>
+              <h2 class="doc-title">ใบแจ้งหนี้<br/><span style="font-size: 15px; font-weight: 400;">(INVOICE)</span></h2>
               <div class="doc-details">
                 <p>เลขที่: <strong>${invoiceData.reference}</strong></p>
                 <p>วันที่: <strong>${new Date(invoiceData.date).toLocaleDateString('th-TH')}</strong></p>
