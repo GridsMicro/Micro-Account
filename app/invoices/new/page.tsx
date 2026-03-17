@@ -77,10 +77,10 @@ export default function NewInvoicePage() {
     });
   };
 
-  // คำนวณยอดเงิน
-  const subtotal = invoiceData.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-  const vatAmount = invoiceData.isVatRegistered ? (subtotal * invoiceData.vatRate) / 100 : 0;
-  const totalAmount = subtotal + vatAmount;
+  // คำนวณยอดเงิน (ปัดทศนิยม 2 ตำแหน่งตามมาตรฐานบัญชี)
+  const subtotal = parseFloat(invoiceData.items.reduce((sum, item) => sum + (item.qty * item.price), 0).toFixed(2));
+  const vatAmount = invoiceData.isVatRegistered ? parseFloat(((subtotal * invoiceData.vatRate) / 100).toFixed(2)) : 0;
+  const totalAmount = parseFloat((subtotal + vatAmount).toFixed(2));
 
   const handleSaveInvoice = async () => {
     if (!invoiceData.contactId || subtotal <= 0) {
@@ -90,7 +90,11 @@ export default function NewInvoicePage() {
 
     setLoading(true);
     try {
-      const selectedContact = contacts.find(c => c.id === invoiceData.contactId);
+      const selectedContact = contacts.find(c => c.id.toString() === invoiceData.contactId.toString());
+      
+      if (!selectedContact) {
+        throw new Error("หาข้อมูลลูกค้าไม่พบ กรุณาลองเลือกใหม่อีกครั้งครับ");
+      }
       
       // 1. ลงบัญชีฝั่ง Debit: ลูกหนี้การค้า (ยอดรวมทั้งหมดที่รอรับเงิน)
       await createJournalEntry({
@@ -133,8 +137,11 @@ export default function NewInvoicePage() {
   };
 
   const handlePrintInvoice = () => {
-    const selectedContact = contacts.find(c => c.id === invoiceData.contactId);
-    if (!selectedContact || !company) return;
+    const selectedContact = contacts.find(c => c.id.toString() === invoiceData.contactId.toString());
+    if (!selectedContact || !company) {
+      setStatus({type: 'error', message: 'กรุณาเลือกคู่ค้าก่อนพิมพ์ใบแจ้งหนี้ครับ'});
+      return;
+    }
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
