@@ -152,22 +152,122 @@ export default function NewInvoicePage() {
           <title>INVOICE - ${invoiceData.reference}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-            body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; max-width: 800px; margin: 0 auto; line-height: 1.5; }
-            .header-flex { display: flex; justify-content: space-between; border-bottom: 3px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
-            .company-info h1 { margin: 0; color: #1e40af; font-size: 26px; }
-            .doc-title { text-align: right; }
-            .doc-title h2 { margin: 0; font-size: 28px; color: #1e40af; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-            .info-label { font-weight: bold; font-size: 12px; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; margin-bottom: 5px; display: block; }
+            body { 
+              font-family: 'Sarabun', sans-serif; 
+              padding: 50px; 
+              color: #1a1a1a; 
+              max-width: 850px; 
+              margin: 0 auto; 
+              line-height: 1.4;
+            }
+            .header-flex { 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: flex-start;
+              border-bottom: 2px solid #1e40af; 
+              padding-bottom: 25px; 
+              margin-bottom: 35px; 
+            }
+            .company-info h1 { 
+              margin: 0 0 8px 0; 
+              color: #1e40af; 
+              font-size: 24px; 
+              font-weight: 700;
+            }
+            .company-info p { margin: 2px 0; font-size: 13px; color: #4b5563; }
+            
+            .doc-title-container { text-align: right; }
+            .doc-title { 
+              margin: 0 0 10px 0; 
+              font-size: 28px; 
+              color: #1e40af; 
+              font-weight: 700;
+              line-height: 1.1;
+            }
+            .doc-details { font-size: 15px; color: #1f2937; }
+            .doc-details p { margin: 4px 0; }
+            .doc-details strong { color: #000; }
+
+            .info-grid { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 50px; 
+              margin-bottom: 40px; 
+            }
+            .info-section h3 { 
+              font-size: 12px; 
+              text-transform: uppercase; 
+              color: #6b7280; 
+              border-bottom: 1px solid #e5e7eb; 
+              padding-bottom: 5px; 
+              margin-bottom: 10px;
+              letter-spacing: 0.05em;
+            }
+            .info-content { font-size: 14px; line-height: 1.6; }
+            
             table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 12px; font-size: 14px; text-align: left; }
-            td { border: 1px solid #cbd5e1; padding: 12px; font-size: 14px; }
-            .summary { margin-left: auto; width: 320px; }
-            .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 15px; }
-            .total-row { border-top: 2px solid #000; border-bottom: 2px double #000; margin-top: 10px; padding: 12px 0; font-weight: bold; font-size: 20px; }
-            .bank-info { margin-top: 50px; border: 1px dashed #cbd5e1; padding: 20px; background: #fff; border-radius: 8px; }
-            .signatures { margin-top: 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 100px; text-align: center; }
-            .sign-box { border-top: 1px solid #000; padding-top: 10px; font-size: 14px; }
+            th { 
+              background: #f9fafb; 
+              border: 1px solid #e5e7eb; 
+              padding: 12px 15px; 
+              font-size: 13px; 
+              text-align: left; 
+              color: #374151;
+            }
+            td { 
+              border: 1px solid #e5e7eb; 
+              padding: 12px 15px; 
+              font-size: 14px; 
+              vertical-align: top;
+            }
+            
+            .summary-container { display: flex; justify-content: flex-end; }
+            .summary { width: 350px; }
+            .summary-row { 
+              display: flex; 
+              justify-content: space-between; 
+              padding: 6px 0; 
+              font-size: 14px; 
+              color: #374151;
+            }
+            .total-row { 
+              border-top: 2px solid #1e40af; 
+              border-bottom: 4px double #1e40af; 
+              margin-top: 10px; 
+              padding: 12px 0; 
+              font-weight: 700; 
+              font-size: 20px; 
+              color: #1e40af;
+            }
+            
+            .bank-info { 
+              margin-top: 50px; 
+              background: #f8fafc; 
+              border-radius: 8px; 
+              padding: 20px; 
+              font-size: 13px;
+              border: 1px solid #e2e8f0;
+            }
+            .bank-info strong { color: #1e40af; display: block; margin-bottom: 5px; }
+            
+            .signatures { 
+              margin-top: 80px; 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 80px; 
+              text-align: center; 
+            }
+            .sign-box { 
+              border-top: 1px solid #9ca3af; 
+              padding-top: 10px; 
+              font-size: 13px; 
+              color: #4b5563;
+            }
+            
+            @media print {
+              body { padding: 20px; }
+              .bank-info { background: #fff !important; }
+            }
           </style>
         </head>
         <body>
@@ -177,77 +277,84 @@ export default function NewInvoicePage() {
               <p>${company.address}</p>
               <p>โทร: ${company.phone} | TAX ID: ${company.tax_id}</p>
             </div>
-            <div class="doc-title">
-              <h2>ใบแจ้งหนี้</h2>
-              <p style="font-weight: bold; font-size: 18px;">(INVOICE)</p>
-              <p>เลขที่: <strong>${invoiceData.reference}</strong></p>
-              <p>วันที่: ${new Date(invoiceData.date).toLocaleDateString('th-TH')}</p>
+            <div class="doc-title-container">
+              <h2 class="doc-title">ใบแจ้งหนี้<br/><span style="font-size: 18px;">(INVOICE)</span></h2>
+              <div class="doc-details">
+                <p>เลขที่: <strong>${invoiceData.reference}</strong></p>
+                <p>วันที่: <strong>${new Date(invoiceData.date).toLocaleDateString('th-TH')}</strong></p>
+              </div>
             </div>
           </div>
 
           <div class="info-grid">
-            <div>
-              <span class="info-label">ชื่อและที่อยู่ลูกค้า (Bill To)</span>
-              <strong>${selectedContact.name}</strong><br/>
-              ${selectedContact.address || '-'}<br/>
-              Tax ID: ${selectedContact.tax_id || '-'}
+            <div class="info-section">
+              <h3>ชื่อและที่อยู่ลูกค้า (Bill To)</h3>
+              <div class="info-content">
+                <strong>${selectedContact.name}</strong><br/>
+                ${selectedContact.address || '-'}<br/>
+                Tax ID: ${selectedContact.tax_id || '-'}
+              </div>
             </div>
-            <div style="text-align: right;">
-              <span class="info-label">กำหนดชำระ (Terms)</span>
-              <p>วันที่ครบกำหนด: <strong>${new Date(invoiceData.dueDate).toLocaleDateString('th-TH')}</strong></p>
-              <p>เงื่อนไขการชำระ: เงินสด/โอนเงิน</p>
+            <div class="info-section" style="text-align: right;">
+              <h3>กำหนดการชำระ (Terms)</h3>
+              <div class="info-content">
+                วันที่ครบกำหนด: <strong>${new Date(invoiceData.dueDate).toLocaleDateString('th-TH')}</strong><br/>
+                เงินสด / โอนผ่านธนาคาร
+              </div>
             </div>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th width="5%">#</th>
-                <th width="55%">รายการ (DESCRIPTION)</th>
-                <th width="10%" style="text-align: center;">จำนวน</th>
-                <th width="15%" style="text-align: right;">ราคา/หน่วย</th>
-                <th width="15%" style="text-align: right;">รวมเงิน</th>
+                <th width="8%" style="text-align: center;">ลำดับ</th>
+                <th width="52%">รายการ (DESCRIPTION)</th>
+                <th width="12%" style="text-align: center;">จำนวน</th>
+                <th width="14%" style="text-align: right;">ราคา/หน่วย</th>
+                <th width="14%" style="text-align: right;">รวมเงิน</th>
               </tr>
             </thead>
             <tbody>
               ${invoiceData.items.map((item, index) => `
                 <tr>
-                  <td>${index + 1}</td>
-                  <td>${item.desc}</td>
+                  <td style="text-align: center;">${index + 1}</td>
+                  <td style="font-weight: 700;">${item.desc}</td>
                   <td style="text-align: center;">${item.qty}</td>
                   <td style="text-align: right;">${item.price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                  <td style="text-align: right;">${(item.qty * item.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                  <td style="text-align: right; font-weight: 700;">${(item.qty * item.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          <div class="summary">
-            <div class="summary-row">
-              <span>รวมเงินสุทธิ (Subtotal):</span>
-              <span>${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-            </div>
-            <div class="summary-row">
-              <span>ภาษีมูลค่าเพิ่ม ${invoiceData.vatRate}% (VAT):</span>
-              <span>${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-            </div>
-            <div class="summary-row total-row">
-              <span>จำนวนเงินทั้งสิ้น (Total):</span>
-              <span>${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+          <div class="summary-container">
+            <div class="summary">
+              <div class="summary-row">
+                <span>รวมเงินสุทธิ (Subtotal):</span>
+                <span>${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              </div>
+              <div class="summary-row">
+                <span>ภาษีมูลค่าเพิ่ม ${invoiceData.vatRate}% (VAT):</span>
+                <span>${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              </div>
+              <div class="summary-row total-row">
+                <span>จำนวนเงินทั้งสิ้น (Total):</span>
+                <span>${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              </div>
             </div>
           </div>
 
           <div class="bank-info">
-             <strong>ข้อมูลการชำระเงิน (Payment Method)</strong><br/>
+             <strong>ช่องทางการโอนเงิน (Payment Method)</strong>
              ธนาคาร: ${company.bank_name || 'ธนาคารกสิกรไทย'}<br/>
              ชื่อบัญชี: ${company.bank_account_name || company.name}<br/>
              เลขที่บัญชี: ${company.bank_account_number || '000-0-00000-0'}<br/>
-             <small style="color: #666;">(กรุณาส่งหลักฐานการโอนเงินคืนบริษัท และระบุเลขที่ใบแจ้งหนี้เพื่อความรวดเร็ว)</small>
+             <small style="color: #666; margin-top: 5px; display: block;">*กรุณาส่งหลักฐานการโอนเงินคืนบริษัท และอ้างอิงเลขที่ใบแจ้งหนี้</small>
           </div>
 
           <div class="signatures">
-            <div class="sign-box">ผู้ออกเอกสาร (Issuer)</div>
-            <div class="sign-box">ผู้มีอำนาจลงนาม (Authorized Signature)</div>
+            <div class="sign-box">ผู้ออกเอกสาร (Authorized by)</div>
+            <div class="sign-box">ผู้รับเอกสาร (Received by)</div>
           </div>
 
           <script>window.onload = function() { window.print(); }</script>
