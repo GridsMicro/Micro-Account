@@ -277,6 +277,16 @@ export default function NewInvoicePage() {
               padding-top: 10px; 
               font-size: 13px; 
               color: #4b5563;
+              position: relative;
+            }
+            .signature-img {
+              position: absolute;
+              top: -60px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 140px;
+              height: auto;
+              mix-blend-mode: multiply;
             }
             
             @media print {
@@ -368,7 +378,10 @@ export default function NewInvoicePage() {
           </div>
 
           <div class="signatures">
-            <div class="sign-box">ผู้ออกเอกสาร (Authorized by)</div>
+            <div class="sign-box">
+              <img src="/Untitled-10.png" class="signature-img" alt="signature" />
+              ผู้ออกเอกสาร (Authorized by)
+            </div>
             <div class="sign-box">ผู้รับเอกสาร (Received by)</div>
           </div>
 

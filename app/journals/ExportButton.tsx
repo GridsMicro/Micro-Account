@@ -1,12 +1,11 @@
 "use client";
 import React, { useState } from 'react';
 import { FileSpreadsheet, Download, Loader2, AlertCircle, CheckCircle2, FileText, Printer } from 'lucide-react';
-import { exportJournalsToSheets, exportJournalsToExcel, getJournalEntries } from '@/app/actions';
+import { exportJournalsToExcel, getJournalEntries } from '@/app/actions';
 
 // ฟังก์ชันสร้าง PDF แบบใช้ "โหมดพิมพ์ผ่านหน้าต่างเบราว์เซอร์" 
 // วิธีนี้เป็นวิธีที่ "ภาษาไทยสวยที่สุด 100%" เพราะใช้ Engine ของ Chrome โดยตรง ไม่ต้องฝังฟอนต์ให้ไฟล์อืดครับ!
 const ExportButton = () => {
-  const [loading, setLoading] = useState(false);
   const [loadingExcel, setLoadingExcel] = useState(false);
   const [loadingPDF, setLoadingPDF] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
@@ -125,50 +124,25 @@ const ExportButton = () => {
     }
   };
 
-  const handleSheetsExport = async () => {
-    setLoading(true);
-    setStatus({ type: null, message: '' });
-    try {
-      const result = await exportJournalsToSheets();
-      if (result.success && result.url) {
-        window.open(result.url, '_blank');
-        setStatus({ type: 'success', message: 'ส่งออกไปยัง Google Sheets สำเร็จ!' });
-      }
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col items-end gap-3">
       <div className="flex flex-wrap gap-2">
         <button
           onClick={handlePDFPrint}
           disabled={loadingPDF}
-          className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-md font-bold disabled:opacity-50 active:scale-95"
+          className="flex items-center gap-2 px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-md font-bold disabled:opacity-50 active:scale-95 text-sm"
         >
           {loadingPDF ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
-          Print PDF (ภาษาไทยเป๊ะ)
+          Export PDF
         </button>
 
         <button
           onClick={handleExcelExport}
           disabled={loadingExcel}
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-md font-bold disabled:opacity-50 active:scale-95"
+          className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-md font-bold disabled:opacity-50 active:scale-95 text-sm"
         >
           {loadingExcel ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
           Export Excel
-        </button>
-
-        <button
-          onClick={handleSheetsExport}
-          disabled={loading}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 border-2 border-gray-100 rounded-xl hover:border-green-500 hover:shadow-lg transition-all font-bold disabled:opacity-50 active:scale-95"
-        >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileSpreadsheet className="w-5 h-5 text-green-600" />}
-          Google Sheets
         </button>
       </div>
 
