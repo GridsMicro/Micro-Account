@@ -218,6 +218,26 @@ export async function getJournalEntries() {
   }
 }
 
+// ดึงรายชื่อผู้ติดต่อ (เพื่อใช้เลือกในหน้าจัดการเงิน)
+export async function getContacts() {
+  try {
+    const { rows } = await sql`SELECT * FROM contacts ORDER BY name ASC`;
+    return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// ดึงข้อมูลบริษัทปัจจุบัน (สำหรับหัวกระดาษใบเสร็จ)
+export async function getCompanySettings() {
+  try {
+    const { rows } = await sql`SELECT * FROM company_settings LIMIT 1`;
+    return { success: true, data: rows[0] };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateContact(id: string, data: {
   name: string;
   type: string;
