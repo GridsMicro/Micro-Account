@@ -32,12 +32,18 @@ theme:
     - navigation.tracking
 
 nav:
-  - 🏠 หน้าแรก: index.md
+  - 🏠 หน้าแรก:
+      - แนะนำภาพรวม: index.md
+      - โครงสร้างโมดูลหลัก: docs/index.md
   - 📄 คู่มือการใช้งาน:
       - การออกใบแจ้งหนี้ (Invoice): invoice.md
       - การรับชำระเงินและใบเสร็จ (Payment): payment.md
+      - สมุดบัญชีรายวัน (Journals): docs/accounting/journals.md
       - ภาษีและการส่งออก (Tax & E-Filing): tax.md
-  - ⚙️ การตั้งค่าระบบ: settings.md
+  - ⚙️ การตั้งค่าระบบ:
+      - คู่มือเชื่อมต่อบอท Finance: settings.md
+      - คู่มือเชื่อมต่อ Google Workspace: docs/modules/setup-google.md
+      - คู่มือเริ่มต้นใช้งาน: docs/modules/getting-started.md
 
 markdown_extensions:
   - admonition
