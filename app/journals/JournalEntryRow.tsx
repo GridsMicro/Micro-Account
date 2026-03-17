@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, Trash2, Save, X, ExternalLink, Calendar, FileText, Tag, Banknote, CheckCircle2 } from "lucide-react";
 import { deleteJournalEntry, updateJournalEntry } from "@/app/actions";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface JournalEntry {
   id: number;
@@ -17,6 +18,7 @@ interface JournalEntry {
 }
 
 export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -34,9 +36,16 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
   const handleDelete = async () => {
     if (!confirm(`⚠️ ยืนยันการลบรายการ: "${entry.account_name}"?\nการกระทำนี้ไม่สามารถย้อนคืนได้`)) return;
     setLoading(true);
-    const res = await deleteJournalEntry(entry.id);
-    if (!res.success) {
-      alert("❌ เกิดข้อผิดพลาด: " + res.error);
+    try {
+      const res = await deleteJournalEntry(entry.id);
+      if (res.success) {
+        router.refresh();
+      } else {
+        alert("❌ เกิดข้อผิดพลาด: " + res.error);
+        setLoading(false);
+      }
+    } catch (err: any) {
+      alert("❌ เกิดข้อผิดพลาดร้ายแรง: " + err.message);
       setLoading(false);
     }
   };
