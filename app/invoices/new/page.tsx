@@ -20,7 +20,7 @@ import {
   Hash,
   ShoppingBag
 } from "lucide-react";
-import { getContacts, createJournalEntry, getCompanySettings } from "@/app/actions";
+import { getContacts, createJournalEntry, getCompanySettings, getNextInvoiceNumber } from "@/app/actions";
 import { useRouter } from "next/navigation";
 
 export default function NewInvoicePage() {
@@ -32,7 +32,7 @@ export default function NewInvoicePage() {
   
   const [invoiceData, setInvoiceData] = useState({
     contactId: '',
-    reference: `INV-${new Date().getFullYear().toString().slice(-2)}${Math.floor(Math.random() * 9000) + 1000}`,
+    reference: 'Loading...',
     date: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 15 days credit
     items: [{ id: Date.now(), desc: "ค่า License Software (Micro-Account)", qty: 1, price: 0 }],
@@ -42,9 +42,14 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [contactRes, companyRes] = await Promise.all([getContacts(), getCompanySettings()]);
+      const [contactRes, companyRes, nextRefRes] = await Promise.all([
+        getContacts(), 
+        getCompanySettings(),
+        getNextInvoiceNumber()
+      ]);
       if (contactRes.success) setContacts(contactRes.data!);
       if (companyRes.success) setCompany(companyRes.data);
+      if (nextRefRes.success) setInvoiceData(prev => ({ ...prev, reference: nextRefRes.data! }));
     };
     fetchData();
   }, []);

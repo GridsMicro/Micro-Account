@@ -238,6 +238,33 @@ export async function getCompanySettings() {
   }
 }
 
+// ดึงเลขที่ใบแจ้งหนี้ถัดไป (Auto-Increment)
+export async function getNextInvoiceNumber() {
+  try {
+    // ค้นหาเลขที่ล่าสุดที่ขึ้นต้นด้วย INV-
+    const { rows } = await sql`
+      SELECT reference_no FROM journal_entries 
+      WHERE reference_no LIKE 'INV-%' 
+      ORDER BY reference_no DESC LIMIT 1
+    `;
+
+    if (rows.length === 0) {
+      return { success: true, data: "INV-0096" };
+    }
+
+    const lastRef = rows[0].reference_no;
+    const lastNum = parseInt(lastRef.split('-')[1]);
+    
+    // ถ้ารันเลขแล้วยังน้อยกว่า 96 ให้เริ่มที่ 96 ตามคำสั่งพี่
+    const nextNum = Math.max(lastNum + 1, 96);
+    const formattedNum = nextNum.toString().padStart(4, '0');
+    
+    return { success: true, data: `INV-${formattedNum}` };
+  } catch (error: any) {
+    return { success: true, data: "INV-0096" }; // Fallback
+  }
+}
+
 export async function updateContact(id: string, data: {
   name: string;
   type: string;
