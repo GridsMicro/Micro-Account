@@ -34,17 +34,22 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
   );
 
   const handleDelete = async () => {
-    if (!confirm(`⚠️ ยืนยันการลบรายการ: "${entry.account_name}"?\nการกระทำนี้ไม่สามารถย้อนคืนได้`)) return;
+    if (!confirm(`⚠️ ยืนยันการลบรายการ: "${entry.account_name}"?\nการกระทำนี้จะลบข้อมูลออกจากฐานข้อมูลถาวร`)) return;
+    
     setLoading(true);
     try {
+      console.log("Proceeding to delete ID:", entry.id);
       const res = await deleteJournalEntry(entry.id);
+      
       if (res.success) {
+        // ให้หน้าจอ Refresh ทันที
         router.refresh();
       } else {
-        alert("❌ เกิดข้อผิดพลาด: " + res.error);
+        alert("❌ ลบไม่สำเร็จ: " + res.error);
         setLoading(false);
       }
     } catch (err: any) {
+      console.error("Delete Click Error:", err);
       alert("❌ เกิดข้อผิดพลาดร้ายแรง: " + err.message);
       setLoading(false);
     }
@@ -74,7 +79,7 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
   if (isEditing) {
     return (
       <tr className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-l-4 border-blue-600 animate-in fade-in slide-in-from-top-1 duration-300">
-        <td colSpan={6} className="p-8">
+        <td colSpan={4} className="p-8">
           <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
             <div className="bg-blue-600 px-6 py-3 flex items-center justify-between">
               <h4 className="text-white text-xs font-black uppercase tracking-widest flex items-center gap-2">
@@ -84,34 +89,8 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
             </div>
             
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* กลุ่มที่ 1: วันที่และอ้างอิง */}
-                <div className="space-y-4 border-r border-gray-100 pr-0 md:pr-6">
-                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Calendar size={12} className="text-blue-500" /> วันที่ทำรายการ
-                      </label>
-                      <input
-                        type="date"
-                        value={entryDate}
-                        onChange={e => setEntryDate(e.target.value)}
-                        className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-bold text-gray-700"
-                      />
-                   </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText size={12} className="text-blue-500" /> เลขที่เอกสารอ้างอิง
-                      </label>
-                      <input
-                        value={referenceNo}
-                        onChange={e => setReferenceNo(e.target.value)}
-                        placeholder="เช่น RCPT#12345"
-                        className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-mono text-sm"
-                      />
-                   </div>
-                </div>
-
-                {/* กลุ่มที่ 2: บัญชีและคำอธิบาย */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* กลุ่มที่ 1: บัญชีและคำอธิบาย */}
                 <div className="md:col-span-1 space-y-4 border-r border-gray-100 pr-0 md:pr-6">
                    <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -136,11 +115,11 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
                    </div>
                 </div>
 
-                {/* กลุ่มที่ 3: ยอดเงินและปุ่ม */}
+                {/* กลุ่มที่ 2: ยอดเงินและปุ่ม */}
                 <div className="space-y-6">
                    <div className="space-y-1.5 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
                       <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Banknote size={12} /> ยอดเงินสุทธิ (บาท)
+                        <Banknote size={12} /> ยอดเงิน (Dr./Cr. เดิมคือ {Number(entry.debit) > 0 ? "Dr." : "Cr."})
                       </label>
                       <input
                         type="number"
@@ -177,63 +156,63 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
     );
   }
 
-  // แถวปกติ (Clean & Modern)
+  // แถวปกติ (Clean & Professional Double-Entry Style)
   return (
-    <tr className="hover:bg-blue-50/30 transition-all group border-b border-gray-100/50 relative">
-      <td className="px-6 py-5">
-         <div className="text-sm font-bold text-gray-700 flex flex-col">
-           {entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('th-TH') : '-'}
-           <span className="text-[9px] text-gray-400 font-medium">#{entry.id}</span>
+    <tr className={cn(
+      "hover:bg-gray-50/50 transition-all group border-b border-gray-50 relative",
+      Number(entry.credit) > 0 ? "bg-green-50/5" : ""
+    )}>
+      <td className="px-6 py-4">
+         <div className={cn(
+           "flex flex-col border-l-2 pl-4 transition-all", 
+           Number(entry.credit) > 0 ? "ml-12 border-green-400 py-1" : "border-blue-500 py-1"
+         )}>
+            <span className={cn(
+              "font-bold text-sm tracking-tight", 
+              Number(entry.credit) > 0 ? "text-green-700" : "text-gray-800"
+            )}>
+              {entry.account_name}
+            </span>
+            <span className="text-[10px] text-gray-400 italic font-medium mt-0.5">{entry.description}</span>
          </div>
       </td>
-      <td className="px-6 py-5">
-         <span className="text-[10px] font-black tracking-widest bg-gray-100 text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200 block w-fit shadow-sm">
-            {entry.reference_no || '-'}
-         </span>
-      </td>
-      <td className="px-6 py-5">
-         <div className={cn("flex flex-col max-w-md", Number(entry.credit) > 0 ? "ml-10 pl-4 border-l-2 border-green-100" : "border-l-2 border-blue-500 pl-4")}>
-            <span className="font-black text-gray-800 text-sm tracking-tight">{entry.account_name}</span>
-            <span className="text-[11px] text-gray-400 italic mt-0.5 line-clamp-1">{entry.description}</span>
-         </div>
-      </td>
-      <td className="px-6 py-5 text-right">
+      <td className="px-6 py-4 text-right">
          {Number(entry.debit) > 0 ? (
-           <span className="font-black text-blue-600 text-base">฿{Number(entry.debit).toLocaleString()}</span>
-         ) : <span className="text-gray-200">-</span>}
+           <span className="font-black text-blue-600 text-sm">฿{Number(entry.debit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+         ) : <span className="text-gray-100 text-[10px]">-</span>}
       </td>
-      <td className="px-6 py-5 text-right">
+      <td className="px-6 py-4 text-right">
          {Number(entry.credit) > 0 ? (
-           <span className="font-black text-green-600 text-base">฿{Number(entry.credit).toLocaleString()}</span>
-         ) : <span className="text-gray-200">-</span>}
+           <span className="font-black text-green-600 text-sm">฿{Number(entry.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+         ) : <span className="text-gray-100 text-[10px]">-</span>}
       </td>
-      <td className="px-6 py-5 text-right">
-        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-1 group-hover:translate-x-0">
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
           {entry.receipt_url && (
             <a
               href={entry.receipt_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-9 h-9 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-500 rounded-xl transition-all border border-blue-50 hover:border-blue-500 shadow-sm"
+              className="w-8 h-8 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-500 rounded-lg transition-all border border-blue-50"
               title="ดูใบเสร็จ"
             >
-              <ExternalLink size={15} />
+              <ExternalLink size={14} />
             </a>
           )}
           <button
             onClick={() => setIsEditing(true)}
-            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 rounded-xl transition-all border border-gray-100 hover:border-blue-600 shadow-sm"
+            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 rounded-lg transition-all border border-gray-100 shadow-sm"
             title="แก้ไขรายการ"
           >
-            <Pencil size={15} />
+            <Pencil size={14} />
           </button>
           <button
             onClick={handleDelete}
             disabled={loading}
-            className="w-9 h-9 flex items-center justify-center text-gray-300 hover:text-white hover:bg-red-500 rounded-xl transition-all border border-gray-50 hover:border-red-500 shadow-sm disabled:opacity-40"
+            className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-white hover:bg-red-500 rounded-lg transition-all border border-gray-50 shadow-sm disabled:opacity-40"
             title="ลบรายการ"
           >
-            <Trash2 size={15} />
+            <Trash2 size={14} />
           </button>
         </div>
       </td>

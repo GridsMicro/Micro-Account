@@ -36,8 +36,8 @@ export default function ProfileClient({ member }: { member: Member | null }) {
   };
 
   return (
-    <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
-      <div className="max-w-2xl mx-auto">
+    <main className="p-6 md:p-10 min-h-screen bg-slate-50">
+      <div className="max-w-3xl mx-auto">
         
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -45,20 +45,20 @@ export default function ProfileClient({ member }: { member: Member | null }) {
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-              <User className="text-blue-600" /> ข้อมูลโปรไฟล์ผู้ใช้
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+              <User className="text-violet-600" /> ข้อมูลโปรไฟล์ผู้ใช้
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">แก้ไขข้อมูลส่วนตัวและรหัสผ่าน</p>
+            <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-widest leading-none">Security & Personnel Management</p>
           </div>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
           
           {/* Avatar Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-6">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-8">
+            <div className="flex items-center gap-10">
               <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-black border-4 border-blue-100">
+                <div className="w-24 h-24 rounded-xl bg-violet-600 flex items-center justify-center text-white text-4xl font-black border-4 border-violet-100 shadow-xl overflow-hidden">
                   {name.charAt(0).toUpperCase()}
                 </div>
                 <button
@@ -69,21 +69,25 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                 </button>
               </div>
               <div>
-                <p className="font-bold text-gray-800 text-lg">{name}</p>
-                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full mt-1 ${
-                  member?.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  <Building2 size={11} />
-                  {member?.role === 'admin' ? 'ผู้ดูแลระบบ' : member?.role || 'ผู้ดูแลระบบ'}
-                </span>
+                <p className="font-black text-slate-900 text-2xl tracking-tighter">{name}</p>
+                <div className="flex items-center gap-3 mt-2">
+                   <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-md uppercase tracking-widest ${
+                     member?.role === 'admin' ? 'bg-violet-100 text-violet-700 border border-violet-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                   }`}>
+                     <Building2 size={11} />
+                     {member?.role === 'admin' ? 'ผู้ดูแลระบบ (ADMIN)' : member?.role || 'Personal Account'}
+                   </span>
+                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Status ACTIVE</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Personal Info */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
-            <h2 className="font-bold text-gray-700 border-b border-gray-100 pb-3 flex items-center gap-2">
-              <User size={16} className="text-blue-500" /> ข้อมูลส่วนตัว
+          <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-8 space-y-6">
+            <h2 className="text-sm font-black text-slate-800 border-b border-slate-50 pb-4 flex items-center gap-2 uppercase tracking-[0.2em]">
+              <User size={16} className="text-violet-500" /> ข้อมูลส่วนตัว
             </h2>
 
             <div className="space-y-2">
@@ -94,7 +98,7 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:bg-white text-sm font-bold transition-all"
+                  className="w-full h-12 pl-12 pr-4 bg-slate-50 border-none rounded-md focus:ring-4 focus:ring-violet-50 focus:bg-white text-sm font-black text-slate-800 transition-all placeholder:text-slate-300"
                   placeholder="ชื่อ-นามสกุล"
                 />
               </div>
@@ -108,7 +112,7 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:bg-white text-sm transition-all"
+                  className="w-full h-12 pl-12 pr-4 bg-slate-50 border-none rounded-md focus:ring-4 focus:ring-violet-50 focus:bg-white text-sm font-medium text-slate-800 transition-all placeholder:text-slate-300"
                   placeholder="อีเมล"
                 />
               </div>
@@ -122,7 +126,7 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:bg-white text-sm transition-all"
+                  className="w-full h-12 pl-12 pr-4 bg-slate-50 border-none rounded-md focus:ring-4 focus:ring-violet-50 focus:bg-white text-sm font-medium text-slate-800 transition-all placeholder:text-slate-300"
                   placeholder="0xx-xxx-xxxx"
                 />
               </div>
@@ -130,10 +134,10 @@ export default function ProfileClient({ member }: { member: Member | null }) {
           </div>
 
           {/* Change Password */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
-            <h2 className="font-bold text-gray-700 border-b border-gray-100 pb-3 flex items-center gap-2">
-              <Lock size={16} className="text-orange-500" /> เปลี่ยนรหัสผ่าน
-              <span className="text-xs font-normal text-gray-400">(เว้นว่างถ้าไม่ต้องการเปลี่ยน)</span>
+          <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-8 space-y-6">
+            <h2 className="text-sm font-black text-slate-800 border-b border-slate-50 pb-4 flex items-center gap-2 uppercase tracking-[0.2em]">
+              <Lock size={16} className="text-amber-500" /> เปลี่ยนรหัสผ่าน
+              <span className="text-[10px] font-black text-slate-400 lowercase tracking-normal ml-auto">(Leave empty to keep existing)</span>
             </h2>
 
             <div className="space-y-2">
@@ -142,7 +146,7 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                 type="password"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
-                className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:bg-white text-sm transition-all"
+                className="w-full h-12 px-6 bg-slate-50 border-none rounded-md focus:ring-4 focus:ring-violet-50 focus:bg-white text-sm font-medium text-slate-800 transition-all placeholder:text-slate-300"
                 placeholder="••••••••"
               />
             </div>
@@ -154,7 +158,7 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                   type="password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:bg-white text-sm transition-all"
+                  className="w-full h-12 px-6 bg-slate-50 border-none rounded-md focus:ring-4 focus:ring-violet-50 focus:bg-white text-sm font-medium text-slate-800 transition-all placeholder:text-slate-300"
                   placeholder="••••••••"
                 />
               </div>
@@ -164,10 +168,10 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                   type="password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  className={`w-full h-11 px-4 bg-gray-50 border rounded-lg focus:bg-white text-sm transition-all ${
+                  className={`w-full h-12 px-6 bg-slate-50 border border-transparent rounded-md focus:bg-white text-sm font-medium text-slate-800 transition-all ${
                     confirmPassword && confirmPassword !== newPassword
-                      ? 'border-red-400 focus:border-red-500'
-                      : 'border-gray-300 focus:border-blue-500'
+                      ? 'border-rose-400 focus:ring-4 focus:ring-rose-50'
+                      : 'focus:ring-4 focus:ring-violet-50'
                   }`}
                   placeholder="••••••••"
                 />
@@ -175,11 +179,10 @@ export default function ProfileClient({ member }: { member: Member | null }) {
             </div>
           </div>
 
-          {/* Save Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-60"
+            className="w-full h-14 bg-violet-600 hover:bg-violet-700 text-white font-black rounded-lg flex items-center justify-center gap-3 shadow-xl shadow-violet-100 hover:-translate-y-1 active:scale-95 transition-all disabled:opacity-30 disabled:translate-y-0"
           >
             {saved ? (
               <><span className="text-green-300">✅</span> บันทึกเรียบร้อยแล้ว!</>

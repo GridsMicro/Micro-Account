@@ -462,30 +462,49 @@ export async function createJournalEntry(data: {
   debit: number;
   credit: number;
   receipt_url?: string | null;
+  journal_type?: string;
 }) {
   try {
-    const res = await sql`
-      INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit, receipt_url) 
-      VALUES (${data.entry_date}, ${data.reference_no}, ${data.account_name}, ${data.description}, ${data.debit}, ${data.credit}, ${data.receipt_url || null})
-      RETURNING id
-    `;
+    const res = await query(
+      `INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit, receipt_url, journal_type) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit, data.receipt_url || null, data.journal_type || 'general']
+    );
     revalidatePath("/journals");
-    return { success: true, id: res.rows[0].id };
+    if (res.rows && res.rows[0]) {
+      return { success: true, id: res.rows[0].id };
+    }
+    return { success: true };
   } catch (error: any) {
     console.error("Failed to create journal entry:", error);
     return { success: false, error: error.message || "Failed to create journal entry" };
   }
 }
 
-// ลบรายการบัญชีรายวัน
-export async function deleteJournalEntry(id: number) {
+// ลบรายการบัญชีรายวัน (Fix: ใช้ @vercel/postgres sql เพื่อความชัวร์บน Vercel)
+export async function deleteJournalEntry(id: number | string) {
   try {
-    await sql`DELETE FROM journal_entries WHERE id = ${id}`;
+    console.log(`🗑️ [DELETE ACTION] Target ID: ${id}`);
+    
+    // ลองใช้ sql ตรงๆ จาก @vercel/postgres เพราะมักจะจัดการ Connection Pool ได้ดีกว่าในเคส Delete
+    const { rowCount } = await sql`DELETE FROM journal_entries WHERE id = ${id}`;
+    
+    console.log(`✅ [DELETE ACTION] Result: Deleted ${rowCount} rows`);
+    
+    if (rowCount === 0) {
+      // ลองค้นหาดูก่อนว่ามี ID นี้จริงไหม (เพื่อ Debug)
+      const checkRes = await sql`SELECT id FROM journal_entries WHERE id = ${id}`;
+      if (checkRes.rowCount === 0) {
+        return { success: false, error: `ไม่บพบรายการ ID: ${id} ในฐานข้อมูล` };
+      }
+      return { success: false, error: "ไม่สามารถลบได้ แม้จะมีข้อมูลอยู่ (Database Constraint?)" };
+    }
+
     revalidatePath("/journals");
     return { success: true };
   } catch (error: any) {
-    console.error("Delete Journal Error:", error);
-    return { success: false, error: error.message };
+    console.error("❌ [DELETE ACTION] Error:", error);
+    return { success: false, error: "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล: " + error.message };
   }
 }
 
@@ -500,17 +519,17 @@ export async function updateJournalEntry(id: number, data: {
   receipt_url?: string | null;
 }) {
   try {
-    await sql`
-      UPDATE journal_entries 
-      SET entry_date=${data.entry_date}, 
-          reference_no=${data.reference_no}, 
-          account_name=${data.account_name}, 
-          description=${data.description}, 
-          debit=${data.debit}, 
-          credit=${data.credit}, 
-          receipt_url=${data.receipt_url || null}
-      WHERE id=${id}
-    `;
+    const res = await query(
+      `UPDATE journal_entries 
+       SET entry_date=$1, reference_no=$2, account_name=$3, description=$4, debit=$5, credit=$6, receipt_url=$7
+       WHERE id=$8`,
+      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit, data.receipt_url || null, id]
+    );
+    
+    if (res.rowCount === 0) {
+      return { success: false, error: "ไม่พบรายการที่ต้องการแก้ไข" };
+    }
+
     revalidatePath("/journals");
     return { success: true };
   } catch (error: any) {
@@ -519,3 +538,75 @@ export async function updateJournalEntry(id: number, data: {
   }
 }
 
+// ดึงรายการผังบัญชี (Chart of Accounts)
+export async function getAccounts(search: string = "") {
+  try {
+    let q = "SELECT * FROM accounts";
+    const params: any[] = [];
+    if (search) {
+      q += " WHERE code ILIKE $1 OR name ILIKE $1";
+      params.push(`%${search}%`);
+    }
+    q += " ORDER BY code ASC LIMIT 50";
+    const res = await query(q, params);
+    return { success: true, data: res.rows };
+  } catch (err: any) {
+    console.error("Get Accounts Error:", err);
+    return { success: false, error: err.message };
+  }
+}
+// ดึงการตั้งค่าแพทเทิร์นเอกสารทั้งหมด
+export async function getDocumentPatterns() {
+  try {
+    const res = await query("SELECT * FROM document_patterns ORDER BY id ASC");
+    return { success: true, data: res.rows };
+  } catch (err: any) {
+    console.error("Get Patterns Error:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+// อัปเดตแพทเทิร์นเอกสาร
+export async function updateDocumentPattern(id: number, data: {
+  prefix: string,
+  include_year: boolean,
+  include_month: boolean,
+  separator: string,
+  digits: number
+}) {
+  try {
+    await query(
+      `UPDATE document_patterns 
+       SET prefix=$1, include_year=$2, include_month=$3, separator=$4, digits=$5, updated_at=CURRENT_TIMESTAMP
+       WHERE id=$6`,
+      [data.prefix, data.include_year, data.include_month, data.separator, data.digits, id]
+    );
+    revalidatePath("/settings/patterns");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Update Pattern Error:", err);
+    return { success: false, error: err.message };
+  }
+}
+// เจนเลขที่เอกสารลำดับถัดไป
+export async function getNextReferenceNo(type: string) {
+  try {
+    const res = await query("SELECT * FROM document_patterns WHERE document_type = $1", [type]);
+    if (res.rows.length === 0) return { success: false, error: "Pattern not found" };
+    
+    const p = res.rows[0];
+    const nextNum = (p.last_number || 0) + 1;
+    
+    // Format: PREFIX-YYYY-MM-0001
+    const year = p.include_year ? new Date().getFullYear().toString() : "";
+    const month = p.include_month ? (new Date().getMonth() + 1).toString().padStart(2, '0') : "";
+    const digits = nextNum.toString().padStart(p.digits, '0');
+    
+    const parts = [p.prefix, year, month].filter(Boolean);
+    const refNo = parts.join(p.separator) + (p.separator || "") + digits;
+    
+    return { success: true, data: refNo };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -17,22 +18,39 @@ import {
   ShieldCheck,
   UserCog,
   Repeat,
-  ScrollText,
-  BookOpen
+  BookOpen,
+  ShoppingCart,
+  Wallet,
+  Truck,
+  Banknote,
+  Library,
+  Palette,
+  X,
+  User,
+  Zap
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { icon: Home, label: "หน้าแรก", href: "/" },
-  { icon: FileText, label: "ใบเสนอราคา", href: "/quotations" },
-  { icon: Receipt, label: "ใบแจ้งหนี้", href: "/invoices" },
+  { icon: Home, label: "หน้าแรก Dashboard", href: "/" },
+  { separator: "การดำเนินธุรกิจ" },
+  { icon: FileText, label: "ใบเสนอราคา (QT)", href: "/quotations" },
+  { icon: Receipt, label: "ใบแจ้งหนี้ (INV)", href: "/invoices" },
   { icon: Repeat, label: "รอบบิลอัตโนมัติ", href: "/recurring" },
   { icon: CreditCard, label: "การชำระเงิน", href: "/payments" },
-  { icon: ScrollText, label: "ใบสำคัญจ่าย", href: "/vouchers" },
-  { icon: BookOpen, label: "สมุดรายวันทั่วไป", href: "/journals" },
   { icon: Package, label: "คลังสินค้า", href: "/inventory" },
   { icon: Users, label: "ลูกค้า/คู่ค้า", href: "/contacts" },
+  
+  { separator: "สมุดบัญชีรายวัน (5 เล่ม)" },
+  { icon: ShoppingCart, label: "สมุดรายวันขาย (Sales)", href: "/journals?type=sales" },
+  { icon: Wallet, label: "สมุดรายวันรับเงิน (Receipt)", href: "/journals?type=receipt" },
+  { icon: Truck, label: "สมุดรายวันซื้อ (Purchase)", href: "/journals?type=purchase" },
+  { icon: Banknote, label: "สมุดรายวันจ่ายเงิน (Payment)", href: "/journals?type=payment" },
+  { icon: Library, label: "สมุดรายวันทั่วไป (General)", href: "/journals" },
+  
+  { separator: "รายงานและตั้งค่า" },
+  { icon: Palette, label: "แพทเทิร์นเอกสาร", href: "/settings/patterns" },
   { icon: BarChart3, label: "รายงานภาษี", href: "/tax-reports" },
   { icon: Settings, label: "ตั้งค่าระบบ", href: "/settings" },
 ];
@@ -45,130 +63,185 @@ const adminItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   return (
-    <aside 
-      className={cn(
-        "h-screen bg-[#343a40] text-[#c2c7d0] transition-all duration-300 flex flex-col shadow-xl",
-        isCollapsed ? "w-20" : "w-64"
-      )}
-    >
-      {/* Brand Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-700 bg-[#343a40]">
-        <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold shrink-0">
-          M
-        </div>
-        {!isCollapsed && (
-          <span className="ml-3 font-bold text-white text-lg tracking-tight truncate">
-            MICRO ACCOUNT
-          </span>
-        )}
+    <>
+      {/* Mobile Header Toolbar: ปรากฏเฉพาะบนมือถือ */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-violet-50 flex items-center justify-between px-6 z-40 shadow-sm">
+         <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-violet-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-violet-200">
+               M
+            </div>
+            <span className="font-black text-slate-800 tracking-tighter text-sm uppercase">Micro Account</span>
+         </div>
+         <button 
+           onClick={() => setIsMobileOpen(true)}
+           className="p-2 text-violet-600 hover:bg-violet-50 rounded-xl transition-all active:scale-90"
+         >
+           <Menu size={24} />
+         </button>
       </div>
 
-      {/* Profile - clickable → go to profile edit */}
-      {!isCollapsed && (
-        <Link href="/profile" className="px-6 py-4 border-b border-gray-700 hidden md:block group hover:bg-gray-700/50 transition-colors cursor-pointer">
-           <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600/80 flex items-center justify-center text-white font-bold border-2 border-blue-500/50 group-hover:border-blue-400 transition-colors shrink-0">
-                 N
+      {/* Mobile Overlay Overlay */}
+      <div 
+        className={cn(
+          "fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden transition-all duration-500",
+          isMobileOpen ? "opacity-100 visible" : "opacity-0 invisible"
+        )}
+        onClick={() => setIsMobileOpen(false)}
+      ></div>
+
+      {/* Sidebar main body */}
+      <aside 
+        className={cn(
+          "bg-slate-900 text-slate-300 transition-all duration-500 flex flex-col shadow-2xl z-[60] fixed lg:static h-full",
+          // Desktop Widths
+          isCollapsed ? "lg:w-24" : "lg:w-80",
+          // Mobile Widths & Animation
+          isMobileOpen ? "translate-x-0 w-80" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        {/* Brand Logo & Toggle */}
+        <div className="h-24 flex items-center justify-between px-8 border-b border-white/5 relative bg-slate-950/20">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white font-black shadow-2xl shadow-violet-600/40 group relative overflow-hidden shrink-0">
+               <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent"></div>
+               <span className="relative">M</span>
+            </div>
+            {(!isCollapsed || isMobileOpen) && (
+              <div className="flex flex-col">
+                 <span className="font-black text-white text-lg tracking-tight uppercase leading-none">MICROTRONIC</span>
+                 <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.4em] mt-1">Autonomous</span>
               </div>
-              <div className="flex flex-col truncate flex-1">
-                 <span className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors">Administrator</span>
-                 <span className="text-[10px] text-green-400 font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse"></span>
-                    Online
-                 </span>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 group-hover:text-blue-400 transition-colors shrink-0">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-           </div>
-        </Link>
-      )}
-
-
-      {/* Navigation */}
-      <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
-        <ul className="space-y-1 px-3">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded transition-colors group relative",
-                    isActive 
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
-                      : "hover:bg-gray-700 hover:text-white"
-                  )}
-                >
-                  <item.icon size={20} className={cn(isActive ? "text-white" : "text-gray-400 group-hover:text-white")} />
-                  {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-                  
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-4 px-3 py-1 bg-gray-800 text-white text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700">
-                      {item.label}
-                    </div>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-
-        {!isCollapsed && (
-          <div className="mt-8 mb-2 px-6">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 opacity-50">Administrator</span>
+            )}
           </div>
+          
+          {/* Close button for Mobile only */}
+          <button 
+            onClick={() => setIsMobileOpen(false)}
+            className="lg:hidden p-2 text-slate-500 hover:text-white transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Profile Segment */}
+        {(!isCollapsed || isMobileOpen) && (
+          <Link href="/profile" className="mx-6 mt-8 mb-6 p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all group group relative text-left">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-black shadow-xl shrink-0">
+                   A
+                </div>
+                <div className="flex flex-col truncate">
+                   <span className="text-sm font-black text-white tracking-tight">Administrator</span>
+                   <div className="flex items-center gap-2 mt-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active Edge</span>
+                   </div>
+                </div>
+                <Zap className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10 group-hover:text-violet-400 transition-colors" />
+             </div>
+          </Link>
         )}
 
-        <ul className="space-y-1 px-3">
-          {adminItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <li key={item.href}>
+        {/* Navigation Content */}
+        <nav className="flex-1 py-4 overflow-y-auto px-4 space-y-8 scrollbar-hide">
+          
+          <div className="space-y-1">
+            {menuItems.map((item, idx) => {
+              if ('separator' in item) {
+                return (!isCollapsed || isMobileOpen) ? (
+                  <div key={`sep-${idx}`} className="mt-8 mb-3 px-4">
+                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">
+                      {item.separator}
+                    </span>
+                  </div>
+                ) : <div key={`sep-${idx}`} className="h-px bg-white/5 my-6 mx-4"></div>;
+              }
+
+              const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href || '#'));
+              const Icon = item.icon!;
+
+              return (
                 <Link
-                  href={item.href}
+                  key={item.href}
+                  href={item.href || '#'}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded transition-colors group relative",
+                    "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all relative group overflow-hidden",
                     isActive 
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
-                      : "hover:bg-gray-700 hover:text-white"
+                      ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40" 
+                      : "hover:bg-white/5 text-slate-400 hover:text-white"
                   )}
                 >
-                  <item.icon size={20} className={cn(isActive ? "text-white" : "text-gray-400 group-hover:text-white")} />
-                  {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+                  <Icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
+                  {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
                   
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-4 px-3 py-1 bg-gray-800 text-white text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700">
+                  {/* Active Indicator Bar */}
+                  {isActive && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full"></div>}
+                  
+                  {/* Tooltip for collapsed view */}
+                  {(isCollapsed && !isMobileOpen) && (
+                    <div className="fixed left-24 px-4 py-2 bg-slate-800 text-white text-xs font-black rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100] shadow-2xl border border-white/5 uppercase tracking-widest">
                       {item.label}
                     </div>
                   )}
                 </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+              );
+            })}
+          </div>
 
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-gray-700 space-y-2 bg-[#2f343a]">
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full h-10 flex items-center justify-center gap-3 hover:bg-gray-700 rounded transition-colors"
-        >
-          {isCollapsed ? <Menu size={18} /> : <div className="flex items-center gap-3"><ChevronLeft size={18} /> <span className="text-sm">หุบแถบเมนู</span></div>}
-        </button>
-        
-        <Link 
-          href="/login"
-          className="w-full h-10 flex items-center justify-center gap-3 hover:bg-red-600 hover:text-white rounded transition-colors group"
-        >
-          <LogOut size={18} className="text-gray-400 group-hover:text-white" />
-          {!isCollapsed && <span className="text-sm">ออกจากระบบ</span>}
-        </Link>
-      </div>
-    </aside>
+          {/* Admin Tools Segment */}
+          <div className="space-y-1 pb-10">
+             {(!isCollapsed || isMobileOpen) && (
+               <div className="px-4 mb-3">
+                 <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">Security Module</span>
+               </div>
+             )}
+             {adminItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all group overflow-hidden",
+                      isActive 
+                        ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40" 
+                        : "hover:bg-white/5 text-slate-400 hover:text-white"
+                    )}
+                  >
+                    <item.icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
+                    {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
+                  </Link>
+                );
+             })}
+          </div>
+        </nav>
+
+        {/* Unified Bottom Actions */}
+        <div className="p-6 bg-slate-950/20 border-t border-white/5 space-y-3">
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="w-full h-12 hidden lg:flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-all group"
+          >
+            {isCollapsed ? <Menu size={20} /> : <div className="flex items-center gap-3"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> <span className="text-[10px] font-black uppercase tracking-widest">COLLAPSE SYSTEM</span></div>}
+          </button>
+          
+          <Link 
+            href="/login"
+            className="w-full h-12 flex items-center justify-center gap-3 bg-white/5 hover:bg-rose-600 hover:text-white text-slate-400 rounded-lg transition-all group border border-white/5"
+          >
+            <LogOut size={20} className="group-hover:scale-110 transition-transform" />
+            {(!isCollapsed || isMobileOpen) && <span className="text-[10px] font-black uppercase tracking-widest">Secure Logout</span>}
+          </Link>
+        </div>
+      </aside>
+    </>
   );
 }

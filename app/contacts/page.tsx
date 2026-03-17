@@ -1,6 +1,8 @@
+
 import { query } from "@/lib/db";
-import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit } from "lucide-react";
+import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit, ShieldCheck, Heart } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,78 +12,108 @@ export default async function ContactsPage() {
     const res = await query('SELECT * FROM contacts ORDER BY name ASC');
     contacts = res.rows;
   } catch (e) {
+    console.error("Fetch Contacts Error:", e);
     contacts = [];
   }
 
   return (
-    <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
-      <div className="max-w-7xl mx-auto">
+    <main className="p-6 md:p-12 min-h-screen bg-[#fdfaff]">
+      <div className="max-w-7xl mx-auto space-y-12">
         
-        {/* Content Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">จัดการข้อมูลลูกค้า/คู่ค้า</h1>
-            <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-              <span>รายชื่อทั้งหมดในระบบ</span>
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="space-y-2 text-left">
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+               <span className="p-3 bg-violet-600 rounded-2xl shadow-xl shadow-violet-200">
+                  <Users className="text-white w-8 h-8" /> 
+               </span>
+               ลูกค้าและคู่ค้า (CRM)
+            </h1>
+            <div className="flex items-center gap-3 ml-2">
+               <span className="text-violet-400 font-black text-[10px] uppercase tracking-[0.3em]">
+                  Stakeholder Relationship Management
+               </span>
+               <div className="h-px w-12 bg-violet-100"></div>
             </div>
           </div>
-          <Link href="/contacts/new" className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm">
-            <Plus size={18} />
-            เพิ่มรายชื่อใหม่
-          </Link>
+          
+          <div className="flex items-center gap-3">
+             <div className="hidden lg:flex items-center gap-2 bg-pink-50 px-4 py-2 rounded-xl border border-pink-100 mr-2">
+                <Heart size={16} className="text-pink-500 fill-pink-500" />
+                <span className="text-[10px] font-black text-pink-600 uppercase tracking-widest leading-none">VIP Relations Active</span>
+             </div>
+             <Link 
+              href="/contacts/new" 
+              className="h-14 px-8 bg-violet-600 hover:bg-violet-700 text-white font-black rounded-xl flex items-center gap-3 shadow-xl hover:-translate-y-1 active:scale-95 transition-all text-sm"
+             >
+                <Plus size={20} /> เพิ่มรายชื่อใหม่
+             </Link>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {contacts.length > 0 ? contacts.map((contact: any) => (
-            <div key={contact.id} className="bg-white rounded shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-               <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                     <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center text-blue-600 text-xl font-bold border border-gray-200">
+        {/* Contacts Gallery Grid */}
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {contacts.length > 0 ? contacts.map((contact: any, i: number) => (
+            <div key={contact.id} className="bg-white rounded-3xl shadow-sm border border-violet-50 hover:shadow-2xl hover:-translate-y-2 transition-all group overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-violet-50/30 rounded-full translate-x-12 -translate-y-12 group-hover:scale-150 transition-transform duration-700"></div>
+               
+               <div className="p-10 pb-6 relative">
+                  <div className="flex items-start justify-between mb-8">
+                     <div className="w-20 h-20 bg-gradient-to-br from-violet-600 to-indigo-700 rounded-xl flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-violet-100">
                         {contact.name.charAt(0)}
                      </div>
-                     <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded border border-blue-100">
-                        {contact.contact_type || 'General'}
+                     <span className="px-4 py-2 bg-violet-50 text-violet-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-violet-100">
+                        {contact.contact_type || 'GENERAL'}
                      </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">{contact.name}</h3>
+                  <h3 className="text-xl font-black text-slate-800 mb-6 tracking-tight line-clamp-1 group-hover:text-violet-600 transition-colors uppercase">{contact.name}</h3>
 
-                  <div className="space-y-3 text-sm text-gray-600">
-                     <div className="flex items-center gap-3">
-                        <Mail size={14} className="text-gray-400" />
-                        <span className="truncate">{contact.email || '-'}</span>
+                  <div className="space-y-4 text-left">
+                     <div className="flex items-center gap-4 bg-slate-50/50 p-3 rounded-xl border border-transparent hover:border-violet-100 transition-all">
+                        <div className="p-2 bg-white rounded-xl shadow-sm"><Mail size={14} className="text-violet-400" /></div>
+                        <span className="text-sm font-bold text-slate-600 truncate">{contact.email || '-'}</span>
                      </div>
-                     <div className="flex items-center gap-3">
-                        <Phone size={14} className="text-gray-400" />
-                        <span>{contact.phone || '-'}</span>
+                     <div className="flex items-center gap-4 bg-slate-50/50 p-3 rounded-xl border border-transparent hover:border-violet-100 transition-all">
+                        <div className="p-2 bg-white rounded-xl shadow-sm"><Phone size={14} className="text-violet-400" /></div>
+                        <span className="text-sm font-bold text-slate-600">{contact.phone || '-'}</span>
                      </div>
-                     <div className="flex items-start gap-3">
-                        <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-2">{contact.address || '-'}</span>
+                     <div className="flex items-start gap-4 bg-slate-50/50 p-3 rounded-xl border border-transparent hover:border-violet-100 transition-all">
+                        <div className="p-2 bg-white rounded-xl shadow-sm shrink-0"><MapPin size={14} className="text-violet-400" /></div>
+                        <span className="text-xs font-medium text-slate-400 line-clamp-2 leading-relaxed">{contact.address || 'ไม่ระบุที่อยู่ติดต่อ'}</span>
                      </div>
                   </div>
                </div>
                
-               <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-between items-center">
-                  <Link href={`/contacts/edit/${contact.id}`} className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline">
-                     <Edit size={14} /> แก้ไขข้อมูล
+               <div className="bg-violet-50/30 px-10 py-6 border-t border-violet-50 flex justify-between items-center group-hover:bg-violet-600 transition-all duration-300">
+                  <Link href={`/contacts/edit/${contact.id}`} className="text-violet-600 group-hover:text-white text-[10px] font-black flex items-center gap-2 uppercase tracking-widest">
+                     <Edit size={14} /> Edit Identity
                   </Link>
-                  <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                     <ArrowRight size={16} />
+                  <button className="text-violet-300 group-hover:text-white transition-colors">
+                     <ArrowRight size={18} />
                   </button>
                </div>
             </div>
           )) : (
-            <div className="col-span-full py-24 text-center bg-white rounded border border-dashed border-gray-300">
-               <Users size={48} className="text-gray-200 mx-auto mb-4" />
-               <p className="text-gray-500 font-bold">ไม่พบข้อมูลรายชื่อในระบบ</p>
+            <div className="col-span-full py-32 text-center bg-violet-50/5 rounded-3xl border-4 border-dashed border-violet-100 group">
+               <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-violet-100 group-hover:scale-110 transition-transform">
+                  <Users size={48} className="text-violet-200" />
+               </div>
+               <p className="text-slate-400 font-black text-xl mb-4 tracking-tight">Everything is Quiet here</p>
+               <p className="text-slate-400/60 text-sm max-w-xs mx-auto italic mb-10">ยังไม่พบรายชื่อผู้ติดต่อหรือลูกค้าในระบบคลาวด์ของคุณ</p>
+               <Link 
+                 href="/contacts/new" 
+                 className="px-8 py-4 bg-violet-600 text-white font-black rounded-xl shadow-xl hover:bg-violet-700 transition-all uppercase text-xs tracking-widest"
+               >
+                 Register First Stakeholder
+               </Link>
             </div>
           )}
         </div>
 
-        {/* Footer Text */}
-        <div className="text-center text-gray-400 text-xs font-medium pb-8 border-t border-gray-200 pt-6">
-           © 2026 Microtronic Thailand.
+        {/* Global Footer */}
+        <div className="text-center py-10 opacity-30">
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Entity Relationship Management System • 2026</p>
         </div>
       </div>
     </main>
