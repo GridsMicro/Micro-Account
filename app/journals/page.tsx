@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { sql } from "@vercel/postgres";
 import { BookOpen, Plus, Calendar } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -8,10 +8,10 @@ import ExportButton from "./ExportButton";
 export const dynamic = 'force-dynamic';
 
 export default async function JournalsPage() {
-  let entries = [];
+  let entries: any[] = [];
   try {
-    const res = await query('SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC');
-    entries = res.rows;
+    const { rows } = await sql`SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC`;
+    entries = rows;
   } catch (e) {
     entries = [];
   }

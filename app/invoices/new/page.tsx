@@ -20,7 +20,7 @@ import {
   Hash,
   ShoppingBag
 } from "lucide-react";
-import { getContacts, createJournalEntry, getCompanySettings, getNextInvoiceNumber } from "@/app/actions";
+import { getContacts, createJournalEntry, getCompanySettings, getNextInvoiceNumber, createInvoiceRecord } from "@/app/actions";
 import { useRouter } from "next/navigation";
 
 export default function NewInvoicePage() {
@@ -129,6 +129,21 @@ export default function NewInvoicePage() {
       }
 
       setStatus({type: 'success', message: 'ออกใบแจ้งหนี้และบันทึกค้างรับเรียบร้อยครับพี่! สามารถพิมพ์ส่งลูกค้าได้ทันที'});
+
+      // 4. บันทึกข้อมูลลงตาราง invoices เพื่อให้ไปปรากฏในหน้ารายการ
+      await createInvoiceRecord({
+        invoice_number: invoiceData.reference,
+        contact_id: invoiceData.contactId,
+        net_amount: totalAmount,
+        vat_amount: vatAmount,
+        status: 'sent',
+        due_date: invoiceData.dueDate
+      });
+
+      // หน่วงเวลานิดนึงเพื่อให้พี่เห็นข้อความสำเร็จ ก่อนกลับไปหน้ารวม
+      setTimeout(() => {
+        router.push('/invoices');
+      }, 2000);
     } catch (err: any) {
       setStatus({type: 'error', message: err.message});
     } finally {

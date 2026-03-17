@@ -265,6 +265,27 @@ export async function getNextInvoiceNumber() {
   }
 }
 
+// บันทึกใบแจ้งหนี้ลงตาราง invoices
+export async function createInvoiceRecord(data: {
+  invoice_number: string;
+  contact_id: string;
+  net_amount: number;
+  vat_amount: number;
+  status: string;
+  due_date: string;
+}) {
+  try {
+    await sql`
+      INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date)
+      VALUES (${data.invoice_number}, ${data.contact_id}, ${data.net_amount}, ${data.vat_amount}, ${data.status}, ${data.due_date})
+    `;
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error creating invoice record:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateContact(id: string, data: {
   name: string;
   type: string;
@@ -443,11 +464,11 @@ export async function createJournalEntry(data: {
   receipt_url?: string | null;
 }) {
   try {
-    const res = await query(
-      `INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit, receipt_url) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit, data.receipt_url || null]
-    );
+    const res = await sql`
+      INSERT INTO journal_entries (entry_date, reference_no, account_name, description, debit, credit, receipt_url) 
+      VALUES (${data.entry_date}, ${data.reference_no}, ${data.account_name}, ${data.description}, ${data.debit}, ${data.credit}, ${data.receipt_url || null})
+      RETURNING id
+    `;
     revalidatePath("/journals");
     return { success: true, id: res.rows[0].id };
   } catch (error: any) {
@@ -459,10 +480,11 @@ export async function createJournalEntry(data: {
 // ลบรายการบัญชีรายวัน
 export async function deleteJournalEntry(id: number) {
   try {
-    await query(`DELETE FROM journal_entries WHERE id = $1`, [id]);
+    await sql`DELETE FROM journal_entries WHERE id = ${id}`;
     revalidatePath("/journals");
     return { success: true };
   } catch (error: any) {
+    console.error("Delete Journal Error:", error);
     return { success: false, error: error.message };
   }
 }
@@ -478,15 +500,21 @@ export async function updateJournalEntry(id: number, data: {
   receipt_url?: string | null;
 }) {
   try {
-    await query(
-      `UPDATE journal_entries 
-       SET entry_date=$1, reference_no=$2, account_name=$3, description=$4, debit=$5, credit=$6, receipt_url=$7
-       WHERE id=$8`,
-      [data.entry_date, data.reference_no, data.account_name, data.description, data.debit, data.credit, data.receipt_url || null, id]
-    );
+    await sql`
+      UPDATE journal_entries 
+      SET entry_date=${data.entry_date}, 
+          reference_no=${data.reference_no}, 
+          account_name=${data.account_name}, 
+          description=${data.description}, 
+          debit=${data.debit}, 
+          credit=${data.credit}, 
+          receipt_url=${data.receipt_url || null}
+      WHERE id=${id}
+    `;
     revalidatePath("/journals");
     return { success: true };
   } catch (error: any) {
+    console.error("Update Journal Error:", error);
     return { success: false, error: error.message };
   }
 }
