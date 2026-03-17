@@ -34,3 +34,4 @@ venv/
 # Whitelist important config files
 !vercel.json
 !hybrid/vercel.json
+site/
