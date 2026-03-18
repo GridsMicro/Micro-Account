@@ -2,18 +2,40 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn, Lock, Mail, ShieldCheck } from "lucide-react";
+import { LogIn, Lock, Mail, ShieldCheck, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
-      router.push("/");
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(result.error || "เข้าสู่ระบบไม่สำเร็จ");
+      } else if (result?.ok) {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err) {
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -36,18 +58,30 @@ export default function LoginPage() {
               <span className="text-xs font-bold text-blue-700 uppercase tracking-widest">Secure Admin Portal</span>
            </div>
 
+           {/* Error Alert */}
+           {error && (
+             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded flex gap-3">
+               <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+               <div>
+                 <p className="font-bold text-red-800 text-sm">เข้าสู่ระบบไม่สำเร็จ</p>
+                 <p className="text-red-700 text-xs mt-1">{error}</p>
+               </div>
+             </div>
+           )}
+
            <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                 <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Username / Email</label>
+                 <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Email</label>
                  <div className="relative group">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
                     <input 
-                      type="text" 
+                      type="email" 
                       required
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
-                      placeholder="admin@microtronic.biz"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
+                      className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="อีเมล"
                     />
                  </div>
               </div>
@@ -61,7 +95,8 @@ export default function LoginPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium"
+                      disabled={isLoading}
+                      className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="••••••••"
                     />
                  </div>
@@ -69,18 +104,19 @@ export default function LoginPage() {
 
               <div className="flex items-center justify-between text-xs">
                  <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-500 select-none">
-                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" disabled={isLoading} />
                     จดจำฉัน
                  </label>
-                 <button type="button" className="text-blue-600 font-bold hover:underline">ลืมรหัสผ่าน?</button>
+                 <button type="button" className="text-blue-600 font-bold hover:underline disabled:opacity-50" disabled={isLoading}>ลืมรหัสผ่าน?</button>
               </div>
 
               <button 
-                type="submit" 
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-black rounded shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm disabled:cursor-not-allowed"
               >
                 <LogIn size={20} />
-                เข้าสู่ระบบ
+                {isLoading ? "กำลังประมวลผล..." : "เข้าสู่ระบบ"}
               </button>
            </form>
 

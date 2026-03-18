@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { 
   Home, 
   FileText, 
@@ -233,13 +234,13 @@ export default function Sidebar() {
             {isCollapsed ? <Menu size={20} /> : <div className="flex items-center gap-3"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> <span className="text-[10px] font-black uppercase tracking-widest">COLLAPSE SYSTEM</span></div>}
           </button>
           
-          <Link 
-            href="/login"
+          <button 
+            onClick={() => signOut({ redirect: true })}
             className="w-full h-12 flex items-center justify-center gap-3 bg-white/5 hover:bg-rose-600 hover:text-white text-slate-400 rounded-lg transition-all group border border-white/5"
           >
             <LogOut size={20} className="group-hover:scale-110 transition-transform" />
             {(!isCollapsed || isMobileOpen) && <span className="text-[10px] font-black uppercase tracking-widest">Secure Logout</span>}
-          </Link>
+          </button>
         </div>
       </aside>
     </>
