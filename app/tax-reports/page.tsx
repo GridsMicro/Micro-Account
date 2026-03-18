@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getTaxSummary } from "@/app/actions";
+import TaxExportButton from "./TaxExportButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -186,9 +187,7 @@ export default async function TaxReportsPage() {
                    <button className="w-full h-10 bg-white border border-green-500 text-green-600 font-bold rounded flex items-center justify-center gap-2 hover:bg-green-50 transition-colors shadow-sm text-sm">
                       <ShieldCheck size={16} /> ยื่นแบบออนไลน์ (E-Filing)
                    </button>
-                   <button className="w-full h-10 bg-white border border-gray-300 text-gray-700 font-bold rounded flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors text-sm">
-                      <Download size={16} /> โหลดไฟล์ยื่นแบบ (.txt)
-                   </button>
+                   <TaxExportButton id={form.id} />
                 </div>
              </div>
            ))}

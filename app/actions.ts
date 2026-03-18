@@ -299,36 +299,6 @@ export async function exportJournalsToExcel() {
 }
 
 // ฟังก์ชันดึงข้อมูลทั้งหมดสำหรับสร้าง PDF/รายงานหน้าบ้าน
-// ฟังก์ชันสรุปยอดภาษีสำหรับ Dashboard
-export async function getTaxSummary() {
-  try {
-    const { rows: vatSales } = await sql`
-      SELECT COALESCE(SUM(credit), 0) as total FROM journal_entries 
-      WHERE description ILIKE '%ภาษีขาย%' OR account_name ILIKE '%ภาษีขาย%'
-    `;
-    const { rows: vatPurchase } = await sql`
-      SELECT COALESCE(SUM(debit), 0) as total FROM journal_entries 
-      WHERE description ILIKE '%ภาษีซื้อ%' OR account_name ILIKE '%ภาษีซื้อ%'
-    `;
-    const { rows: wht } = await sql`
-      SELECT COALESCE(SUM(credit), 0) as total FROM journal_entries 
-      WHERE description ILIKE '%หัก ณ ที่จ่าย%' OR account_name ILIKE '%หัก ณ ที่จ่าย%'
-    `;
-
-    return {
-      success: true,
-      data: {
-        vatSales: Number(vatSales[0].total),
-        vatPurchase: Number(vatPurchase[0].total),
-        wht: Number(wht[0].total),
-        netVat: Number(vatSales[0].total) - Number(vatPurchase[0].total)
-      }
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
 export async function getJournalEntries() {
   try {
     const { rows } = await sql`
@@ -389,7 +359,7 @@ export async function getNextInvoiceNumber() {
   }
 }
 
-// บันทึกใบแจ้งหนี้ลงตาราง invoices
+// บันทึกใบแจ้งหนี้ลงตาราง invoices + บันทึกบัญชีอัตโนมัติ
 export async function createInvoiceRecord(data: {
   invoice_number: string;
   contact_id: string;
@@ -399,10 +369,43 @@ export async function createInvoiceRecord(data: {
   due_date: string;
 }) {
   try {
-    await sql`
-      INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date)
-      VALUES (${data.invoice_number}, ${data.contact_id}, ${data.net_amount}, ${data.vat_amount}, ${data.status}, ${data.due_date})
-    `;
+    const totalAmount = Number(data.net_amount) + Number(data.vat_amount);
+    
+    // 1. บันทึก Invoice
+    await query(
+      `INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      [data.invoice_number, data.contact_id, data.net_amount, data.vat_amount, data.status, data.due_date]
+    );
+
+    // 2. บันทึกบัญชีอัตโนมัติ (Journal Entry)
+    // Dr. ลูกหนี้การค้า
+    await query(
+      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
+       VALUES (NOW(), $1, $2, 'ลูกหนี้การค้า', $3, 0)`,
+      [data.invoice_number, `รายได้จากใบแจ้งหนี้ #${data.invoice_number}`, totalAmount]
+    );
+
+    // Cr. รายได้จากการขาย/บริการ
+    await query(
+      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
+       VALUES (NOW(), $1, $2, 'รายได้จากการขาย/บริการ', 0, $3)`,
+      [data.invoice_number, `รายได้จากใบแจ้งหนี้ #${data.invoice_number}`, data.net_amount]
+    );
+
+    // Cr. ภาษีขาย (ถ้ามี VAT)
+    if (data.vat_amount > 0) {
+      await query(
+        `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
+         VALUES (NOW(), $1, $2, 'ภาษีขาย', 0, $3)`,
+        [data.invoice_number, `ภาษีขายจาก #"${data.invoice_number}`, data.vat_amount]
+      );
+    }
+
+    revalidatePath("/invoices");
+    revalidatePath("/journals");
+    revalidatePath("/");
+    
     return { success: true };
   } catch (error: any) {
     console.error("Error creating invoice record:", error);
@@ -737,6 +740,7 @@ export async function getNextReferenceNo(type: string) {
 
 // --- Payment Vouchers Actions ---
 
+// บันทึกใบสำคัญจ่าย + บันทึกบัญชีอัตโนมัติ
 export async function createPaymentVoucher(data: {
   voucher_no: string;
   payee_name: string;
@@ -744,14 +748,40 @@ export async function createPaymentVoucher(data: {
   amount: number;
   payment_method: string;
   status: string;
+  receipt_url?: string;
 }) {
   try {
+    // 1. บันทึก Voucher
     const res = await query(
-      `INSERT INTO payment_vouchers (voucher_no, payee_name, issue_date, amount, payment_method, status)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [data.voucher_no, data.payee_name, data.issue_date, data.amount, data.payment_method, data.status]
+      `INSERT INTO payment_vouchers (voucher_no, payee_name, issue_date, amount, payment_method, status, receipt_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [data.voucher_no, data.payee_name, data.issue_date, data.amount, data.payment_method, data.status, data.receipt_url || null]
     );
+
+    // 2. บันทึกบัญชีอัตโนมัติ (Journal Entry)
+    // เพิ่มคำอธิบายว่าแนบบิลมาด้วย (ถ้ามี)
+    const description = `จ่ายเงินให้: ${data.payee_name}${data.receipt_url ? ' (แนบบิลแล้ว)' : ''}`;
+    
+    await query(
+      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit, receipt_url)
+       VALUES ($1, $2, $3, 'ค่าใช้จ่ายทั่วไป/ซื้อสินค้า', $4, 0, $5)`,
+      [data.issue_date, data.voucher_no, description, data.amount, data.receipt_url || null]
+    );
+
+    // ... (ส่วนที่เหลือของสมุดรายวัน)
+
+    // Cr. เงินสด หรือ เงินฝากธนาคาร (ตามช่องทางหลัก)
+    const bankAccount = data.payment_method === "Transfer" ? "เงินฝากธนาคาร" : "เงินสด";
+    await query(
+      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
+       VALUES ($1, $2, $3, $4, 0, $5)`,
+      [data.issue_date, data.voucher_no, `จ่ายโอน/เงินสดให้: ${data.payee_name}`, bankAccount, data.amount]
+    );
+
     revalidatePath("/vouchers");
+    revalidatePath("/journals");
+    revalidatePath("/");
+    
     return { success: true, id: res.rows[0].id };
   } catch (error: any) {
     console.error("Failed to create payment voucher:", error);
@@ -763,6 +793,200 @@ export async function getPaymentVouchers() {
   try {
     const { rows } = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');
     return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+//สรุปข้อมูลภาษีสำหรับ Dashboard
+export async function getTaxSummary() {
+    try {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  
+      // 1. คำนวณภาษีขายจาก Invoices
+      const salesRes = await query(`
+        SELECT SUM(vat_amount) as total_vat_sales 
+        FROM invoices 
+        WHERE created_at >= $1 OR created_on >= $1
+      `, [firstDayOfMonth]);
+  
+      // 2. คำนวณภาษีซื้อจาก Payment Vouchers (สมมติว่ามีการเก็บ VAT ใน Vouchers)
+      // หากยังไม่มี column vat ใน vouchers จะปรับให้ดึงจาก Journal Entries ที่ระบุเป็น 'Purchase VAT'
+      const purchaseRes = await query(`
+        SELECT SUM(debit) as total_vat_purchase 
+        FROM journal_entries 
+        WHERE (account_name ILIKE '%ภาษีซื้อ%' OR account_name ILIKE '%Purchase VAT%')
+        AND entry_date >= $1
+      `, [firstDayOfMonth]);
+  
+      // 3. คำนวณภาษีหัก ณ ที่จ่าย (WHT) จากรายการจ่าย
+      const whtRes = await query(`
+        SELECT SUM(credit) as total_wht 
+        FROM journal_entries 
+        WHERE (account_name ILIKE '%ภาษีหัก ณ ที่จ่าย%' OR account_name ILIKE '%Withholding%')
+        AND entry_date >= $1
+      `, [firstDayOfMonth]);
+  
+      const vatSales = Number(salesRes.rows[0]?.total_vat_sales || 0);
+      const vatPurchase = Number(purchaseRes.rows[0]?.total_vat_purchase || 0);
+      const wht = Number(whtRes.rows[0]?.total_wht || 0);
+      const netVat = vatSales - vatPurchase;
+  
+      return {
+        success: true,
+        data: {
+          vatSales,
+          vatPurchase,
+          wht,
+          netVat
+        }
+      };
+    } catch (error: any) {
+      console.error("Tax Summary Error:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+// --- RD E-Filing Export Logic (AccRevo Standard) ---
+
+// 1. Export ภ.พ. 30 (ภาษีมูลค่าเพิ่ม)
+export async function exportPP30ToTxt(month: number, year: number) {
+  try {
+    const firstDay = new Date(year, month - 1, 1).toISOString();
+    const lastDay = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+    // ดึงภาษีขาย
+    const sales = await query(`
+      SELECT i.*, c.name, c.tax_id 
+      FROM invoices i 
+      JOIN contacts c ON i.contact_id = c.id::text
+      WHERE i.created_at BETWEEN $1 AND $2 AND i.status = 'paid'
+    `, [firstDay, lastDay]);
+
+    // Format: TAXID|NAME|BRANCH|DATE|INV_NO|AMOUNT|VAT
+    let content = sales.rows.map(r => {
+      const date = new Date(r.created_at || r.created_on).toLocaleDateString('th-TH');
+      return `${r.tax_id || '0000000000000'}|${r.name}|00000|${date}|${r.invoice_number}|${r.net_amount}|${r.vat_amount}`;
+    }).join("\n");
+
+    if (!content) content = "NO DATA FOR THIS MONTH";
+
+    const base64 = Buffer.from(content).toString("base64");
+    return { 
+      success: true, 
+      data: base64, 
+      filename: `PP30_Export_${year}_${month}.txt` 
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+// 2. Export ภ.ง.ด. 53 (ภาษีหัก ณ ที่จ่าย - License/Service)
+export async function exportPND53ToTxt(month: number, year: number) {
+  try {
+    const firstDay = new Date(year, month - 1, 1).toISOString();
+    const lastDay = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+    // ดึงรายการจ่ายเงินที่มี WHT (หัก ณ ที่จ่าย 53)
+    const whtItems = await query(`
+      SELECT j.*, c.name, c.tax_id, c.address
+      FROM journal_entries j
+      LEFT JOIN contacts c ON j.description ILIKE '%' || c.name || '%'
+      WHERE j.entry_date BETWEEN $1 AND $2 
+      AND (j.account_name ILIKE '%หัก ณ ที่จ่าย%')
+    `, [firstDay, lastDay]);
+
+    // RD Format (Pipe Separated Example)
+    let content = whtItems.rows.map(r => {
+      const date = new Date(r.entry_date).toLocaleDateString('th-TH');
+      return `${r.tax_id || '0000000000000'}|${r.name}|${r.address || '-'}|${date}|5%|${r.credit}`;
+    }).join("\n");
+
+    if (!content) content = "NO DATA FOR THIS MONTH";
+
+    const base64 = Buffer.from(content).toString("base64");
+    return { 
+      success: true, 
+      data: base64, 
+      filename: `PND53_Export_${year}_${month}.txt` 
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+// 🏆 สรุปรายเดือนแบบพรีเมียม (Monthly Financial Snapshot on Drive)
+export async function exportMonthlySummaryToDrive() {
+  try {
+    const now = new Date();
+    const monthYear = (now.getMonth() + 1) + '/' + now.getFullYear();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const invoices = (await query('SELECT * FROM invoices WHERE created_at >= $1 OR created_on >= $1', [firstDay])).rows;
+    const vouchers = (await query('SELECT * FROM payment_vouchers WHERE issue_date >= $1', [firstDay])).rows;
+    
+    const folderId = await getOrCreateFolder('Micro Account Reports/Summaries');
+    const spreadsheet = await googleSheets.spreadsheets.create({
+      requestBody: {
+        properties: { title: 'สรุปงานบัญชีประจำเดือน ' + monthYear + ' - Microtronic' },
+        sheets: [
+          { properties: { title: 'สรุปรายได้ (Invoices)' } },
+          { properties: { title: 'สรุปค่าใช้จ่าย (Expenses)' } }
+        ]
+      }
+    });
+
+    const spreadsheetId = spreadsheet.data.spreadsheetId;
+    if (!spreadsheetId) throw new Error('Cloud Sync Failed');
+
+    const invoiceValues = [
+      ['ลำดับ', 'เลขที่ใบแจ้งหนี้', 'ยอดก่อน VAT', 'VAT', 'ยอดรวมสุทธิ', 'สถานะ'],
+      ...invoices.map((i: any, idx: number) => [idx+1, i.invoice_number, i.net_amount, i.vat_amount, Number(i.net_amount)+Number(i.vat_amount), i.status])
+    ];
+    await googleSheets.spreadsheets.values.update({
+      spreadsheetId: spreadsheetId,
+      range: 'สรุปรายได้ (Invoices)!A1',
+      valueInputOption: 'RAW',
+      requestBody: { values: invoiceValues }
+    });
+
+    const voucherValues = [
+      ['ลำดับ', 'เลขที่ PV', 'ผู้รับเงิน', 'จำนวนเงิน', 'วิธีจ่าย', 'วันที่'],
+      ...vouchers.map((v: any, idx: number) => [idx+1, v.voucher_no, v.payee_name, v.amount, v.payment_method, new Date(v.issue_date).toLocaleDateString('th-TH')])
+    ];
+    await googleSheets.spreadsheets.values.update({
+      spreadsheetId: spreadsheetId,
+      range: 'สรุปค่าใช้จ่าย (Expenses)!A1',
+      valueInputOption: 'RAW',
+      requestBody: { values: voucherValues }
+    });
+
+    if (folderId) {
+      await googleDrive.files.update({
+        fileId: spreadsheetId,
+        addParents: folderId,
+        removeParents: 'root',
+        fields: 'id, parents',
+      });
+    }
+    
+    try {
+      await googleDrive.permissions.create({
+        fileId: spreadsheetId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
+    } catch (e) {}
+
+    return { 
+      success: true, 
+      url: 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit',
+      message: 'รายงานประจำเดือน ' + monthYear + ' พร้อมใช้งานบน Google Drive แล้ว' 
+    };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

@@ -1,48 +1,43 @@
-# Micro-Account Expert (Next Era 2026)
 
-ระบบจัดการบัญชีและเอกสารบริษัทนวัตกรรมใหม่ ที่รวมพลังระหว่าง **Online 100% (Cloud)** และ **Hybrid (Local Backup)** เข้าด้วยกันอย่างสมบูรณ์แบบ
+# 📘 Micro-Account: ระบบบัญชีอัจฉริยะ 🚀
+*ฉบับสมบูรณ์ - AI Powered & RD-Ready (Purple Pastel Premium)*
 
-## 🏗️ โครงสร้างโครงการ (Project Structure)
-
-โครงการถูกแบ่งออกเป็น 2 ส่วนหลักเพื่อความยืดหยุ่นและความปลอดภัยสูงสุด:
-
-### 1. 🌐 Online 100% Version (Root Directory)
-ระบบงานหลักสำหรับพนักงานทุกคน ทำงานผ่านระบบคลาวด์เต็มรูปแบบ
-- **Technology:** Next.js 16+, TypeScript, Tailwind CSS 4
-- **Database:** Neon (PostgreSQL Cloud)
-- **Deployment:** Vercel
-- **จุดเด่น:** เข้าถึงได้จากทุกที่ทั่วโลก, ข้อมูล Real-time, UI ระดับ Premium
-
-### 2. 🏮 Hybrid / Local Version (`/hybrid`)
-ระบบกึ่งออนไลน์สำหรับใช้เป็น Backup หรือทำงานในที่ที่อินเทอร์เน็ตไม่เสถียร
-- **Technology:** Python, NiceGUI, SQLAlchemy
-- **Database:** SQLite (`database.db`) สำหรับ Local และเชื่อมต่อ Neon สำหรับ Online
-- **จุดเด่น:** ทำงานได้โดยไม่ต้องต่อเน็ตภายนอก, มีสำเนาข้อมูลล่าสุดในเครื่องเสมอ
+ยินดีต้อนรับสู่ระบบบริหารจัดการบัญชีและภาษีอัตโนมัติ สำหรับ **บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด** ระบบนี้ออกแบบมาให้ใช้งานง่ายแต่ทรงพลังเหมือนระดับองค์กรใหญ่
 
 ---
 
-## 🚀 วิธีการใช้งาน (Getting Started)
+### ✨ ฟีเจอร์หลัก (Key Features)
 
-### สำหรับการทำงานออนไลน์ (Next.js):
-1. ตรวจสอบไฟล์ `.env` ว่ามี `DATABASE_URL` (Neon) เรียบร้อยแล้ว
-2. รันคำสั่งพัฒนา:
-   ```bash
-   npm install
-   npm run dev
-   ```
-3. เข้าใช้งานผ่าน `http://localhost:3000`
+#### 1. 🧾 **การจัดการรายได้ (Invoices)**
+- **AI Auto-Journal:** บันทึกเดบิต/เครดิต อัตโนมัติลงสมุดรายวันทันทีที่ออกบิล
+- **AccRevo Style:** ดีไซน์ใบแจ้งหนี้พรีเมียม พร้อม Preview และ Print เป็น PDF ได้ทันที
 
-### สำหรับการทำงานกึ่งออนไลน์ (Python Hybrid):
-1. เข้าไปที่โฟลเดอร์ `hybrid/`
-2. รันไฟล์ `start.bat` (Windows) หรือ `./run.sh` (Linux)
-3. ระบบจะเปิดหน้าจอ NiceGUI ที่ `http://localhost:8080`
+#### 2. 💸 **บัญชีรายจ่าย & หลักฐาน (Expenses & Vouchers)**
+- **Evidence Collector:** สามารถแนบไฟล์รูปใบเสร็จ หรือ Link จาก Google Drive คู่กับรายการรายจ่าย
+- **Tax Benefit:** ตรวจสอบหลักฐานลดหย่อนภาษีได้ 100% จากหน้าสมุดรายวัน
+
+#### 3. 📊 **E-Filing Dashboard (Tax & RD-Now)**
+- **VAT & WHT:** สรุปภาษีซื้อ-ภาษีขาย และภาษีหัก ณ ที่จ่าย แบบเรียลไทม์
+- **RD Export:** ส่งออกไฟล์ `.txt` ตามฟอร์แมตมาตรฐานกรมสรรพากร (ภ.พ. 30, ภ.ง.ด. 53) เพื่อยื่นแบบออนไลน์ในคลิกเดียว
+
+#### 4. ☁️ **Cloud Connectivity (Google Drive Sync)**
+- **Monthly Summary:** ปุ่มสรุปยอดรายเดือนส่งขึ้น Google Drive อัตโนมัติ
+- **Bot Assistant:** ทำงานร่วมกับ `micro.env2026@gmail.com` เพื่อจัดเก็บเอกสารอย่างปลอดภัย
+
+---
+
+### 🚀 วิธีการเริ่มใช้งาน (Getting Started)
+
+1. **หน้ารายการ (Dashboard):** ตรวจสอบสุขภาพทางการเงิน (Financial Health) ได้ที่หน้าแรก
+2. **ออกเอกสารใหม่:** ใช้ทางลัด "New Invoice" หรือ "New Voucher" จาก Dashboard
+3. **ปิดงบรายเดือน:** กดปุ่ม **"สรุปยอดส่งเข้า Google Drive"** เพื่อจัดเก็บข้อมูลบนคลาวด์
 
 ---
 
-## 📂 รายละเอียดไฟล์สำคัญ
-- `app/` - โค้ดหน้าจอหลักของระบบออนไลน์ (Next.js)
-- `hybrid/pure_app.py` - โค้ดหลักของระบบกึ่งออนไลน์ (Python)
-- `hybrid/sync_to_cloud.py` - สคริปต์สำหรับซิงค์ข้อมูลจากเครื่องขึ้นคลาวด์
+### 🛠️ ข้อมูลทางเทคนิค
+- **Frontend/Backend:** Next.js 14+ (App Router) / TypeScript 5
+- **Styling:** Tailwind CSS 4 + Vanilla CSS Custom Utilities
+- **Database:** Neon PostgreSQL (Serverless)
 
----
-**พัฒนาโดย Antigravity AI | มุ่งสู่ระบบบัญชีไร้พรมแดน 2026**
+> **"Software เฉพาะทาง เพื่อขับเคลื่อนธุรกิจให้ก้าวล้ำ นำภาษีสู่ระบบอัตโนมัติ"**
+> *© 2026 บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด*

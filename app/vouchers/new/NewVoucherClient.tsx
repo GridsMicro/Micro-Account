@@ -70,6 +70,7 @@ export default function NewVoucherClient() {
         issue_date: issueDate,
         amount: Number(amount),
         payment_method: paymentMethod,
+        receipt_url: receiptUrl,
         status: 'Paid' // Default to Paid for simplicity in this demo
       };
 

@@ -19,7 +19,12 @@ const fontInter = Inter({
 export const metadata: Metadata = {
   title: "Micro-Account Excellence | ม่วงพาสเทลพรีเมียม",
   description: "ระบบจัดการบัญชีและภาษีออนไลน์ 100% สไตล์ Enterprise Premium โดย Microtronic (Thailand)",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

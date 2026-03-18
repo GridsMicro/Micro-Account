@@ -132,12 +132,17 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
                       </td>
                       <td className="px-10 py-6 text-right">
                          <div className="flex justify-end gap-3 translate-x-2 group-hover:translate-x-0 transition-transform opacity-0 group-hover:opacity-100">
+                            <Link 
+                               href={`/invoices/preview/${inv.id}`} 
+                               className="p-3 bg-violet-600 text-white hover:bg-violet-700 rounded-xl transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+                               title="Preview & Print PDF"
+                            >
+                               <FileText size={16} />
+                               <span className="text-[10px] font-black uppercase tracking-wider pr-1">Preview</span>
+                            </Link>
                             <Link href={`/invoices/edit/${inv.id}`} className="p-3 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-xl transition-all shadow-sm">
                                <Edit size={16} />
                             </Link>
-                            <button className="p-3 bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl transition-all shadow-sm">
-                               <FileText size={16} />
-                            </button>
                          </div>
                       </td>
                     </tr>

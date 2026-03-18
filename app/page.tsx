@@ -1,5 +1,6 @@
 
 import { query } from "@/lib/db";
+import SyncMonthlyButton from "@/components/SyncMonthlyButton";
 import { 
   Building2, 
   Users, 
@@ -13,7 +14,12 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  LayoutDashboard
+  LayoutDashboard,
+  Wallet,
+  PieChart,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  FileBadge
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -23,191 +29,176 @@ export const dynamic = 'force-dynamic';
 async function getDashboardData() {
   try {
     const company = await query('SELECT * FROM company_settings LIMIT 1');
-    const stats = {
-      totalInvoices: await query('SELECT COUNT(*) FROM invoices'),
-      totalEarnings: await query('SELECT SUM(net_amount) FROM invoices WHERE status = \'paid\''),
-      totalCustomers: await query('SELECT COUNT(*) FROM contacts'),
-      pendingInvoices: await query('SELECT COUNT(*) FROM invoices WHERE status != \'paid\'')
-    };
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    // 💰 รายได้ (Invoice Paid)
+    const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND (created_at >= $1 OR created_on >= $1)`, [firstDayOfMonth]);
+    // 💸 รายจ่าย (Payment Vouchers)
+    const expenseRes = await query(`SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1`, [firstDayOfMonth]);
+    // 🧾 ใบแจ้งหนี้ค้างชำระ
+    const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid'`);
+    // 📖 รายการบัญชีล่าสุด
+    const journalsRes = await query(`SELECT * FROM journal_entries ORDER BY entry_date DESC, id DESC LIMIT 5`);
 
     return {
       company: company.rows[0],
       stats: {
-        invoices: stats.totalInvoices.rows[0].count,
-        earnings: stats.totalEarnings.rows[0].sum || 0,
-        customers: stats.totalCustomers.rows[0].count,
-        pending: stats.pendingInvoices.rows[0].count
-      }
+        monthlyIncome: Number(incomeRes.rows[0]?.total || 0),
+        monthlyExpense: Number(expenseRes.rows[0]?.total || 0),
+        totalPending: Number(pendingRes.rows[0]?.total || 0),
+        customers: (await query('SELECT COUNT(*) FROM contacts')).rows[0].count
+      },
+      recentJournals: journalsRes.rows
     };
   } catch (error) {
     console.error("Dashboard DB Error:", error);
     return {
       company: null,
-      stats: { invoices: 0, earnings: 0, customers: 0, pending: 0 }
+      stats: { monthlyIncome: 0, monthlyExpense: 0, totalPending: 0, customers: 0 },
+      recentJournals: []
     };
   }
 }
 
 export default async function Dashboard() {
   const data = await getDashboardData();
-  const { company, stats } = data;
+  const { company, stats, recentJournals } = data;
+  const netProfit = stats.monthlyIncome - stats.monthlyExpense;
 
   return (
-    <main className="p-6 md:p-12 min-h-screen bg-[#fdfaff]">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Contents Header: Premium Style */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-               <span className="p-3 bg-violet-600 rounded-xl shadow-xl shadow-violet-200">
-                  <LayoutDashboard className="text-white w-8 h-8" /> 
-               </span>
-               หน้าแรก Dashboard
-            </h1>
-            <div className="flex items-center gap-3 ml-2">
-               <span className="text-violet-400 font-black text-[10px] uppercase tracking-[0.3em]">
-                  Autonomous Enterprise Overview
-               </span>
-               <div className="h-px w-12 bg-violet-100"></div>
+        {/* AccRevo Style Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-6">
+            <div className="p-4 bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-100">
+               <Building2 className="text-white w-10 h-10" /> 
+            </div>
+            <div className="text-left text-slate-900">
+              <h1 className="text-3xl font-black tracking-tight leading-none">
+                {company?.name || "ระบบบัญชีอัจฉริยะ"}
+              </h1>
+              <p className="text-slate-400 font-bold text-sm mt-2 flex items-center gap-2">
+                 <ShieldCheck size={16} className="text-indigo-500" /> Professional Insight Solutions
+              </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-             <div className="hidden lg:flex items-center gap-3 bg-white px-5 py-3 rounded-xl border border-violet-50 shadow-sm text-left">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Cloud Sync Active</span>
-             </div>
-             <Link 
-               href="/settings" 
-               className="p-4 bg-white hover:bg-violet-50 text-slate-400 hover:text-violet-600 rounded-2xl border border-violet-50 transition-all shadow-sm group"
-             >
-                <Settings size={22} className="group-hover:rotate-90 transition-transform duration-500" />
-             </Link>
-          </div>
+          <Link href="/settings" className="h-14 px-6 bg-white hover:bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-2xl border border-slate-100 flex items-center shadow-sm transition-all group">
+             <Settings size={22} className="group-hover:rotate-90 transition-transform duration-500" />
+          </Link>
         </div>
 
-        {/* Stats Grid: Pastel Glassmorphism */}
+        {/* Financial Snapshot */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+           <div className="lg:col-span-2 bg-indigo-950 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full translate-x-32 -translate-y-32 blur-3xl" />
+              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
+                 <div className="space-y-6 text-left">
+                    <div className="flex items-center gap-3 text-indigo-400">
+                       <Wallet size={20} />
+                       <span className="text-xs font-black uppercase tracking-[0.3em]">Monthly Liquidity</span>
+                    </div>
+                    <div>
+                       <p className="text-slate-400 font-bold text-sm mb-1">กำไรสุทธิเดือนนี้ (Net Profit)</p>
+                       <h2 className="text-6xl font-black tabular-nums tracking-tighter">฿{netProfit.toLocaleString()}</h2>
+                    </div>
+                    <div className="px-4 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 w-fit">
+                       {netProfit >= 0 ? "Status: Profit" : "Status: Loss"}
+                    </div>
+                 </div>
+                 <div className="w-full md:w-64 space-y-4">
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center">
+                       <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest">รายได้</span>
+                       <span className="font-black">฿{stats.monthlyIncome.toLocaleString()}</span>
+                    </div>
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center">
+                       <span className="text-rose-400 text-xs font-bold uppercase tracking-widest">รายจ่าย</span>
+                       <span className="font-black">฿{stats.monthlyExpense.toLocaleString()}</span>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           {/* Tax & Sync Card */}
+           <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden group">
+              <div className="space-y-6 text-left relative z-10">
+                 <div className="flex items-center gap-3 text-indigo-600">
+                    <PieChart size={20} />
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">Accounting Ready</span>
+                 </div>
+                 <div>
+                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">ยอดค้างชำระ (Pending Receivables)</p>
+                    <h3 className="text-4xl font-black text-slate-900 tracking-tighter tabular-nums">฿{stats.totalPending.toLocaleString()}</h3>
+                 </div>
+                 <div className="pt-6 border-t border-slate-50 space-y-4">
+                    <Link href="/tax-reports" className="w-full h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+                       จัดการรายงานภาษี <ArrowRight size={18} />
+                    </Link>
+                    <SyncMonthlyButton />
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        {/* Quick Access Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { label: "ใบแจ้งหนี้ทั้งหมด", val: stats.invoices, icon: Receipt, color: "violet", trend: "+12.5%" },
-            { label: "รายได้สุทธิ (Post)", val: `฿${Number(stats.earnings).toLocaleString()}`, icon: TrendingUp, color: "emerald", trend: "Balanced" },
-            { label: "จำนวนลูกค้า/คู่ค้า", val: stats.customers, icon: Users, color: "indigo", trend: "Growth" },
-            { label: "รอสแตนด์บาย", val: stats.pending, icon: BarChart3, color: "rose", trend: "Pending" },
-          ].map((item, i) => (
-            <div key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-violet-50 hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden text-left">
-               <div className={cn("absolute top-0 right-0 w-24 h-24 rounded-full translate-x-12 -translate-y-12 group-hover:scale-150 transition-transform duration-700", {
-                 'bg-violet-50/50': item.color === 'violet',
-                 'bg-emerald-50/50': item.color === 'emerald',
-                 'bg-indigo-50/50': item.color === 'indigo',
-                 'bg-rose-50/50': item.color === 'rose',
-               })}></div>
-               
-               <div className="flex items-center justify-between mb-8 relative">
-                  <div className={cn("p-4 rounded-lg", {
-                    'bg-violet-50 text-violet-600': item.color === 'violet',
-                    'bg-emerald-50 text-emerald-600': item.color === 'emerald',
-                    'bg-indigo-50 text-indigo-600': item.color === 'indigo',
-                    'bg-rose-50 text-rose-600': item.color === 'rose',
-                  })}>
-                     <item.icon className="w-6 h-6" />
-                  </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 border border-slate-50 px-2 py-1 rounded-full">{item.trend}</span>
-               </div>
-               
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative">{item.label}</p>
-               <h3 className="text-3xl font-black text-slate-900 tracking-tighter relative tabular-nums">{item.val}</h3>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          
-          {/* Company Identity Display */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-violet-50 overflow-hidden group text-left">
-             <div className="px-10 py-8 border-b border-violet-50 bg-violet-50/10 flex items-center justify-between">
-                <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
-                   <Building2 className="text-violet-500" /> อัตลักษณ์บริษัท
-                </h3>
-                <div className="flex items-center gap-2">
-                   <ShieldCheck size={16} className="text-emerald-500" />
-                   <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Verified Data</span>
+           {[
+             { label: "ออกใบแจ้งหนี้", sub: "Sales Account", href: "/invoices/new", icon: Receipt, color: "bg-indigo-50 text-indigo-600" },
+             { label: "บันทึกรายจ่าย", sub: "Cash Flow", href: "/vouchers/new", icon: Wallet, color: "bg-emerald-50 text-emerald-600" },
+             { label: "ผู้ติดต่อ/ลูกค้า", sub: "CRM Data", href: "/contacts", icon: Users, color: "bg-amber-50 text-amber-600" },
+             { label: "สมุดรายวัน", sub: "Journal Entries", href: "/journals", icon: BarChart3, color: "bg-slate-900 text-white" },
+           ].map((item, i) => (
+             <Link key={i} href={item.href} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all group relative text-left">
+                <div className={cn("inline-flex p-4 rounded-3xl mb-10", item.color)}>
+                   <item.icon className="w-6 h-6" />
                 </div>
-             </div>
-             
-             <div className="p-10">
-                {company ? (
-                  <div className="flex flex-col md:flex-row items-center gap-10">
-                    <div className="w-32 h-32 bg-gradient-to-br from-violet-600 to-indigo-700 rounded-xl flex items-center justify-center text-white text-5xl font-black shadow-2xl shadow-violet-200">
-                      {company.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 space-y-4 text-center md:text-left">
-                       <div>
-                          <h2 className="text-3xl font-black text-slate-900 tracking-tight">{company.name}</h2>
-                          <p className="text-violet-500 font-bold text-sm">Tax ID: {company.tax_id}</p>
-                       </div>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-violet-50">
-                          <div className="space-y-1">
-                             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Support Email</p>
-                             <p className="text-sm font-bold text-slate-600">{company.email}</p>
-                          </div>
-                          <div className="space-y-1">
-                             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Office Contact</p>
-                             <p className="text-sm font-bold text-slate-600">{company.phone}</p>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-20 text-center space-y-4">
-                     <p className="text-slate-300 font-black text-lg animate-pulse">ยังไม่ได้ตั้งค่าหน่วยงานทางธุรกิจ</p>
-                     <Link href="/settings" className="inline-block px-10 py-4 bg-violet-50 text-violet-600 rounded-xl font-black text-xs uppercase tracking-widest">Configure Identity</Link>
-                  </div>
-                )}
-             </div>
-             <div className="px-10 py-6 bg-slate-50/30 border-t border-violet-50">
-                <Link href="/settings" className="text-violet-600 font-black text-xs flex items-center gap-2 hover:gap-4 transition-all uppercase tracking-widest">
-                   Update Company Settings <ArrowRight size={14} />
-                </Link>
-             </div>
-          </div>
-
-          {/* Precision Navigation (Quick Actions) */}
-          <div className="bg-slate-900 rounded-2xl p-10 shadow-2xl relative overflow-hidden group text-left">
-             <div className="absolute top-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-             
-             <h3 className="text-xs font-black text-violet-400 uppercase tracking-[0.3em] mb-10 flex items-center gap-3">
-                <Zap size={16} fill="currentColor" /> Quick Operations
-             </h3>
-             
-             <div className="space-y-4 relative z-10">
-                {[
-                  { label: "สร้างใบแจ้งหนี้ใหม่", href: "/invoices/new", icon: Plus },
-                  { label: "บันทึกใบสำคัญใหม่", href: "/journals/new", icon: Plus },
-                  { label: "ตรวจสอบคลังสินค้า", href: "/inventory", icon: ArrowRight },
-                ].map((action, i) => (
-                  <Link 
-                    key={i} 
-                    href={action.href}
-                    className="flex items-center justify-between p-6 bg-white/5 hover:bg-white text-slate-400 hover:text-slate-900 rounded-2xl border border-white/10 transition-all duration-500 group/link"
-                  >
-                     <span className="font-black text-sm uppercase tracking-wider">{action.label}</span>
-                     <action.icon size={20} className="text-violet-500 transform group-hover/link:rotate-90 transition-transform" />
-                  </Link>
-                ))}
-             </div>
-             
-             <div className="mt-12 pt-8 border-t border-white/5 relative z-10">
-                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.5em] leading-relaxed">
-                   AI-Driven Accounting<br/>Edge Intelligence Module
-                </p>
-             </div>
-          </div>
+                <h4 className="text-xl font-black text-slate-900 tracking-tight">{item.label}</h4>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{item.sub}</p>
+             </Link>
+           ))}
         </div>
 
-        {/* Professional Footer */}
-        <div className="text-center py-12 opacity-30">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.6em]">Microtronic Thailand • Autonomous Future • 2026</p>
+        {/* Recent Journal (Automation Log) */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+           <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
+                 <Zap className="text-amber-500 fill-amber-500 w-5 h-5" /> 
+                 รายการบัญชีล่าสุด (Automation Log)
+              </h3>
+              <Link href="/journals" className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest transition-all">View All</Link>
+           </div>
+           
+           <div className="space-y-3">
+              {recentJournals.length > 0 ? recentJournals.map((j: any) => (
+                <div key={j.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300">
+                   <div className="flex items-center gap-4 text-left">
+                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px]", Number(j.debit) > 0 ? "bg-emerald-50 text-emerald-600" : "bg-indigo-50 text-indigo-600")}>
+                         {Number(j.debit) > 0 ? "DR" : "CR"}
+                      </div>
+                      <div className="flex flex-col">
+                         <span className="text-xs font-black text-slate-700 leading-none">{j.account_name}</span>
+                         <span className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase truncate max-w-[200px]">{j.description}</span>
+                      </div>
+                   </div>
+                   <div className="text-right">
+                      <span className={cn("text-sm font-black tabular-nums", Number(j.debit) > 0 ? "text-emerald-500" : "text-slate-900")}>
+                         ฿{Number(j.debit || j.credit).toLocaleString()}
+                      </span>
+                      <p className="text-[8px] text-slate-300 font-black mt-1 uppercase tracking-tighter">{new Date(j.entry_date).toLocaleDateString()}</p>
+                   </div>
+                </div>
+              )) : (
+                <div className="p-12 border-2 border-dashed border-slate-100 rounded-[2rem] text-slate-300 text-center italic font-bold text-xs">
+                   ยังไม่มีการบันทึกบัญชีอัตโนมัติ
+                </div>
+              )}
+           </div>
+        </div>
+
+        <div className="text-center py-10 opacity-30">
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Microtronic Enterprise Ledger • 2026 Edition</p>
         </div>
 
       </div>
