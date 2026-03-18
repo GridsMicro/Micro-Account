@@ -924,7 +924,7 @@ export async function exportMonthlySummaryToDrive() {
     const monthYear = (now.getMonth() + 1) + '/' + now.getFullYear();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    const invoices = (await query('SELECT * FROM invoices WHERE created_at >= $1 OR created_on >= $1', [firstDay])).rows;
+    const invoices = (await query('SELECT * FROM invoices WHERE created_at >= $1', [firstDay])).rows;
     const vouchers = (await query('SELECT * FROM payment_vouchers WHERE issue_date >= $1', [firstDay])).rows;
     
     const folderId = await getOrCreateFolder('Micro Account Reports/Summaries');

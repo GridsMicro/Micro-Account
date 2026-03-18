@@ -33,7 +33,7 @@ async function getDashboardData() {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     // 💰 รายได้ (Invoice Paid)
-    const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND (created_at >= $1 OR created_on >= $1)`, [firstDayOfMonth]);
+    const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1`, [firstDayOfMonth]);
     // 💸 รายจ่าย (Payment Vouchers)
     const expenseRes = await query(`SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1`, [firstDayOfMonth]);
     // 🧾 ใบแจ้งหนี้ค้างชำระ
