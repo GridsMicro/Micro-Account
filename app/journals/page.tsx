@@ -1,6 +1,6 @@
 
 import { query } from "@/lib/db";
-import { BookOpen, Plus, Calendar, ShoppingCart, Wallet, Truck, Banknote, Library, AlertCircle } from "lucide-react";
+import { BookOpen, Plus, Calendar, ShoppingCart, Wallet, Truck, Banknote, Library, AlertCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import JournalEntryRow from "./JournalEntryRow";
