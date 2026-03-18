@@ -1,15 +1,25 @@
 
 import { query } from "@/lib/db";
-import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit, ShieldCheck, Heart } from "lucide-react";
+import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit, ShieldCheck, Heart, Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ContactsPage() {
+export default async function ContactsPage({ searchParams }: { searchParams: { search?: string } }) {
+  const search = (await searchParams)?.search || "";
   let contacts = [];
   try {
-    const res = await query('SELECT * FROM contacts ORDER BY name ASC');
+    let q = 'SELECT * FROM contacts WHERE 1=1';
+    const params: any[] = [];
+    
+    if (search) {
+      params.push(`%${search}%`);
+      q += ` AND (name ILIKE $1 OR contact_type ILIKE $1)`;
+    }
+    
+    q += ' ORDER BY name ASC';
+    const res = await query(q, params);
     contacts = res.rows;
   } catch (e) {
     console.error("Fetch Contacts Error:", e);
@@ -50,6 +60,28 @@ export default async function ContactsPage() {
              </Link>
           </div>
         </div>
+        
+        {/* Search Bar */}
+        <form method="GET" className="flex flex-col md:flex-row gap-4 items-center">
+           <div className="relative flex-1 group w-full">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-500 transition-colors" size={20} />
+              <input 
+                type="text" 
+                name="search"
+                defaultValue={search}
+                placeholder="ค้นหารายชื่อ เบอร์โทร หรือประเภทคู่ค้า..." 
+                className="w-full pl-14 pr-6 h-14 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-bold shadow-sm transition-all" 
+              />
+           </div>
+           <div className="flex gap-2">
+              <button type="submit" className="h-14 px-8 bg-violet-600 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-3 uppercase tracking-widest">
+                 <Search size={16} /> Search
+              </button>
+              <Link href="/contacts" className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest">
+                 Clear
+              </Link>
+           </div>
+        </form>
 
         {/* Contacts Gallery Grid */}
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">

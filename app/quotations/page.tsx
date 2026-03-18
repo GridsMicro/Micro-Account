@@ -6,15 +6,25 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
-export default async function QuotationsPage() {
+export default async function QuotationsPage({ searchParams }: { searchParams: { search?: string } }) {
+  const search = (await searchParams)?.search || "";
   let quotations = [];
   try {
-    const res = await query(`
+    let q = `
       SELECT q.*, c.name as customer_name 
       FROM quotations q 
       LEFT JOIN contacts c ON q.contact_id = c.id 
-      ORDER BY q.created_at DESC
-    `);
+    `;
+    const params: any[] = [];
+    
+    if (search) {
+      q += ` WHERE q.quotation_number ILIKE $1 OR c.name ILIKE $1 `;
+      params.push(`%${search}%`);
+    }
+    
+    q += ` ORDER BY q.created_at DESC `;
+    
+    const res = await query(q, params);
     quotations = res.rows;
   } catch (e) {
     console.error("Fetch Quotations Error:", e);
@@ -57,16 +67,26 @@ export default async function QuotationsPage() {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+        <form method="GET" className="flex flex-col md:flex-row gap-4 items-center">
            <div className="relative flex-1 group w-full">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-500 transition-colors" size={20} />
               <input 
                 type="text" 
+                name="search"
+                defaultValue={search}
                 placeholder="ค้นหาเลขที่ใบเสนอราคา หรือชื่อผู้รับบริการ..." 
                 className="w-full pl-14 pr-6 h-14 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-bold shadow-sm transition-all" 
               />
            </div>
-        </div>
+           <div className="flex gap-2">
+              <button type="submit" className="h-14 px-8 bg-violet-600 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-3 uppercase tracking-widest">
+                 <Search size={16} /> Search
+              </button>
+              <Link href="/quotations" className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest">
+                 Clear
+              </Link>
+           </div>
+        </form>
 
         {/* Quotations Table Card */}
         <div className="bg-white rounded-3xl shadow-2xl shadow-violet-100/40 border border-violet-50 overflow-hidden text-left mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">

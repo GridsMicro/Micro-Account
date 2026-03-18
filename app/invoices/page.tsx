@@ -6,15 +6,25 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({ searchParams }: { searchParams: { search?: string } }) {
+  const search = (await searchParams)?.search || "";
   let invoices = [];
   try {
-    const res = await query(`
+    let q = `
       SELECT i.*, c.name as customer_name 
       FROM invoices i 
       LEFT JOIN contacts c ON i.contact_id = c.id 
-      ORDER BY i.created_on DESC, i.id DESC
-    `);
+    `;
+    const params: any[] = [];
+    
+    if (search) {
+      q += ` WHERE i.invoice_number ILIKE $1 OR c.name ILIKE $1 `;
+      params.push(`%${search}%`);
+    }
+    
+    q += ` ORDER BY i.created_on DESC, i.id DESC `;
+    
+    const res = await query(q, params);
     invoices = res.rows;
   } catch (e) {
     console.error("Fetch Invoices Error:", e);
@@ -57,19 +67,24 @@ export default async function InvoicesPage() {
         </div>
 
         {/* Global Toolbar */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+        <form method="GET" className="flex flex-col md:flex-row gap-4 items-center">
            <div className="relative flex-1 group w-full">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-500 transition-colors" size={20} />
               <input 
                 type="text" 
+                name="search"
+                defaultValue={search}
                 placeholder="ค้นหาเลขที่ใบแจ้งหนี้ รหัสสินค้า หรือชื่อลูกค้า..." 
                 className="w-full pl-14 pr-6 h-14 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-bold shadow-sm transition-all" 
               />
            </div>
-           <button className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest shrink-0">
-              <Filter size={16} /> Filters
+           <button type="submit" className="h-14 px-8 bg-violet-600 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest shrink-0">
+              <Search size={16} /> Search
            </button>
-        </div>
+           <Link href="/invoices" className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest shrink-0">
+              <Filter size={16} /> Clear
+           </Link>
+        </form>
 
         {/* Invoices List Table */}
         <div className="bg-white rounded-3xl shadow-2xl shadow-violet-100/40 border border-violet-50 overflow-hidden text-left">

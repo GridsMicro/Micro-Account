@@ -4,15 +4,24 @@ import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({ searchParams }: { searchParams: { search?: string } }) {
+  const search = (await searchParams)?.search || "";
   let payments = [];
   try {
-    const res = await query(`
+    let q = `
       SELECT p.*, c.name as customer_name 
       FROM payments p 
       LEFT JOIN contacts c ON p.contact_id = c.id 
-      ORDER BY p.payment_date DESC
-    `);
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    if (search) {
+      params.push(`%${search}%`);
+      q += ` AND (p.reference_number ILIKE $1 OR c.name ILIKE $1)`;
+    }
+    q += ` ORDER BY p.payment_date DESC `;
+    
+    const res = await query(q, params);
     payments = res.rows;
   } catch (e) {
     payments = [];
@@ -31,6 +40,28 @@ export default async function PaymentsPage() {
             บันทึกการรับเงิน
           </Link>
         </div>
+
+        {/* Search Bar */}
+        <form method="GET" className="flex flex-col md:flex-row gap-4 items-center mb-8">
+           <div className="relative flex-1 group w-full">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={20} />
+              <input 
+                type="text" 
+                name="search"
+                defaultValue={search}
+                placeholder="ค้นหาชื่อลูกค้า หรือเลขที่อ้างอิง..." 
+                className="w-full pl-14 pr-6 h-14 bg-white border border-blue-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-200 text-sm font-bold shadow-sm transition-all" 
+              />
+           </div>
+           <div className="flex gap-2">
+              <button type="submit" className="h-14 px-8 bg-blue-600 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-3 uppercase tracking-widest">
+                 <Search size={16} /> Search
+              </button>
+              <Link href="/payments" className="h-14 px-8 bg-white border border-blue-50 rounded-xl text-xs font-black text-slate-500 hover:bg-blue-50 hover:text-blue-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest">
+                 Clear
+              </Link>
+           </div>
+        </form>
 
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden mb-12">
            <div className="overflow-x-auto">

@@ -6,10 +6,20 @@ import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
-export default async function InventoryPage() {
+export default async function InventoryPage({ searchParams }: { searchParams: { search?: string } }) {
+  const search = (await searchParams)?.search || "";
   let products = [];
   try {
-    const res = await query('SELECT * FROM products ORDER BY name ASC');
+    let q = 'SELECT * FROM products WHERE 1=1';
+    const params: any[] = [];
+    
+    if (search) {
+      params.push(`%${search}%`);
+      q += ` AND (name ILIKE $${params.length} OR sku_number ILIKE $${params.length} OR type ILIKE $${params.length})`;
+    }
+    
+    q += ' ORDER BY name ASC';
+    const res = await query(q, params);
     products = res.rows;
   } catch (e) {
     console.error("Fetch Inventory Error:", e);
@@ -52,24 +62,26 @@ export default async function InventoryPage() {
         </div>
 
         {/* Inventory Control Toolbar */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+        <form method="GET" className="flex flex-col md:flex-row gap-4 items-center">
            <div className="relative flex-1 group w-full">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-500 transition-colors" size={20} />
               <input 
                 type="text" 
+                name="search"
+                defaultValue={search}
                 placeholder="ค้นหาชื่อสินค้า รหัส SKU หรือหมวดหมู่..." 
                 className="w-full pl-14 pr-6 h-14 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-bold shadow-sm transition-all" 
               />
            </div>
            <div className="flex gap-2">
-              <button className="h-14 px-6 bg-white border border-violet-50 rounded-xl text-[10px] font-black text-slate-400 hover:text-violet-600 shadow-sm transition-all uppercase tracking-widest flex items-center gap-2">
-                 <Barcode size={16} /> Scan
+              <button type="submit" className="h-14 px-8 bg-violet-600 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-3 uppercase tracking-widest">
+                 <Search size={16} /> Search
               </button>
-              <button className="h-14 px-6 bg-white border border-violet-50 rounded-xl text-[10px] font-black text-slate-400 hover:text-violet-600 shadow-sm transition-all uppercase tracking-widest flex items-center gap-2">
-                 <Tag size={16} /> Category
-              </button>
+              <Link href="/inventory" className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest shrink-0">
+                 Clear
+              </Link>
            </div>
-        </div>
+        </form>
 
         {/* Smart Inventory Table */}
         <div className="bg-white rounded-3xl shadow-2xl shadow-violet-100/40 border border-violet-50 overflow-hidden text-left mb-12">

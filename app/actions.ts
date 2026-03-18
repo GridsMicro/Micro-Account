@@ -9,19 +9,59 @@ import { googleSheets, googleDrive } from "@/lib/google-server";
 import { Readable } from "stream";
 
 /**
+ * ฟังก์ชันช่วยหาหรือสร้างโฟลเดอร์ใน Google Drive
+ */
+async function getOrCreateFolder(folderName: string) {
+  try {
+    // 1. ค้นหาโฟลเดอร์ตามชื่อ
+    const response = await googleDrive.files.list({
+      q: `name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+    });
+
+    const folders = response.data.files;
+    if (folders && folders.length > 0) {
+      return folders[0].id; // คืนค่า ID ถ้าเจอแล้ว
+    }
+
+    // 2. ถ้าไม่เจอ ให้สร้างใหม่
+    const folderMetadata = {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+    };
+
+    const folder = await googleDrive.files.create({
+      requestBody: folderMetadata,
+      fields: 'id',
+    });
+
+    console.log(`📂 Created new folder: ${folderName} (ID: ${folder.data.id})`);
+    return folder.data.id;
+  } catch (error: any) {
+    console.error("Folder Creation Error:", error);
+    return null; // Fallback to root if folder creation fails
+  }
+}
+
+/**
  * Server Action: อัปโหลดไฟล์จากเครื่องขึ้น Google Drive (Autonomous Storage)
  */
 export async function uploadToGoogleDrive(base64Data: string, fileName: string, mimeType: string) {
   try {
-    // 1. แปลงไฟล์จาก Base64 เป็น Buffer
+    // 1. เตรียมโฟลเดอร์เป้าหมาย
+    const folderId = await getOrCreateFolder('Micro Account Documents');
+
+    // 2. แปลงไฟล์จาก Base64 เป็น Buffer
     const buffer = Buffer.from(base64Data.split(",")[1] || base64Data, "base64");
     const stream = Readable.from(buffer);
 
-    // 2. ยิงขึ้น Drive
+    // 3. ยิงขึ้น Drive
     const response = await googleDrive.files.create({
       requestBody: {
         name: `Receipt_${Date.now()}_${fileName}`,
         mimeType: mimeType,
+        parents: folderId ? [folderId] : [], // ใส่ในโฟลเดอร์ถ้ามี
       },
       media: {
         mimeType: mimeType,
@@ -32,7 +72,7 @@ export async function uploadToGoogleDrive(base64Data: string, fileName: string, 
 
     const fileId = response.data.id;
 
-    // 3. ปรับสิทธิ์ให้ดูได้ (หรือแชร์เฉพาะคนตามระบบเรา)
+    // 4. ปรับสิทธิ์ให้ดูได้ (หรือแชร์เฉพาะคนตามระบบเรา)
     await googleDrive.permissions.create({
       fileId: fileId!,
       requestBody: {
@@ -63,7 +103,10 @@ export async function exportJournalsToSheets() {
       throw new Error("ไม่มีข้อมูลให้ส่งออก");
     }
 
-    // 2. สร้าง Spreadsheet ใหม่
+    // 2. เตรียมโฟลเดอร์เป้าหมาย
+    const folderId = await getOrCreateFolder('Micro Account Reports');
+
+    // 3. สร้าง Spreadsheet ใหม่
     const spreadsheet = await googleSheets.spreadsheets.create({
       requestBody: {
         properties: {
@@ -75,7 +118,17 @@ export async function exportJournalsToSheets() {
     const spreadsheetId = spreadsheet.data.spreadsheetId;
     if (!spreadsheetId) throw new Error("ไม่สามารถสร้างไฟล์ได้");
 
-    // 3. เตรียมข้อมูล
+    // ย้ายไฟล์เข้าโฟลเดอร์ (Sheets API สร้างไฟล์แล้วต้องใช้ Drive API ย้าย)
+    if (folderId) {
+      await googleDrive.files.update({
+        fileId: spreadsheetId,
+        addParents: folderId,
+        removeParents: 'root', // Remove from root if necessary
+        fields: 'id, parents',
+      });
+    }
+
+    // 4. เตรียมข้อมูล
     const values = [
       ["วันที่", "เลขที่เอกสาร", "ชื่อบัญชี", "หมายเหตุ", "เดบิต (Dr.)", "เครดิต (Cr.)"],
       ...entries.map((e: any) => [
@@ -88,16 +141,16 @@ export async function exportJournalsToSheets() {
       ])
     ];
 
-    // 4. เขียนข้อมูลลงใน Sheet
+    // 5. เขียนข้อมูลลงใน Sheet
     await googleSheets.spreadsheets.values.update({
-      spreadsheetId,
+      spreadsheetId: spreadsheetId!,
       range: 'Sheet1!A1',
       valueInputOption: 'RAW',
       requestBody: { values },
     });
 
-    // 5. ดึงอีเมลผู้รับจากฐานข้อมูล (Member ที่เป็น admin คนแรก)
-    const memberRes = await query("SELECT email FROM members WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
+    // 6. ดึงอีเมลผู้รับจากฐานข้อมูล (User ที่เป็น admin คนแรก)
+    const memberRes = await query("SELECT email FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
     const targetEmail = memberRes.rows[0]?.email || "grids@microtronic.biz";
 
     // 6. ตั้งค่าสิทธิ์แบบใครมีลิงก์ก็ดูได้ (เทสเข้มข้น)
@@ -133,6 +186,77 @@ export async function exportJournalsToSheets() {
     }
     
     return { success: false, error: errorMsg };
+  }
+}
+
+// ส่งออกใบสำคัญจ่ายไปยัง Google Sheets
+export async function exportVouchersToSheets() {
+  try {
+    const res = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');
+    const vouchers = res.rows;
+
+    if (vouchers.length === 0) {
+      throw new Error("ไม่มีข้อมูลใบสำคัญจ่ายให้ส่งออก");
+    }
+
+    const folderId = await getOrCreateFolder('Micro Account Reports');
+    const spreadsheet = await googleSheets.spreadsheets.create({
+      requestBody: {
+        properties: {
+          title: `Micro Account - รายงานใบสำคัญจ่าย (${new Date().toLocaleDateString('th-TH')})`,
+        },
+      },
+    });
+
+    const spreadsheetId = spreadsheet.data.spreadsheetId;
+    if (!spreadsheetId) throw new Error("ไม่สามารถสร้างไฟล์ได้");
+
+    if (folderId) {
+      await googleDrive.files.update({
+        fileId: spreadsheetId,
+        addParents: folderId,
+        removeParents: 'root',
+        fields: 'id, parents',
+      });
+    }
+
+    const values = [
+      ["เลขที่ใบสำคัญ", "ผู้รับเงิน", "วันที่ออก", "จำนวนเงิน", "ช่องทาง", "สถานะ"],
+      ...vouchers.map((v: any) => [
+        v.voucher_no || `PV-${String(v.id).padStart(5, '0')}`,
+        v.payee_name || "-",
+        new Date(v.issue_date).toLocaleDateString('th-TH'),
+        Number(v.amount) || 0,
+        v.payment_method || "Cash",
+        v.status || "Pending"
+      ])
+    ];
+
+    await googleSheets.spreadsheets.values.update({
+      spreadsheetId: spreadsheetId!,
+      range: 'Sheet1!A1',
+      valueInputOption: 'RAW',
+      requestBody: { values },
+    });
+
+    try {
+      await googleDrive.permissions.create({
+        fileId: spreadsheetId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
+    } catch (e) {}
+
+    return { 
+      success: true, 
+      url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+      message: `ส่งออกใบสำคัญจ่ายสำเร็จ`
+    };
+  } catch (error: any) {
+    console.error("❌ Export Vouchers Error:", error);
+    return { success: false, error: "❌ ไม่สามารถส่งออกข้อมูลได้: " + error.message };
   }
 }
 
@@ -608,5 +732,38 @@ export async function getNextReferenceNo(type: string) {
     return { success: true, data: refNo };
   } catch (err: any) {
     return { success: false, error: err.message };
+  }
+}
+
+// --- Payment Vouchers Actions ---
+
+export async function createPaymentVoucher(data: {
+  voucher_no: string;
+  payee_name: string;
+  issue_date: string;
+  amount: number;
+  payment_method: string;
+  status: string;
+}) {
+  try {
+    const res = await query(
+      `INSERT INTO payment_vouchers (voucher_no, payee_name, issue_date, amount, payment_method, status)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [data.voucher_no, data.payee_name, data.issue_date, data.amount, data.payment_method, data.status]
+    );
+    revalidatePath("/vouchers");
+    return { success: true, id: res.rows[0].id };
+  } catch (error: any) {
+    console.error("Failed to create payment voucher:", error);
+    return { success: false, error: error.message || "Failed to create database entry" };
+  }
+}
+
+export async function getPaymentVouchers() {
+  try {
+    const { rows } = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');
+    return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }

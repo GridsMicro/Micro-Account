@@ -8,8 +8,9 @@ import ExportButton from "./ExportButton";
 
 export const dynamic = 'force-dynamic';
 
-export default async function JournalsPage({ searchParams }: { searchParams: { type?: string } }) {
+export default async function JournalsPage({ searchParams }: { searchParams: { type?: string, search?: string } }) {
   const type = (await searchParams)?.type;
+  const search = (await searchParams)?.search || "";
   
   const journalBooks = [
     { title: 'สมุดรายวันขาย', type: 'sales', icon: ShoppingCart, bg: 'bg-violet-50', text: 'text-violet-600', border: 'border-violet-100' },
@@ -24,12 +25,19 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
 
   try {
     // 1. Fetch Entries
-    let q = 'SELECT * FROM journal_entries';
+    let q = 'SELECT * FROM journal_entries WHERE 1=1';
     const params: any[] = [];
+    
     if (type) {
-      q += ' WHERE journal_type = $1';
       params.push(type);
+      q += ` AND journal_type = $${params.length}`;
     }
+    
+    if (search) {
+      params.push(`%${search}%`);
+      q += ` AND (reference_no ILIKE $${params.length} OR description ILIKE $${params.length} OR account_name ILIKE $${params.length})`;
+    }
+
     q += ' ORDER BY entry_date DESC, reference_no ASC, id ASC';
     const res = await query(q, params);
     entries = res.rows;
@@ -132,23 +140,47 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
           </div>
         )}
 
-        {/* 2. Journal Book Selection Chips */}
-        <div className="flex flex-wrap gap-3 bg-white p-3 rounded-2xl border border-violet-50 shadow-sm w-fit mx-auto lg:mx-0">
-           {journalBooks.map((book) => (
-              <Link 
-                key={book.type}
-                href={type === book.type ? "/journals" : `/journals?type=${book.type}`}
-                className={cn(
-                  "px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 border-2",
-                  type === book.type 
-                    ? "bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-200" 
-                    : "bg-white border-transparent text-slate-500 hover:bg-violet-50 hover:text-violet-600"
-                )}
-              >
-                 <book.icon size={16} />
-                 {book.title}
+        {/* 2. Journal Search & Book Selection Chips */}
+        <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
+          <form method="GET" className="flex items-center gap-3 w-full lg:max-w-md">
+            <div className="relative flex-1 group">
+               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-500 transition-colors" size={18} />
+               <input 
+                 type="text" 
+                 name="search"
+                 defaultValue={search}
+                 placeholder="ค้นหาเลขที่เอกสาร หรือคำบรรยาย..." 
+                 className="w-full pl-14 pr-6 h-12 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-bold shadow-sm transition-all" 
+               />
+               {type && <input type="hidden" name="type" value={type} />}
+            </div>
+            <button type="submit" className="h-12 px-6 bg-violet-600 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-2">
+               <Search size={16} /> Search
+            </button>
+            {search && (
+              <Link href={type ? `/journals?type=${type}` : "/journals"} className="h-12 px-6 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-400 flex items-center gap-2">
+                Clear
               </Link>
-           ))}
+            )}
+          </form>
+
+          <div className="flex flex-wrap gap-2 bg-white p-2 rounded-2xl border border-violet-50 shadow-sm w-fit">
+             {journalBooks.map((book) => (
+                <Link 
+                  key={book.type}
+                  href={(type === book.type && !search) ? "/journals" : `/journals?type=${book.type}${search ? `&search=${search}` : ""}`}
+                  className={cn(
+                    "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-2",
+                    type === book.type 
+                      ? "bg-violet-600 border-violet-600 text-white shadow-lg" 
+                      : "bg-white border-transparent text-slate-500 hover:bg-violet-50 hover:text-violet-600"
+                  )}
+                >
+                   <book.icon size={14} />
+                   {book.title}
+                </Link>
+             ))}
+          </div>
         </div>
 
         {/* 3. Voucher Transaction Area */}

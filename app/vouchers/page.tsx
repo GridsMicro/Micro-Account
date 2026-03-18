@@ -1,14 +1,25 @@
 import { query } from "@/lib/db";
-import { ScrollText, Plus, Printer, CheckCircle2, ChevronDown, ListFilter, MapPin, BookOpen } from "lucide-react";
+import { ScrollText, Plus, Printer, CheckCircle2, ChevronDown, ListFilter, MapPin, BookOpen, Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import VoucherExportButton from "./VoucherExportButton";
 
 export const dynamic = 'force-dynamic';
 
-export default async function PaymentVouchersPage() {
+export default async function PaymentVouchersPage({ searchParams }: { searchParams: { search?: string } }) {
+  const search = (await searchParams)?.search || "";
   let vouchers = [];
   try {
-    const res = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC');
+    let q = 'SELECT * FROM payment_vouchers WHERE 1=1';
+    const params: any[] = [];
+    
+    if (search) {
+      params.push(`%${search}%`);
+      q += ` AND (payee_name ILIKE $1 OR voucher_no ILIKE $1)`;
+    }
+    
+    q += ' ORDER BY issue_date DESC';
+    const res = await query(q, params);
     vouchers = res.rows;
   } catch (e) {
     vouchers = [];
@@ -29,15 +40,38 @@ export default async function PaymentVouchersPage() {
             </div>
           </div>
           <div className="flex gap-2">
+             <VoucherExportButton />
              <Link href="/journals" className="h-11 px-6 bg-white border border-gray-300 text-blue-700 font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm hover:bg-blue-50">
                 <BookOpen size={18} /> สมุดบัญชีรายวัน
              </Link>
-             <button className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm">
+             <Link href="/vouchers/new" className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center gap-2 transition-all shadow-sm text-sm">
                 <Plus size={18} />
                 ออกใบสำคัญจ่าย
-             </button>
+             </Link>
           </div>
         </div>
+
+        {/* Search Bar */}
+        <form method="GET" className="flex flex-col md:flex-row gap-4 items-center mb-6">
+           <div className="relative flex-1 group w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <input 
+                type="text" 
+                name="search"
+                defaultValue={search}
+                placeholder="ค้นหาเลขที่ใบสำคัญ หรือชื่อผู้รับเงิน..." 
+                className="w-full pl-11 pr-4 h-11 bg-white border border-gray-200 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 text-sm font-medium transition-all" 
+              />
+           </div>
+           <div className="flex gap-2">
+              <button type="submit" className="h-11 px-6 bg-gray-800 text-white rounded font-bold shadow-sm flex items-center gap-2 hover:bg-gray-900 transition-all text-xs uppercase tracking-widest">
+                 <Search size={16} /> ค้นหา
+              </button>
+              <Link href="/vouchers" className="h-11 px-6 bg-white border border-gray-300 rounded font-bold text-gray-600 hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2 text-xs uppercase tracking-widest">
+                 ล้างค่า
+              </Link>
+           </div>
+        </form>
 
         {/* Action Banner */}
         <div className="bg-white border-l-4 border-l-blue-600 shadow-sm border border-gray-200 rounded p-6 mb-8 flex justify-between items-center text-sm">
