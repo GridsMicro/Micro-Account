@@ -61,7 +61,17 @@ const adminItems = [
   { icon: ShieldCheck, label: "จัดการสิทธิ์", href: "/admin/permissions" },
 ];
 
-export default function Sidebar() {
+type SidebarProps = {
+  isLoggedIn?: boolean;
+  userName?: string;
+  userRole?: string;
+};
+
+export default function Sidebar({ 
+  isLoggedIn = false, 
+  userName = "Administrator", 
+  userRole = "Active Edge" 
+}: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -133,17 +143,17 @@ export default function Sidebar() {
         </div>
 
         {/* Profile Segment */}
-        {(!isCollapsed || isMobileOpen) && (
+        {isLoggedIn && (!isCollapsed || isMobileOpen) && (
           <Link href="/profile" className="mx-6 mt-8 mb-6 p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all group group relative text-left">
              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-black shadow-xl shrink-0">
-                   A
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-black shadow-xl shrink-0 uppercase">
+                   {userName ? userName.charAt(0) : "A"}
                 </div>
                 <div className="flex flex-col truncate">
-                   <span className="text-sm font-black text-white tracking-tight">Administrator</span>
+                   <span className="text-sm font-black text-white tracking-tight">{userName}</span>
                    <div className="flex items-center gap-2 mt-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active Edge</span>
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{userRole}</span>
                    </div>
                 </div>
                 <Zap className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10 group-hover:text-violet-400 transition-colors" />
@@ -234,13 +244,15 @@ export default function Sidebar() {
             {isCollapsed ? <Menu size={20} /> : <div className="flex items-center gap-3"><ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> <span className="text-[10px] font-black uppercase tracking-widest">COLLAPSE SYSTEM</span></div>}
           </button>
           
-          <button 
-            onClick={() => signOut({ redirect: true })}
-            className="w-full h-12 flex items-center justify-center gap-3 bg-white/5 hover:bg-rose-600 hover:text-white text-slate-400 rounded-lg transition-all group border border-white/5"
-          >
-            <LogOut size={20} className="group-hover:scale-110 transition-transform" />
-            {(!isCollapsed || isMobileOpen) && <span className="text-[10px] font-black uppercase tracking-widest">Secure Logout</span>}
-          </button>
+          {isLoggedIn && (
+            <button 
+              onClick={() => signOut({ redirect: true })}
+              className="w-full h-12 flex items-center justify-center gap-3 bg-white/5 hover:bg-rose-600 hover:text-white text-slate-400 rounded-lg transition-all group border border-white/5"
+            >
+              <LogOut size={20} className="group-hover:scale-110 transition-transform" />
+              {(!isCollapsed || isMobileOpen) && <span className="text-[10px] font-black uppercase tracking-widest">Secure Logout</span>}
+            </button>
+          )}
         </div>
       </aside>
     </>

@@ -26,6 +26,9 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
+import { auth } from "@/lib/auth";
+import WaitingRoom from "@/components/WaitingRoom";
+
 async function getDashboardData() {
   try {
     const company = await query('SELECT * FROM company_settings LIMIT 1');
@@ -41,27 +44,45 @@ async function getDashboardData() {
     // 📖 รายการบัญชีล่าสุด
     const journalsRes = await query(`SELECT * FROM journal_entries ORDER BY entry_date DESC, id DESC LIMIT 5`);
 
+    // 🔔 แจ้งเตือน Admin: จำนวนผู้สมัครใหม่ที่รออนุมัติ
+    const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending'`);
+
     return {
       company: company.rows[0],
       stats: {
         monthlyIncome: Number(incomeRes.rows[0]?.total || 0),
         monthlyExpense: Number(expenseRes.rows[0]?.total || 0),
         totalPending: Number(pendingRes.rows[0]?.total || 0),
-        customers: (await query('SELECT COUNT(*) FROM contacts')).rows[0].count
+        customers: (await query('SELECT COUNT(*) FROM contacts')).rows[0].count,
+        pendingApprovals: Number(pendingUsersRes.rows[0]?.count || 0)
       },
       recentJournals: journalsRes.rows
     };
+// ... same catch block ...
   } catch (error) {
     console.error("Dashboard DB Error:", error);
     return {
       company: null,
-      stats: { monthlyIncome: 0, monthlyExpense: 0, totalPending: 0, customers: 0 },
+      stats: { monthlyIncome: 0, monthlyExpense: 0, totalPending: 0, customers: 0, pendingApprovals: 0 },
       recentJournals: []
     };
   }
 }
 
 export default async function Dashboard() {
+  const session = await auth();
+  const user = session?.user as any;
+
+  // 🛋️ แสดงหน้าห้องรับรอง (Waiting Room) ถ้าสถานะเป็น Pending
+  // หมายเหตุ: ใน lib/auth.ts เราดึงข้อมูล status จาก DB มาใส่ใน User object ด้วย
+  // แต่เนื่องจาก Session อาจจะเก่า เราควร Fetch สถานะล่าสุดจาก DB
+  const userStatusRes = await query("SELECT status, name, email FROM users WHERE id = $1", [user?.id]);
+  const currentUser = userStatusRes.rows[0];
+
+  if (currentUser?.status === "Pending") {
+    return <WaitingRoom userName={currentUser.name} userEmail={currentUser.email} />;
+  }
+
   const data = await getDashboardData();
   const { company, stats, recentJournals } = data;
   const netProfit = stats.monthlyIncome - stats.monthlyExpense;
@@ -70,7 +91,26 @@ export default async function Dashboard() {
     <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
       <div className="max-w-7xl mx-auto space-y-8">
         
+        {/* Admin Notification Banner */}
+        {user?.role === "admin" && stats.pendingApprovals > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-[2rem] p-6 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+             <div className="flex items-center gap-4 text-left">
+                <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-200">
+                   <Users size={24} />
+                </div>
+                <div>
+                   <h4 className="text-sm font-black text-amber-900 tracking-tight">คุณมีการแจ้งเตือนใหม่!</h4>
+                   <p className="text-xs text-amber-700 font-bold mt-1">มีผู้สมัครใช้งานใหม่ {stats.pendingApprovals} ราย กำลังรอการอนุมัติสิทธิ์</p>
+                </div>
+             </div>
+             <Link href="/admin/users" className="h-10 px-5 bg-amber-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all flex items-center gap-2">
+                จัดการผู้ใช้ <ArrowRight size={14} />
+             </Link>
+          </div>
+        )}
+
         {/* AccRevo Style Header */}
+// ... rest of the dashboard ...
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-6">
             <div className="p-4 bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-100">

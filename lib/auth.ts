@@ -51,9 +51,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const user = res.rows[0];
 
-          // Check if user is active
-          if (user.status !== "Active") {
-            throw new Error("User account is inactive");
+          // Check if user is active (allow Pending for waiting room)
+          if (user.status === "Inactive") {
+            throw new Error("บัญชีของคุณถูกระงับการใช้งาน");
           }
 
           // Verify password

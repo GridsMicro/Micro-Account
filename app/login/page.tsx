@@ -122,7 +122,7 @@ export default function LoginPage() {
 
            <div className="mt-10 pt-6 border-t border-gray-100 text-center">
               <p className="text-xs text-gray-400 font-medium">
-                 ยังไม่มีบัญชี? <Link href="#" className="text-blue-600 font-bold hover:underline">ลงทะเบียนขอเข้าใช้งาน</Link>
+                 ยังไม่มีบัญชี? <Link href="/register" className="text-blue-600 font-bold hover:underline">ลงทะเบียนขอเข้าใช้งาน</Link>
               </p>
            </div>
         </div>

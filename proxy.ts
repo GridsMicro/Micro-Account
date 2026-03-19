@@ -4,7 +4,7 @@ import { authConfig } from "./lib/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const publicRoutes = ["/login", "/api/auth"];
+const publicRoutes = ["/login", "/register", "/api/auth"];
 
 export const proxy = auth((req) => {
   const { pathname } = req.nextUrl;
