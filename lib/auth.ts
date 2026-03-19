@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { query } from "./db";
 import bcrypt from "bcryptjs";
+import { authConfig } from "./auth.config";
 
 // Validate required environment variables (only at runtime, not during build)
 function validateAuthEnv() {
@@ -20,10 +21,8 @@ function validateAuthEnv() {
   }
 }
 
-// Get session duration from environment (default: 24 hours)
-const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || "86400", 10);
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       name: "Credentials",
@@ -81,27 +80,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = (user as any).role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        (session.user as any).role = token.role;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: SESSION_MAX_AGE, // Configured via SESSION_MAX_AGE env var (default: 24 hours)
-  },
 });
