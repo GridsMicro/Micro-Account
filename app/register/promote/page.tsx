@@ -15,10 +15,10 @@ export default function FixAdminPage() {
       const res = await promoteUserAction("k.net.game01@gmail.com");
       if (res.success) {
         setStatus("success");
-        setMsg(res.message);
+        setMsg(res.message || "ดำเนินการสำเร็จ");
       } else {
         setStatus("error");
-        setMsg(res.error);
+        setMsg(res.error || "เกิดข้อผิดพลาดในการดำเนินการ");
       }
     } catch (e: any) {
       setStatus("error");

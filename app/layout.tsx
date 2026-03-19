@@ -18,7 +18,7 @@ const fontInter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Micro-Account Excellence | ม่วงพาสเทลพรีเมียม",
+  title: "Micro-Account Excellence | ระบบจัดการบัญชีอัจฉริยะ",
   description: "ระบบจัดการบัญชีและภาษีออนไลน์ 100% สไตล์ Enterprise Premium โดย Microtronic (Thailand)",
 };
 
