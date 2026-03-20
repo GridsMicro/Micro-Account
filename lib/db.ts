@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 // - idleTimeoutMillis: ปิด connection ที่ว่างเปล่าหลัง 10 วินาที
 // - connectionTimeoutMillis: ถ้าเชื่อมไม่ได้ใน 5 วินาที ให้ Error ทันที (ไม่ค้าง)
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false,
   },
