@@ -32,11 +32,6 @@
   ],
   "exclude": [
     "node_modules",
-    "check_schema.ts",
-    "migrate_*.ts",
-    "test_*.ts",
-    "init_*.ts",
-    "run_*.ts",
-    "debug_*.ts"
+    "scripts"
   ]
 }
