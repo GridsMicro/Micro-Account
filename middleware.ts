@@ -7,9 +7,10 @@ export function middleware(req: NextRequest) {
   const hasSessionCookie = allCookies.some(c => c.name.includes("session-token"));
   
   const isLoginPage = req.nextUrl.pathname === "/login";
+  const isRegisterPage = req.nextUrl.pathname.startsWith("/register") || req.nextUrl.pathname.startsWith("/promote");
 
-  // 1. ถ้าไม่มี Session (ไม่ได้ล็อกอิน) และไม่ใช่หน้า Login -> เตะไปหน้า Login
-  if (!hasSessionCookie && !isLoginPage) {
+  // 1. ถ้าไม่มี Session และไม่ใช่หน้า Login/Register -> เตะไปหน้า Login
+  if (!hasSessionCookie && !isLoginPage && !isRegisterPage) {
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
