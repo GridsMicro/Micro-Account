@@ -58,7 +58,6 @@ async function getDashboardData() {
       },
       recentJournals: journalsRes.rows
     };
-// ... same catch block ...
   } catch (error) {
     console.error("Dashboard DB Error:", error);
     return {
@@ -110,7 +109,6 @@ export default async function Dashboard() {
         )}
 
         {/* AccRevo Style Header */}
-// ... rest of the dashboard ...
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-6">
             <div className="p-4 bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-100">

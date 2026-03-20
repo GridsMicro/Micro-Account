@@ -1,83 +1,91 @@
-import { ShieldCheck, Lock, Users, Eye, Edit, Trash2, CheckCircle2 } from "lucide-react";
+"use client";
+
+import { ShieldCheck, Lock, Users, Eye, Edit, Trash2, CheckCircle2, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { useToast } from "@/components/ToastProvider";
 
 export default function PermissionsPage() {
+  const { showToast } = useToast();
+
   const roles = [
     { 
-      name: "Super Admin", 
-      desc: "เข้าถึงได้ทุกส่วนของระบบ รวมถึงการตั้งค่าความปลอดภัย", 
-      permissions: ["All Access", "Manage Users", "Manage Database"] 
+      name: "superadmin", 
+      label: "เจ้าของระบบ / Super Admin",
+      desc: "เข้าถึงได้ทุกส่วนของระบบ รวมถึงการตั้งค่าความปลอดภัยระดับสูงสุด", 
+      permissions: ["Full Context", "Root Auth", "Infra Control"] 
+    },
+    { 
+      name: "Admin", 
+      label: "ผู้ดูแลระบบ / Administrator",
+      desc: "จัดการผู้ใช้งาน สิทธิ์ และข้อมูลบริษัททั้งหมด", 
+      permissions: ["Manage Users", "Company Settings", "All Modules"] 
     },
     { 
       name: "Manager", 
-      desc: "จัดการใบแจ้งหนี้ ใบเสนอราคา และคลังสินค้า", 
+      label: "ผู้จัดการ / Manager",
+      desc: "จัดการใบแจ้งหนี้ ใบเสนอราคา และคลังสินค้าทั้งหมด", 
       permissions: ["Quotations", "Invoices", "Inventory", "Contacts"] 
     },
     { 
-      name: "Sales (ฝ่ายขาย)", 
-      desc: "จัดการลูกค้าและใบเสนอราคาสำหรับปิดการขาย", 
-      permissions: ["View Inventory", "Create Quotations", "Manage Contacts"] 
-    },
-    { 
-      name: "Service (ฝ่ายบริการ)", 
-      desc: "จัดการข้อมูลผู้ติดต่อและรับเรื่องแจ้งซ่อม", 
-      permissions: ["View Contacts", "Support Tickets"] 
-    },
-    { 
-      name: "Stock (ฝ่ายคลังสินค้า)", 
-      desc: "จัดการนำเข้า/ส่งออกสินค้า เช็คสต็อก ตัดสต็อก", 
-      permissions: ["Manage Inventory", "Stock Adjustments"] 
-    },
-    { 
-      name: "Finance (ฝ่ายการเงิน)", 
-      desc: "จัดการใบแจ้งหนี้ การชำระเงิน และออกใบเสร็จรับเงิน", 
-      permissions: ["Manage Invoices", "Process Payments", "Tax Reports"] 
-    },
-    { 
-      name: "Production (ฝ่ายผลิต)", 
-      desc: "เบิกจ่ายวัตถุดิบและยืนยันการผลิตเข้าคลังสินค้า", 
-      permissions: ["View Inventory", "Production Orders"] 
-    },
-    { 
-      name: "Dev / Debugger", 
-      desc: "กลุ่มพิเศษสำหรับทดสอบระบบ (Bypass สิทธิ์ปกติ)", 
-      permissions: ["System Logs", "Test Mode", "API Access", "Bypass Rules"] 
-    },
-    { 
       name: "Staff", 
-      desc: "ดูข้อมูลคลังสินค้าเบื้องต้น", 
-      permissions: ["View Inventory"] 
+      label: "พนักงาน / Staff",
+      desc: "ดูข้อมูลคลังสินค้าและออกเอกสารเบื้องต้น", 
+      permissions: ["View Inventory", "Create Simple Docs"] 
+    },
+    { 
+      name: "Tester", 
+      label: "ผู้ทดสอบ / Tester",
+      desc: "เข้าดูระบบตัวอย่างเพื่อทดสอบก่อนการอนุมัติจริง", 
+      permissions: ["Demo Access Only"] 
+    },
+    { 
+      name: "User", 
+      label: "ผู้ใช้ทั่วไป / General User",
+      desc: "ระดับพื้นหลัง รอการกำหนดสิทธิ์เพิ่มเติม", 
+      permissions: ["Limited Access"] 
     },
   ];
 
   return (
-    <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
-      <div className="max-w-7xl mx-auto">
+    <main className="p-6 md:p-10 min-h-screen bg-[#fcfaff]">
+      <div className="max-w-7xl mx-auto space-y-10">
         
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 tracking-tight flex items-center gap-3">
-               <ShieldCheck className="text-blue-600" /> จัดการสิทธิ์ (Role & Permissions)
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">กำหนดสิทธิ์การเข้าถึงเมนูต่างๆ ตามบทบาทผู้ใช้งาน</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+          <div className="relative z-10 flex items-center gap-6">
+            <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-indigo-200">
+               <ShieldCheck size={32} />
+            </div>
+            <div className="text-left">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+                 จัดการสิทธิ์การเข้าถึง
+              </h1>
+              <p className="text-slate-400 font-bold text-sm mt-2 uppercase tracking-widest flex items-center gap-2">
+                 <Lock size={14} className="text-indigo-500" /> RBAC Security Module v2.1
+              </p>
+            </div>
           </div>
+          <Link href="/admin/members" className="h-14 px-8 bg-slate-900 text-white rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 group">
+             จัดการสมาชิกรายคน <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
            {roles.map((role, idx) => (
-              <div key={idx} className="bg-white rounded shadow-sm border border-gray-200 flex flex-col overflow-hidden hover:shadow-md transition-shadow">
-                 <div className="p-6 flex-1">
-                    <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center text-blue-600 mb-4 border border-gray-100">
-                       <Lock size={24} />
+              <div key={idx} className="bg-white rounded-[2rem] shadow-lg shadow-slate-100 border border-slate-100 flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all group">
+                 <div className="p-8 flex-1 text-left">
+                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-indigo-600 mb-6 border border-slate-50 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
+                       <Lock size={20} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">{role.name}</h3>
-                    <p className="text-xs text-gray-500 leading-relaxed mb-6">{role.desc}</p>
+                    <h3 className="text-xl font-black text-slate-800 mb-2 tracking-tight uppercase">{role.label}</h3>
+                    <p className="text-[11px] font-bold text-slate-400 leading-relaxed mb-8 h-12 overflow-hidden">{role.desc}</p>
                     
-                    <div className="space-y-3">
-                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Enabled Permissions</p>
+                    <div className="space-y-4 pt-6 border-t border-slate-50">
+                       <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Granted Actions</p>
                        <div className="flex flex-wrap gap-2">
                           {role.permissions.map((p, pIdx) => (
-                             <span key={pIdx} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100">
+                             <span key={pIdx} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-500 text-[9px] font-black uppercase rounded-lg border border-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors">
                                 <CheckCircle2 size={10} /> {p}
                              </span>
                           ))}
@@ -85,33 +93,45 @@ export default function PermissionsPage() {
                     </div>
                  </div>
                  
-                 <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-between items-center">
-                    <button className="text-blue-600 text-xs font-bold hover:underline flex items-center gap-1">
-                       <Edit size={14} /> แก้ไขสิทธิ์
+                 <div className="bg-slate-50/50 px-8 py-5 border-t border-slate-50 flex justify-between items-center">
+                    <button 
+                      onClick={() => showToast("ฟังก์ชันแก้ไขกฎสิทธิ์ส่วนกลางกำลังพัฒนาเพิ่มเติม...", "info")}
+                      className="text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:text-slate-950 transition-colors flex items-center gap-2"
+                    >
+                       <Edit size={14} /> ปรับจูนสิทธิ์
                     </button>
-                    <button className="text-gray-400 hover:text-red-500 transition-colors">
-                       <Trash2 size={16} />
-                    </button>
+                    <Link 
+                      href={`/admin/members?role=${role.name}`}
+                      className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                    >
+                       <Users size={16} /> 
+                       <span className="text-[10px] font-black uppercase tracking-widest">ผู้ใช้ในกลุ่ม</span>
+                    </Link>
                  </div>
               </div>
            ))}
         </div>
 
-        {/* Permission Matrix Preview */}
-        <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-           <div className="bg-gray-800 text-white px-8 py-4 flex items-center gap-2 font-bold uppercase tracking-widest text-xs">
-              <Eye size={16} className="text-blue-400" /> Permission Matrix (Preview)
+        {/* Informational Panel */}
+        <div className="bg-indigo-950 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl flex flex-col md:flex-row items-center gap-10">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full translate-x-32 -translate-y-32 blur-3xl opacity-50"></div>
+           <div className="bg-indigo-600 w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl shrink-0 translate-y-0 hover:-translate-y-2 transition-transform duration-500">
+              <Eye size={40} className="text-white opacity-80" />
            </div>
-           <div className="p-8">
-              <p className="text-sm text-gray-500 italic">
-                 ระบบจัดการสิทธิ์แบบละเอียด (Granular Access Control) กำลังถูกพัฒนาเพื่อเชื่อมโยงกับระบบหลังบ้าน 
-                 Neon RBAC ในรุ่นถัดไป
+           <div className="text-left space-y-4 flex-1">
+              <h4 className="text-xl font-black uppercase tracking-tight">Granular Access Architecture</h4>
+              <p className="text-sm opacity-60 font-bold leading-relaxed max-w-2xl">
+                 ระบบจัดการสิทธิ์ของเราออกแบบมาบนหลักการ Least Privilege ของ Neon RBAC เพื่อความปลอดภัยสูงสุด 
+                 ในเวอร์ชันนี้ สิทธิ์จะถูกผูกเข้ากับบทบาทผู้ใช้งาน (Roles) โดยตรง คุณสามารถจัดการสิทธิ์ที่ละคนได้ที่หน้า "จัดการสมาชิก"
               </p>
            </div>
+           <Link href="/admin/members" className="h-14 px-8 bg-white text-indigo-950 rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all shrink-0">
+              ไปหน้าจัดการสมาชิก <ArrowRight size={18} />
+           </Link>
         </div>
 
-        <div className="mt-8 text-center text-gray-400 text-xs font-medium">
-           © 2026 Microtronic Thailand. Security Shield v2.1
+        <div className="py-10 text-center opacity-30">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Microtronic Security Shield • RBAC v2.1</p>
         </div>
       </div>
     </main>

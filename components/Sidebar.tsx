@@ -166,6 +166,12 @@ export default function Sidebar({
           
           <div className="space-y-1">
             {menuItems.map((item, idx) => {
+              // 🛡️ Logic to restrict "Reports & Settings" segment
+              const isSettingsSegment = idx >= menuItems.findIndex(m => 'separator' in m && m.separator === "รายงานและตั้งค่า");
+              const hasAccessToSettings = userRole === "superadmin" || userRole === "Admin" || userRole === "Manager";
+
+              if (isSettingsSegment && !hasAccessToSettings) return null;
+
               if ('separator' in item) {
                 return (!isCollapsed || isMobileOpen) ? (
                   <div key={`sep-${idx}`} className="mt-8 mb-3 px-4">
@@ -207,32 +213,34 @@ export default function Sidebar({
             })}
           </div>
 
-          {/* Admin Tools Segment */}
-          <div className="space-y-1 pb-10">
-             {(!isCollapsed || isMobileOpen) && (
-               <div className="px-4 mb-3">
-                 <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">Security Module</span>
-               </div>
-             )}
-             {adminItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all group overflow-hidden",
-                      isActive 
-                        ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40" 
-                        : "hover:bg-white/5 text-slate-400 hover:text-white"
-                    )}
-                  >
-                    <item.icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
-                    {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
-                  </Link>
-                );
-             })}
-          </div>
+          {/* Admin Tools Segment - Restricted to superadmin and Admin */}
+          {(userRole === "superadmin" || userRole === "Admin") && (
+            <div className="space-y-1 pb-10">
+               {(!isCollapsed || isMobileOpen) && (
+                 <div className="px-4 mb-3">
+                   <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">Security Module</span>
+                 </div>
+               )}
+               {adminItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all group overflow-hidden",
+                        isActive 
+                          ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40" 
+                          : "hover:bg-white/5 text-slate-400 hover:text-white"
+                      )}
+                    >
+                      <item.icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
+                      {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
+                    </Link>
+                  );
+               })}
+            </div>
+          )}
         </nav>
 
         {/* Unified Bottom Actions */}
