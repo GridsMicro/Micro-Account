@@ -7,11 +7,11 @@ import { authConfig } from "./auth.config";
 // Validate required environment variables (only at runtime, not during build)
 function validateAuthEnv() {
   const dbExists = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL);
-  const authSecretExists = !!(process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET);
+  const authSecretExists = !!(process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || process.env.NEXT_AUTH_SECRET);
   const missing: string[] = [];
 
   if (!dbExists) missing.push("DATABASE_URL (or POSTGRES_URL)");
-  if (!authSecretExists) missing.push("NEXTAUTH_SECRET (or AUTH_SECRET)");
+  if (!authSecretExists) missing.push("AUTH_SECRET (or NEXTAUTH_SECRET)");
 
   if (missing.length > 0) {
     const message = `\n❌ Missing required environment variables for authentication:\n${missing.map((v) => `   - ${v}`).join("\n")}\n\nPlease set these in your .env.local file. See .env.example for reference.\n`;
