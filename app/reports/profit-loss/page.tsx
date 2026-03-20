@@ -23,7 +23,7 @@ async function getPLData() {
     const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
 
     // 💰 รายได้สะสมรายปี
-    const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND (created_at >= $1 OR created_on >= $1)`, [startOfYear]);
+    const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1`, [startOfYear]);
     // 💸 รายจ่ายสะสมรายปี
     const expenseRes = await query(`SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1`, [startOfYear]);
     

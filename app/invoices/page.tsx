@@ -22,7 +22,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
       params.push(`%${search}%`);
     }
     
-    q += ` ORDER BY i.created_on DESC, i.id DESC `;
+    q += ` ORDER BY i.created_at DESC, i.id DESC `;
     
     const res = await query(q, params);
     invoices = res.rows;
@@ -114,7 +114,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
                       </td>
                       <td className="px-10 py-6">
                          <span className="text-xs font-bold text-slate-500">
-                            {new Date(inv.created_on || inv.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {new Date(inv.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
                          </span>
                       </td>
                       <td className="px-10 py-6 text-right">
