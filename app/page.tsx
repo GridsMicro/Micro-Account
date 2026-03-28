@@ -18,8 +18,10 @@ import {
   Wallet,
   PieChart,
   ArrowDownCircle,
-  ArrowUpCircle,
-  FileBadge
+  ArrowUpCircle, 
+  FileBadge,
+  Calendar as CalendarIcon,
+  Bell
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -35,17 +37,15 @@ async function getDashboardData() {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    // 💰 รายได้ (Invoice Paid)
     const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1`, [firstDayOfMonth]);
-    // 💸 รายจ่าย (Payment Vouchers)
     const expenseRes = await query(`SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1`, [firstDayOfMonth]);
-    // 🧾 ใบแจ้งหนี้ค้างชำระ
     const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid'`);
-    // 📖 รายการบัญชีล่าสุด
     const journalsRes = await query(`SELECT * FROM journal_entries ORDER BY entry_date DESC, id DESC LIMIT 5`);
-
-    // 🔔 แจ้งเตือน Admin: จำนวนผู้สมัครใหม่ที่รออนุมัติ
     const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending'`);
+
+    // Fetch alerts for Phase 2
+    const { getDashboardAlerts } = await import("@/app/actions");
+    const alertsRes = await getDashboardAlerts();
 
     return {
       company: company.rows[0],
@@ -56,14 +56,18 @@ async function getDashboardData() {
         customers: (await query('SELECT COUNT(*) FROM contacts')).rows[0].count,
         pendingApprovals: Number(pendingUsersRes.rows[0]?.count || 0)
       },
-      recentJournals: journalsRes.rows
+      recentJournals: journalsRes.rows,
+      alerts: alertsRes.success
+        ? (alertsRes.data ?? { reminders: [], invoices: [] })
+        : { reminders: [], invoices: [] }
     };
   } catch (error) {
     console.error("Dashboard DB Error:", error);
     return {
       company: null,
       stats: { monthlyIncome: 0, monthlyExpense: 0, totalPending: 0, customers: 0, pendingApprovals: 0 },
-      recentJournals: []
+      recentJournals: [],
+      alerts: { reminders: [], invoices: [] }
     };
   }
 }
@@ -72,9 +76,6 @@ export default async function Dashboard() {
   const session = await auth();
   const user = session?.user as any;
 
-  // 🛋️ แสดงหน้าห้องรับรอง (Waiting Room) ถ้าสถานะเป็น Pending
-  // หมายเหตุ: ใน lib/auth.ts เราดึงข้อมูล status จาก DB มาใส่ใน User object ด้วย
-  // แต่เนื่องจาก Session อาจจะเก่า เราควร Fetch สถานะล่าสุดจาก DB
   const userStatusRes = await query("SELECT status, name, email FROM users WHERE id = $1", [user?.id]);
   const currentUser = userStatusRes.rows[0];
 
@@ -83,14 +84,13 @@ export default async function Dashboard() {
   }
 
   const data = await getDashboardData();
-  const { company, stats, recentJournals } = data;
+  const { company, stats, recentJournals, alerts } = data;
   const netProfit = stats.monthlyIncome - stats.monthlyExpense;
 
   return (
     <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Admin Notification Banner */}
         {user?.role === "admin" && stats.pendingApprovals > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-[2rem] p-6 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
              <div className="flex items-center gap-4 text-left">
@@ -108,7 +108,6 @@ export default async function Dashboard() {
           </div>
         )}
 
-        {/* AccRevo Style Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-6">
             <div className="p-4 bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-100">
@@ -128,9 +127,8 @@ export default async function Dashboard() {
           </Link>
         </div>
 
-        {/* Financial Snapshot */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-           <div className="lg:col-span-2 bg-indigo-950 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl">
+           <div className="lg:col-span-2 bg-indigo-950 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl text-left">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full translate-x-32 -translate-y-32 blur-3xl" />
               <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
                  <div className="space-y-6 text-left">
@@ -147,11 +145,11 @@ export default async function Dashboard() {
                     </div>
                  </div>
                  <div className="w-full md:w-64 space-y-4">
-                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center">
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center text-left">
                        <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest">รายได้</span>
                        <span className="font-black">฿{stats.monthlyIncome.toLocaleString()}</span>
                     </div>
-                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center">
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center text-left">
                        <span className="text-rose-400 text-xs font-bold uppercase tracking-widest">รายจ่าย</span>
                        <span className="font-black">฿{stats.monthlyExpense.toLocaleString()}</span>
                     </div>
@@ -159,8 +157,7 @@ export default async function Dashboard() {
               </div>
            </div>
 
-           {/* Tax & Sync Card */}
-           <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden group">
+           <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden group text-left">
               <div className="space-y-6 text-left relative z-10">
                  <div className="flex items-center gap-3 text-indigo-600">
                     <PieChart size={20} />
@@ -180,7 +177,67 @@ export default async function Dashboard() {
            </div>
         </div>
 
-        {/* Quick Access Grid */}
+        {/* Calendar & Upcoming Alerts Phase 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
+              <div className="flex items-center justify-between mb-6 text-left">
+                <h3 className="text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
+                    <CalendarIcon className="text-indigo-600 w-5 h-5" /> 
+                    แผนงานและรายการแจ้งเตือน (Upcoming)
+                </h3>
+                <Link href="/calendar" className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest">Open Calendar</Link>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-3 text-left">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tasks & Reminders</p>
+                    {alerts.reminders.length > 0 ? alerts.reminders.map((r: any) => (
+                      <div key={r.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group">
+                          <div className="flex items-center gap-3">
+                            <Bell size={14} className="text-amber-500" />
+                            <span className="text-xs font-bold text-slate-700">{r.title}</span>
+                          </div>
+                          <span className="text-[10px] font-black text-slate-400">{new Date(r.due_date).toLocaleDateString('th-TH')}</span>
+                      </div>
+                    )) : (
+                      <div className="p-8 border border-dashed border-slate-100 rounded-2xl text-center text-[10px] font-bold text-slate-300">
+                          ไม่มีรายการแจ้งเตือนงาน
+                      </div>
+                    )}
+                </div>
+                
+                <div className="space-y-3 text-left">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Payment Overdue (Est.)</p>
+                    {alerts.invoices.length > 0 ? alerts.invoices.map((i: any) => (
+                      <div key={i.id} className="p-4 bg-rose-50/30 rounded-2xl border border-rose-50 flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-rose-700 leading-none">{i.invoice_number}</span>
+                            <span className="text-[9px] text-rose-400 font-bold mt-1 uppercase leading-none">{i.customer_name}</span>
+                          </div>
+                          <span className="text-xs font-black text-rose-600">฿{Number(i.net_amount).toLocaleString()}</span>
+                      </div>
+                    )) : (
+                      <div className="p-8 border border-dashed border-slate-100 rounded-2xl text-center text-[10px] font-bold text-slate-300">
+                          ไม่มีรายการค้างชำระ
+                      </div>
+                    )}
+                </div>
+              </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden flex flex-col justify-center text-left">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-10 -translate-y-10 blur-2xl" />
+              <Zap className="text-indigo-200 mb-6" size={32} />
+              <h4 className="text-2xl font-black tracking-tight mb-2 uppercase leading-none">Planning Power</h4>
+              <p className="text-sm font-bold opacity-80 leading-relaxed mb-6 text-left">
+                วางแผนการรับเงินและจ่ายเงินล่วงหน้า ช่วยลดความผิดพลาดในการจัดการ Cash Flow
+              </p>
+              <Link href="/calendar" className="h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest hover:bg-indigo-50 transition-all">
+                Go to Calendar
+              </Link>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
            {[
              { label: "ออกใบแจ้งหนี้", sub: "Sales Account", href: "/invoices/new", icon: Receipt, color: "bg-indigo-50 text-indigo-600" },
@@ -198,9 +255,8 @@ export default async function Dashboard() {
            ))}
         </div>
 
-        {/* Recent Journal (Automation Log) */}
         <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-           <div className="flex items-center justify-between mb-8">
+           <div className="flex items-center justify-between mb-8 text-left">
               <h3 className="text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
                  <Zap className="text-amber-500 fill-amber-500 w-5 h-5" /> 
                  รายการบัญชีล่าสุด (Automation Log)
@@ -210,21 +266,21 @@ export default async function Dashboard() {
            
            <div className="space-y-3">
               {recentJournals.length > 0 ? recentJournals.map((j: any) => (
-                <div key={j.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300">
+                <div key={j.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300 text-left">
                    <div className="flex items-center gap-4 text-left">
                       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px]", Number(j.debit) > 0 ? "bg-emerald-50 text-emerald-600" : "bg-indigo-50 text-indigo-600")}>
                          {Number(j.debit) > 0 ? "DR" : "CR"}
                       </div>
                       <div className="flex flex-col">
                          <span className="text-xs font-black text-slate-700 leading-none">{j.account_name}</span>
-                         <span className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase truncate max-w-[200px]">{j.description}</span>
+                         <span className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase truncate max-w-[200px] leading-none">{j.description}</span>
                       </div>
                    </div>
                    <div className="text-right">
                       <span className={cn("text-sm font-black tabular-nums", Number(j.debit) > 0 ? "text-emerald-500" : "text-slate-900")}>
                          ฿{Number(j.debit || j.credit).toLocaleString()}
                       </span>
-                      <p className="text-[8px] text-slate-300 font-black mt-1 uppercase tracking-tighter">{new Date(j.entry_date).toLocaleDateString()}</p>
+                      <p className="text-[8px] text-slate-300 font-black mt-1 uppercase tracking-tighter leading-none">{new Date(j.entry_date).toLocaleDateString()}</p>
                    </div>
                 </div>
               )) : (

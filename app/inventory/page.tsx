@@ -15,7 +15,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
     
     if (search) {
       params.push(`%${search}%`);
-      q += ` AND (name ILIKE $${params.length} OR sku_number ILIKE $${params.length} OR type ILIKE $${params.length})`;
+      q += ` AND (name ILIKE $${params.length} OR sku_number ILIKE $${params.length} OR type ILIKE $${params.length} OR category_name ILIKE $${params.length})`;
     }
     
     q += ' ORDER BY name ASC';
@@ -33,14 +33,14 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 animate-in fade-in slide-in-from-top-4 duration-700">
           <div className="space-y-2 text-left">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight flex items-center gap-4">
                <span className="p-3 bg-violet-600 rounded-2xl shadow-xl shadow-violet-200">
                   <Package className="text-white w-8 h-8" /> 
                </span>
                การจัดการคลังสินค้า (Inventory)
             </h1>
             <div className="flex items-center gap-3 ml-2">
-               <span className="text-violet-400 font-black text-[10px] uppercase tracking-[0.3em]">
+               <span className="text-violet-400 font-medium text-[10px] uppercase tracking-[0.3em]">
                   Stock Asset & Resource Management
                </span>
                <div className="h-px w-12 bg-violet-100"></div>
@@ -50,11 +50,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
           <div className="flex items-center gap-3">
              <div className="hidden lg:flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 mr-2">
                 <ShieldCheck size={16} className="text-indigo-500" />
-                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none">Real-time Stock Tracking</span>
+                <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-widest leading-none">Real-time Stock Tracking</span>
              </div>
              <Link 
               href="/inventory/new" 
-              className="h-14 px-8 bg-violet-600 hover:bg-violet-700 text-white font-black rounded-xl flex items-center gap-3 shadow-xl hover:-translate-y-1 active:scale-95 transition-all text-sm"
+              className="h-14 px-8 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-xl flex items-center gap-3 shadow-xl hover:-translate-y-1 active:scale-95 transition-all text-sm"
              >
                 <Plus size={20} /> เพิ่มสินค้าใหม่
              </Link>
@@ -70,14 +70,14 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
                 name="search"
                 defaultValue={search}
                 placeholder="ค้นหาชื่อสินค้า รหัส SKU หรือหมวดหมู่..." 
-                className="w-full pl-14 pr-6 h-14 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-bold shadow-sm transition-all" 
+                className="w-full pl-14 pr-6 h-14 bg-white border border-violet-50 rounded-xl focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-200 text-sm font-medium shadow-sm transition-all" 
               />
            </div>
            <div className="flex gap-2">
-              <button type="submit" className="h-14 px-8 bg-violet-600 text-white rounded-xl text-xs font-black shadow-sm flex items-center gap-3 uppercase tracking-widest">
+              <button type="submit" className="h-14 px-8 bg-violet-600 text-white rounded-xl text-xs font-medium shadow-sm flex items-center gap-3 uppercase tracking-widest">
                  <Search size={16} /> Search
               </button>
-              <Link href="/inventory" className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-black text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest shrink-0">
+              <Link href="/inventory" className="h-14 px-8 bg-white border border-violet-50 rounded-xl text-xs font-medium text-slate-500 hover:bg-violet-50 hover:text-violet-600 shadow-sm transition-all flex items-center gap-3 uppercase tracking-widest shrink-0">
                  Clear
               </Link>
            </div>
@@ -89,11 +89,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-violet-50/10 border-b border-violet-50">
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">สินค้า / SKU Identity</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Type</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">คงเหลือ (Stock)</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">ราคาต่อหน่วย</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">จัดการ</th>
+                    <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">สินค้า / SKU Identity</th>
+                    <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Asset Type</th>
+                    <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">คงเหลือ (Stock)</th>
+                    <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">ราคาต่อหน่วย</th>
+                    <th className="px-10 py-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-violet-50/50">
@@ -105,31 +105,38 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
                                <Package size={24} />
                             </div>
                             <div className="flex flex-col">
-                               <span className="font-black text-slate-800 text-base tracking-tight">{p.name}</span>
-                               <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">{p.sku_number || 'E-DOCUMENT'}</span>
+                               <span className="font-semibold text-slate-800 text-base tracking-tight">{p.name}</span>
+                               <span className="text-[10px] font-medium text-violet-400 uppercase tracking-widest">{p.sku_number || 'E-DOCUMENT'}</span>
                             </div>
                          </div>
                       </td>
                       <td className="px-10 py-6">
-                         <span className="px-4 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-slate-100 italic transition-all group-hover:bg-white group-hover:border-violet-100 group-hover:text-violet-600">
-                           {p.type || 'PHYSICAL ASSET'}
-                         </span>
+                         <div className="flex flex-col gap-2 items-start">
+                           {p.category_name && (
+                             <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded uppercase tracking-wider">
+                               {p.category_name}
+                             </span>
+                           )}
+                           <span className="px-4 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-medium uppercase tracking-widest rounded-full border border-slate-100 italic transition-all group-hover:bg-white group-hover:border-violet-100 group-hover:text-violet-600">
+                             {p.type || 'PHYSICAL ASSET'}
+                           </span>
+                         </div>
                       </td>
                       <td className="px-10 py-6 text-center">
                          <div className="flex flex-col items-center gap-1">
                             <span className={cn(
-                              "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border",
+                              "px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-widest shadow-sm border",
                               (p.stock_quantity ?? 0) > 10 
                                 ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
                                 : "bg-rose-50 text-rose-600 border-rose-100 animate-pulse"
                             )}>
                               {p.stock_quantity ?? 0} UNITS
                             </span>
-                            {(p.stock_quantity ?? 0) <= 5 && <span className="text-[8px] font-black text-rose-300 uppercase animate-bounce">Low Stock!</span>}
+                            {(p.stock_quantity ?? 0) <= 5 && <span className="text-[8px] font-bold text-rose-300 uppercase animate-bounce">Low Stock!</span>}
                          </div>
                       </td>
                       <td className="px-10 py-6 text-right">
-                         <span className="text-lg font-black text-slate-900 tabular-nums tracking-tighter">฿{Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                         <span className="text-lg font-semibold text-slate-900 tabular-nums tracking-tighter">฿{Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       </td>
                       <td className="px-10 py-6 text-right">
                          <div className="flex justify-end gap-3 translate-x-3 group-hover:translate-x-0 transition-all opacity-0 group-hover:opacity-100">
@@ -150,10 +157,10 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
                                <Box size={40} className="text-violet-200" />
                             </div>
                             <div className="space-y-1">
-                               <p className="text-slate-500 font-black text-xl">The Warehouse is Empty</p>
+                               <p className="text-slate-500 font-semibold text-xl">The Warehouse is Empty</p>
                                <p className="text-slate-400 text-sm italic">ยังไม่มีผลิตภัณฑ์ถูกลงทะเบียนในคลังสินค้าคลาวด์ของคุณ</p>
                             </div>
-                            <Link href="/inventory/new" className="px-10 py-4 bg-violet-600 text-white font-black rounded-xl shadow-xl hover:bg-violet-700 transition-all uppercase text-xs tracking-widest">Add First Product</Link>
+                            <Link href="/inventory/new" className="px-10 py-4 bg-violet-600 text-white font-medium rounded-xl shadow-xl hover:bg-violet-700 transition-all uppercase text-xs tracking-widest">Add First Product</Link>
                          </div>
                       </td>
                     </tr>
@@ -165,8 +172,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
 
         {/* Professional Footer */}
         <div className="text-center py-10 opacity-30">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.6em] mb-2">Microtronic Thailand • Autonomous Logistics Edge • 2026</p>
-           <p className="text-[8px] font-black text-slate-300 uppercase italic">Powering the future of digitized supply chains</p>
+           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.6em] mb-2">Microtronic Thailand • Autonomous Logistics Edge • 2026</p>
+           <p className="text-[8px] font-medium text-slate-300 uppercase italic">Powering the future of digitized supply chains</p>
         </div>
       </div>
     </main>

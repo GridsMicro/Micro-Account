@@ -14,7 +14,8 @@ import {
   Briefcase,
   Percent,
   Coins,
-  FileDigit
+  FileDigit,
+  CloudUpload
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateCompanySettings } from "@/app/actions";
@@ -24,6 +25,7 @@ const menuItems = [
   { id: 'company', icon: Building2, label: "ข้อมูลบริษัท (Profile)" },
   { id: 'tax', icon: ShieldCheck, label: "ข้อมูลภาษี (Tax Info)" },
   { id: 'bank', icon: Briefcase, label: "บัญชีธนาคาร (Bank)" },
+  { id: 'rd-api', icon: CloudUpload, label: "RD API Portal" },
   { id: 'system', icon: Database, label: "ฐานข้อมูล (System)" },
 ];
 
@@ -47,6 +49,12 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
     currency: initialData?.currency || "THB",
     invoice_prefix: initialData?.invoice_prefix || "INV",
     quotation_prefix: initialData?.quotation_prefix || "QT",
+    // RD API Settings
+    rd_client_id: initialData?.rd_client_id || "",
+    rd_client_secret: initialData?.rd_client_secret || "",
+    rd_api_key: initialData?.rd_api_key || "",
+    rd_base_url: initialData?.rd_base_url || "https://api-portal.rd.go.th",
+    rd_enabled: initialData?.rd_enabled ?? false,
   });
 
   const handleSave = async () => {

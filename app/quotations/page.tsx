@@ -1,8 +1,8 @@
-
 import { query } from "@/lib/db";
 import { FileText, Plus, Search, ArrowRight, Edit, ShieldCheck, FileCheck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import QuotationRowActions from "./QuotationRowActions";
 
 export const dynamic = 'force-dynamic';
 
@@ -15,17 +15,36 @@ export default async function QuotationsPage({ searchParams }: { searchParams: {
       FROM quotations q 
       LEFT JOIN contacts c ON q.contact_id = c.id 
     `;
-    const params: any[] = [];
     
-    if (search) {
-      q += ` WHERE q.quotation_number ILIKE $1 OR c.name ILIKE $1 `;
-      params.push(`%${search}%`);
+    // Try the query with contact_id first, fallback if it fails
+    try {
+      const params: any[] = [];
+      
+      if (search) {
+        q += ` WHERE q.quotation_number ILIKE $1 OR c.name ILIKE $1 `;
+        params.push(`%${search}%`);
+      }
+      
+      q += ` ORDER BY q.created_at DESC `;
+      
+      const res = await query(q, params);
+      quotations = res.rows;
+    } catch (joinError) {
+      // If contact_id doesn't exist, try without the join
+      console.log('contact_id column missing, trying fallback query...');
+      let fallbackQ = `SELECT q.*, null as customer_name FROM quotations q`;
+      const params: any[] = [];
+      
+      if (search) {
+        fallbackQ += ` WHERE q.quotation_number ILIKE $1 `;
+        params.push(`%${search}%`);
+      }
+      
+      fallbackQ += ` ORDER BY q.created_at DESC `;
+      
+      const res = await query(fallbackQ, params);
+      quotations = res.rows;
     }
-    
-    q += ` ORDER BY q.created_at DESC `;
-    
-    const res = await query(q, params);
-    quotations = res.rows;
   } catch (e) {
     console.error("Fetch Quotations Error:", e);
     quotations = [];
@@ -124,24 +143,17 @@ export default async function QuotationsPage({ searchParams }: { searchParams: {
                       </td>
                       <td className="px-10 py-6 text-center">
                         <span className={cn(
-                          "inline-block px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                          q.status === 'accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                          q.status === 'sent' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                          q.status === 'rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                          "inline-block px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm transition-all",
+                          q.status === 'accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-50/50' : 
+                          q.status === 'sent' ? 'bg-blue-50 text-blue-600 border-blue-100 shadow-blue-50' :
+                          q.status === 'cancelled' ? 'bg-rose-50 text-rose-500 border-rose-100 shadow-rose-50 line-through opacity-70' :
                           'bg-amber-50 text-amber-600 border-amber-100'
                         )}>
                           {q.status ? q.status.toUpperCase() : 'DRAFT'}
                         </span>
                       </td>
                       <td className="px-10 py-6 text-right">
-                         <div className="flex justify-end gap-3 translate-x-3 group-hover:translate-x-0 transition-all opacity-0 group-hover:opacity-100">
-                            <Link href={`/quotations/edit/${q.id}`} className="p-3 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-xl transition-all shadow-sm">
-                               <Edit size={16} />
-                            </Link>
-                            <button className="p-3 bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl transition-all shadow-sm">
-                               <FileText size={16} />
-                            </button>
-                         </div>
+                         <QuotationRowActions id={q.id} status={q.status || 'draft'} />
                       </td>
                     </tr>
                   )) : (

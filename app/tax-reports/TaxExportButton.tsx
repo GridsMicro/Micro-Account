@@ -1,8 +1,8 @@
 
 "use client";
 
-import { Download } from "lucide-react";
-import { exportPP30ToTxt, exportPND53ToTxt } from "@/app/actions";
+import { Download, Send, CheckCircle, XCircle, Clock } from "lucide-react";
+import { exportPP30ToTxt, exportPND53ToTxt, batchSubmitToRDPortal } from "@/app/actions";
 import { useState } from "react";
 
 interface TaxExportButtonProps {
@@ -11,6 +11,7 @@ interface TaxExportButtonProps {
 
 export default function TaxExportButton({ id }: TaxExportButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [rdSubmitting, setRDSubmitting] = useState(false);
 
   const handleExport = async () => {
     setLoading(true);
@@ -48,14 +49,64 @@ export default function TaxExportButton({ id }: TaxExportButtonProps) {
     }
   };
 
+  const handleRDSubmit = async () => {
+    if (!confirm("ต้องการส่งข้อมูลไปยังกรมสรรพากรผ่าน RD API ใช่หรือไม่?")) {
+      return;
+    }
+
+    setRDSubmitting(true);
+    try {
+      // For demo purposes, we'll submit sample documents
+      // In real implementation, you'd get actual document IDs from the database
+      const sampleIds = ["1", "2", "3"]; // Replace with actual IDs
+
+      const type = id === "pp30" ? "invoice" : "wht";
+      const result = await batchSubmitToRDPortal(sampleIds, type);
+
+      if (result.success && "summary" in result) {
+        alert(`✅ ส่งสำเร็จ ${result.summary.successful}/${result.summary.total} เอกสาร`);
+      } else {
+        const errorMessage = "results" in result
+          ? result.results.find((r: { id: string; result: { success: boolean; error?: string } }) => !r.result.success)?.result.error
+          : result.error;
+        alert(`❌ ส่งไม่สำเร็จ: ${errorMessage || "Unknown error"}`);
+      }
+    } catch (err: any) {
+      alert("เกิดข้อผิดพลาดในการส่ง: " + err.message);
+    } finally {
+      setRDSubmitting(false);
+    }
+  };
+
   return (
-    <button 
-      onClick={handleExport}
-      disabled={loading}
-      className="w-full h-10 bg-white border border-gray-300 text-gray-700 font-bold rounded flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors text-sm disabled:opacity-50"
-    >
-      <Download size={16} /> 
-      {loading ? "กำลังเตรียมไฟล์..." : "โหลดไฟล์ยื่นแบบ (.txt)"}
-    </button>
+    <div className="flex flex-col gap-2">
+      {/* Export Button */}
+      <button
+        onClick={handleExport}
+        disabled={loading}
+        className="w-full h-10 bg-white border border-green-500 text-green-600 font-bold rounded flex items-center justify-center gap-2 hover:bg-green-50 transition-colors shadow-sm text-sm disabled:opacity-50"
+      >
+        {loading ? (
+          <Clock size={16} className="animate-spin" />
+        ) : (
+          <Download size={16} />
+        )}
+        {loading ? "กำลังส่งออก..." : "ส่งออกไฟล์"}
+      </button>
+
+      {/* RD API Submit Button */}
+      <button
+        onClick={handleRDSubmit}
+        disabled={rdSubmitting}
+        className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded flex items-center justify-center gap-2 transition-colors shadow-sm text-sm disabled:opacity-50"
+      >
+        {rdSubmitting ? (
+          <Clock size={16} className="animate-spin" />
+        ) : (
+          <Send size={16} />
+        )}
+        {rdSubmitting ? "กำลังส่ง..." : "ส่ง RD API"}
+      </button>
+    </div>
   );
 }

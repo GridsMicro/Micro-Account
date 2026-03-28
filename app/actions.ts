@@ -1,4 +1,5 @@
 "use server";
+// Force recompile 1
 
 import { query } from "@/lib/db";
 import { sql } from "@vercel/postgres";
@@ -7,6 +8,13 @@ import * as xlsx from "xlsx";
 import { revalidatePath } from "next/cache";
 import { googleSheets, googleDrive } from "@/lib/google-server";
 import { Readable } from "stream";
+import {
+  initializeRDClient,
+  submitInvoiceToRD,
+  submitWHTToRD,
+  checkRDSubmissionStatus,
+  batchSubmitToRD
+} from "@/lib/rd-api";
 
 /**
  * ฟังก์ชันช่วยหาหรือสร้างโฟลเดอร์ใน Google Drive
@@ -332,30 +340,28 @@ export async function getCompanySettings() {
   }
 }
 
-// ดึงเลขที่ใบแจ้งหนี้ถัดไป (Auto-Increment)
+// ดึงเลขที่ใบแจ้งหนี้ถัดไป (รูปแบบสั้น: INV26-001)
 export async function getNextInvoiceNumber() {
+  const yearShort = new Date().getFullYear().toString().slice(-2); // e.g. "26"
+  const prefix = `INV${yearShort}-`; // e.g. "INV26-"
   try {
-    // ค้นหาเลขที่ล่าสุดที่ขึ้นต้นด้วย INV-
-    const { rows } = await sql`
-      SELECT reference_no FROM journal_entries 
-      WHERE reference_no LIKE 'INV-%' 
-      ORDER BY reference_no DESC LIMIT 1
-    `;
+    const { rows } = await query(
+      `SELECT invoice_number FROM invoices WHERE invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`,
+      [`${prefix}%`]
+    );
 
     if (rows.length === 0) {
-      return { success: true, data: "INV-0096" };
+      return { success: true, data: `${prefix}001` };
     }
 
-    const lastRef = rows[0].reference_no;
-    const lastNum = parseInt(lastRef.split('-')[1]);
-    
-    // ถ้ารันเลขแล้วยังน้อยกว่า 96 ให้เริ่มที่ 96 ตามคำสั่งพี่
-    const nextNum = Math.max(lastNum + 1, 96);
-    const formattedNum = nextNum.toString().padStart(4, '0');
-    
-    return { success: true, data: `INV-${formattedNum}` };
+    const lastRef = rows[0].invoice_number as string;
+    const lastNum = parseInt(lastRef.replace(prefix, ''), 10);
+    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
+    const formattedNum = nextNum.toString().padStart(3, '0');
+
+    return { success: true, data: `${prefix}${formattedNum}` };
   } catch (error: any) {
-    return { success: true, data: "INV-0096" }; // Fallback
+    return { success: true, data: `${prefix}001` }; // Fallback
   }
 }
 
@@ -370,8 +376,30 @@ export async function createInvoiceRecord(data: {
 }) {
   try {
     const totalAmount = Number(data.net_amount) + Number(data.vat_amount);
-    
-    // 1. บันทึก Invoice
+    // 1. ตรวจสอบ/เพิ่มคอลัมน์ contact_id ก่อนบันทึก Invoice
+    try {
+      await query("SELECT contact_id FROM invoices LIMIT 1");
+    } catch (e: any) {
+      if (e.code === '42703') { // undefined_column
+        await query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contact_id INTEGER");
+      } else if (e.code === '42P01') { // undefined_table
+        await query(`
+          CREATE TABLE IF NOT EXISTS invoices (
+            id SERIAL PRIMARY KEY,
+            invoice_number VARCHAR(100) UNIQUE,
+            contact_id INTEGER,
+            status VARCHAR(50) DEFAULT 'draft',
+            net_amount DECIMAL(15, 2) DEFAULT 0.00,
+            vat_amount DECIMAL(15, 2) DEFAULT 0.00,
+            issue_date DATE,
+            due_date DATE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+      }
+    }
+
+    // 2. บันทึก Invoice
     await query(
       `INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
@@ -413,6 +441,193 @@ export async function createInvoiceRecord(data: {
   }
 }
 
+export async function getNextQuotationNumber() {
+  const yearShort = new Date().getFullYear().toString().slice(-2); // e.g. "26"
+  const prefix = `QT${yearShort}-`; // e.g. "QT26-"
+  try {
+    // Find latest quotation with this year prefix
+    const { rows } = await query(`
+      SELECT quotation_number FROM quotations 
+      WHERE quotation_number LIKE $1 
+      ORDER BY id DESC LIMIT 1
+    `, [`${prefix}%`]);
+
+    if (rows.length === 0) {
+      return { success: true, data: `${prefix}001` };
+    }
+
+    const lastRef = rows[0].quotation_number as string;
+    const lastNum = parseInt(lastRef.replace(prefix, ''), 10);
+    const nextNum = isNaN(lastNum) ? 1 : lastNum + 1;
+    const formattedNum = nextNum.toString().padStart(3, '0');
+
+    return { success: true, data: `${prefix}${formattedNum}` };
+  } catch (error: any) {
+    return { success: true, data: `${prefix}001` };
+  }
+}
+
+export async function createQuotation(data: {
+  quotation_number: string;
+  contact_id: number;
+  total_amount: number;
+  vat_amount: number;
+  net_amount: number;
+  notes: string;
+  items: any[];
+  is_recurring?: boolean;
+  recurring_interval?: string;
+}) {
+  const pool = (await import('@/lib/db')).default;
+  const client = await pool.connect();
+
+  try {
+    // One-time check for recurring columns if they might be missing
+    try {
+      await client.query("SELECT is_recurring FROM quotations LIMIT 1");
+    } catch (e: any) {
+      if (e.code === '42703') { // undefined_column
+        await client.query("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE");
+        await client.query("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS recurring_interval VARCHAR(20) DEFAULT 'none'");
+      }
+    }
+
+    await client.query('BEGIN');
+    
+    // Insert into quotations
+    const qRes = await client.query(
+      `INSERT INTO quotations (quotation_number, contact_id, total_amount, vat_amount, net_amount, notes, status, created_at, is_recurring, recurring_interval)
+       VALUES ($1, $2, $3, $4, $5, $6, 'draft', NOW(), $7, $8) RETURNING id`,
+      [data.quotation_number, data.contact_id, data.total_amount, data.vat_amount, data.net_amount, data.notes, data.is_recurring || false, data.recurring_interval || 'none']
+    );
+    const quotationId = qRes.rows[0].id;
+
+    // Insert items
+    for (const item of data.items) {
+      await client.query(
+        `INSERT INTO quotation_items (quotation_id, description, quantity, unit_price, total_price)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [quotationId, item.desc, item.qty, item.price, item.qty * item.price]
+      );
+    }
+
+    await client.query('COMMIT');
+    revalidatePath('/quotations');
+    revalidatePath(`/quotations/${quotationId}/preview`, 'page');
+    revalidatePath(`/quotations/edit/${quotationId}`, 'page');
+    return { success: true, id: quotationId };
+  } catch (error: any) {
+    try { await client.query('ROLLBACK'); } catch {}
+    
+    // Auto-migration block if tables are missing some columns or don't exist
+    if (error.code === '42P01') {
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS quotations (
+            id SERIAL PRIMARY KEY,
+            quotation_number VARCHAR(100),
+            contact_id INT,
+            total_amount FLOAT,
+            vat_amount FLOAT,
+            net_amount FLOAT,
+            notes TEXT,
+            status VARCHAR(50),
+            is_recurring BOOLEAN DEFAULT FALSE,
+            recurring_interval VARCHAR(20) DEFAULT 'none',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS quotation_items (
+            id SERIAL PRIMARY KEY,
+            quotation_id INT,
+            description TEXT,
+            quantity INT,
+            unit_price FLOAT,
+            total_price FLOAT
+          );
+        `);
+        // Retry
+        await client.query('BEGIN');
+        const qResRetry = await client.query(
+          `INSERT INTO quotations (quotation_number, contact_id, total_amount, vat_amount, net_amount, notes, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, 'draft', NOW()) RETURNING id`,
+          [data.quotation_number, data.contact_id, data.total_amount, data.vat_amount, data.net_amount, data.notes]
+        );
+        const retryId = qResRetry.rows[0].id;
+        for (const item of data.items) {
+          await client.query(
+            `INSERT INTO quotation_items (quotation_id, description, quantity, unit_price, total_price)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [retryId, item.desc, item.qty, item.price, item.qty * item.price]
+          );
+        }
+        await client.query('COMMIT');
+        revalidatePath('/quotations');
+        return { success: true, id: retryId };
+      } catch (e2) {
+        console.error("Migration/Retry Failed:", e2);
+      }
+    }
+    
+    console.error("Failed to create quotation:", error);
+    return { success: false, error: error.message };
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateQuotation(id: number, data: {
+  contact_id: number;
+  total_amount: number;
+  vat_amount: number;
+  net_amount: number;
+  notes: string;
+  items: any[];
+  is_recurring?: boolean;
+  recurring_interval?: string;
+  status: string;
+}) {
+  const pool = (await import('@/lib/db')).default;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    
+    // Update main quotation
+    await client.query(
+      `UPDATE quotations 
+       SET contact_id = $1, total_amount = $2, vat_amount = $3, net_amount = $4, notes = $5, status = $6, is_recurring = $7, recurring_interval = $8
+       WHERE id = $9`,
+      [data.contact_id, data.total_amount, data.vat_amount, data.net_amount, data.notes, data.status, data.is_recurring || false, data.recurring_interval || 'none', id]
+    );
+
+    // Delete old items and insert new ones (simpler than syncing)
+    await client.query(`DELETE FROM quotation_items WHERE quotation_id = $1`, [id]);
+    
+    for (const item of data.items) {
+      await client.query(
+        `INSERT INTO quotation_items (quotation_id, description, quantity, unit_price, total_price)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id, item.desc, item.qty, item.price, item.qty * item.price]
+      );
+    }
+
+    await client.query('COMMIT');
+    revalidatePath('/quotations');
+    revalidatePath(`/quotations/${id}/preview`, 'page');
+    revalidatePath(`/quotations/edit/${id}`, 'page');
+    return { success: true };
+  } catch (error: any) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error("Failed to update quotation:", error);
+    return { success: false, error: error.message };
+  } finally {
+    client.release();
+  }
+}
+
+
+
+
 export async function updateContact(id: string, data: {
   name: string;
   type: string;
@@ -436,6 +651,55 @@ export async function updateContact(id: string, data: {
   }
 }
 
+export async function getProducts() {
+  try {
+    const { rows } = await query('SELECT * FROM products ORDER BY name ASC');
+    return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getNextSkuNumber() {
+  try {
+    const { rows } = await query(`
+      SELECT sku_number FROM products 
+      WHERE sku_number LIKE 'SKU-%' 
+      ORDER BY id DESC LIMIT 1
+    `);
+    if (rows.length > 0 && rows[0].sku_number) {
+      const match = rows[0].sku_number.match(/SKU-(\d+)/);
+      if (match && match[1]) {
+        const nextNum = parseInt(match[1], 10) + 1;
+        return { success: true, sku: `SKU-${String(nextNum).padStart(6, '0')}` };
+      }
+    }
+    return { success: true, sku: 'SKU-000001' };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getCategories() {
+  try {
+    const { rows } = await query('SELECT * FROM product_categories ORDER BY name ASC');
+    return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createCategory(name: string, description: string = '') {
+  try {
+    const { rows } = await query(
+      `INSERT INTO product_categories (name, description) VALUES ($1, $2) RETURNING id`,
+      [name, description]
+    );
+    return { success: true, id: rows[0].id };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
 
 export async function updateProduct(id: string, data: {
   name: string;
@@ -478,21 +742,7 @@ export async function updateInvoice(id: string, data: {
   }
 }
 
-export async function updateQuotation(id: string, data: {
-  status: string;
-}) {
-  try {
-    await query(
-      `UPDATE quotations SET status = $1 WHERE id = $2`,
-      [data.status, id]
-    );
-    revalidatePath("/quotations");
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to update quotation:", error);
-    return { success: false, error: "Failed to update database" };
-  }
-}
+
 
 export async function updateCompanySettings(data: {
   name: string;
@@ -559,6 +809,7 @@ export async function createContact(data: {
 
 export async function createProduct(data: {
   name: string;
+  category_name?: string;
   type: string;
   sku_number: string;
   source_info: string;
@@ -567,17 +818,100 @@ export async function createProduct(data: {
   price: number;
   product_notes: string;
 }) {
+  // Import pool for transaction support
+  const pool = (await import('@/lib/db')).default;
+  const client = await pool.connect();
+
   try {
-    const res = await query(
-      `INSERT INTO products (name, type, sku_number, source_info, storage_location, stock_quantity, price, product_notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [data.name, data.type, data.sku_number, data.source_info, data.storage_location, data.stock_quantity, data.price, data.product_notes]
+    // Start transaction
+    await client.query('BEGIN');
+
+    // Try to insert
+    const res = await client.query(
+      `INSERT INTO products (name, category_name, type, sku_number, source_info, storage_location, stock_quantity, price, product_notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [data.name, data.category_name || null, data.type, data.sku_number, data.source_info, data.storage_location, data.stock_quantity, data.price, data.product_notes]
     );
+
+    await client.query('COMMIT');
     revalidatePath("/inventory");
     return { success: true, id: res.rows[0].id };
   } catch (error: any) {
-    console.error("Failed to create product:", error);
-    return { success: false, error: error.message || "Failed to create database entry" };
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // Ignore rollback errors
+    }
+
+    let isHandled = false;
+
+    // Handle missing columns error
+    if (error.code === '42703' && /sku_number|source_info|storage_location|stock_quantity|product_notes/i.test(error.message || '')) {
+      isHandled = true;
+      console.log('⚠️ ตรวจพบตารางไม่ครบ: กำลังปรับปรุงคอลัมน์อัตโนมัติ (Auto-Migration)...');
+      try {
+        await client.query(`
+          ALTER TABLE products
+          ADD COLUMN IF NOT EXISTS sku_number VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS source_info TEXT,
+          ADD COLUMN IF NOT EXISTS storage_location TEXT,
+          ADD COLUMN IF NOT EXISTS stock_quantity INT DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS product_notes TEXT;
+        `);
+
+        try {
+          await client.query(`
+            ALTER TABLE products
+            ADD CONSTRAINT products_sku_number_unique UNIQUE (sku_number);
+          `);
+        } catch {
+          // Constraint might already exist
+        }
+      } catch (alterError: any) {
+        console.error('Failed to alter table:', alterError);
+      }
+    }
+
+    // Handle primary key conflict by resetting sequence
+    if (error.code === '23505' && error.constraint === 'products_pkey') {
+      isHandled = true;
+      console.log('⚠️ ตรวจพบเลข ID ซ้ำ (Sequence Out of Sync): กำลังรีเซ็ต Sequence ให้ตรงกับตารางปัจจุบันอัตโนมัติ...');
+      try {
+        // Reset sequence to max(id) -> Next value generated will be max(id) + 1
+        await client.query(`
+          SELECT setval('products_id_seq', COALESCE((SELECT MAX(id) FROM products), 1));
+        `);
+      } catch (seqError: any) {
+        console.error('Failed to reset sequence:', seqError);
+      }
+    }
+
+    if (!isHandled) {
+      console.error("❌ Failed to create product (Unhandled error):", error);
+    }
+
+    // Retry insertion after fixes
+    try {
+      await client.query('BEGIN');
+      const resRetry = await client.query(
+        `INSERT INTO products (name, category_name, type, sku_number, source_info, storage_location, stock_quantity, price, product_notes) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [data.name, data.category_name || null, data.type, data.sku_number, data.source_info, data.storage_location, data.stock_quantity, data.price, data.product_notes]
+      );
+      await client.query('COMMIT');
+      revalidatePath('/inventory');
+      return { success: true, id: resRetry.rows[0].id };
+    } catch (retryError: any) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        // Ignore rollback errors
+      }
+      console.error('Failed to create product after retry:', retryError);
+      return { success: false, error: retryError.message || 'Failed to create database entry' };
+    }
+  } finally {
+    client.release();
   }
 }
 
@@ -987,6 +1321,295 @@ export async function exportMonthlySummaryToDrive() {
       url: 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit',
       message: 'รายงานประจำเดือน ' + monthYear + ' พร้อมใช้งานบน Google Drive แล้ว' 
     };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// อัปเดตสถานะใบเสนอราคา
+export async function updateQuotationStatus(id: number, status: string) {
+  try {
+    const { query } = await import("@/lib/db");
+    await query("UPDATE quotations SET status = $1 WHERE id = $2", [status, id]);
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/quotations");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update Quotation Status Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// อัปเดตประเภทสินค้า
+export async function updateCategory(id: number, name: string, description: string = "") {
+  try {
+    const { query } = await import("@/lib/db");
+    await query(
+      "UPDATE product_categories SET name = $1, description = $2 WHERE id = $3",
+      [name, description, id]
+    );
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/inventory");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// ลบประเภทสินค้า
+export async function deleteCategory(id: number) {
+  try {
+    const { query } = await import("@/lib/db");
+    
+    // ตรวจสอบว่ามีสินค้าที่ใช้หมวดหมู่นี้อยู่หรือไม่
+    const productsRes = await query("SELECT id FROM products WHERE category_id = $1 LIMIT 1", [id]);
+    if (productsRes.rows.length > 0) {
+      return { success: false, error: "ไม่สามารถลบได้ เนื่องจากมีสินค้าบางรายการที่ยังใช้ประเภทนี้น้อยู่" };
+    }
+
+    await query("DELETE FROM product_categories WHERE id = $1", [id]);
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/inventory");
+    revalidatePath("/inventory/categories");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Category Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ลบใบเสนอราคา (Hard Delete)
+export async function deleteQuotation(id: number) {
+  try {
+    const { query } = await import("@/lib/db");
+    
+    // ลบ items ก่อน (CASCADE ใน DB จะดีมาก แต่เพื่อความชัวร์ลบแยกก็ได้ถ้าไม่ได้คุม constraint)
+    // แต่ส่วนใหญ่เราสร้าง table แบบ CASCADE ได้
+    await query("DELETE FROM quotation_items WHERE quotation_id = $1", [id]);
+    await query("DELETE FROM quotations WHERE id = $1", [id]);
+    
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/quotations");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Quotation Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// --- CALENDAR & REMINDERS ---
+
+export async function getReminders() {
+  const { query } = await import("@/lib/db");
+  try {
+    // Migration check: Ensure reminders table exists
+    await query(`
+      CREATE TABLE IF NOT EXISTS reminders (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        due_date TIMESTAMP NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        type VARCHAR(50) DEFAULT 'manual',
+        related_id INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const res = await query("SELECT * FROM reminders WHERE status != 'deleted' ORDER BY due_date ASC");
+    return { success: true, data: res.rows };
+  } catch (error: any) {
+    console.error("Get Reminders Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createReminder(data: {
+  title: string;
+  description?: string;
+  due_date: string;
+  type?: string;
+  related_id?: number;
+}) {
+  const { query } = await import("@/lib/db");
+  try {
+    const res = await query(
+      `INSERT INTO reminders (title, description, due_date, type, related_id) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [data.title, data.description || '', data.due_date, data.type || 'manual', data.related_id || null]
+    );
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/calendar");
+    return { success: true, id: res.rows[0].id };
+  } catch (error: any) {
+    console.error("Create Reminder Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateReminderStatus(id: number, status: string) {
+  const { query } = await import("@/lib/db");
+  try {
+    await query("UPDATE reminders SET status = $1 WHERE id = $2", [status, id]);
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/calendar");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteReminder(id: number) {
+  const { query } = await import("@/lib/db");
+  try {
+    await query("DELETE FROM reminders WHERE id = $1", [id]);
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/calendar");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getDashboardAlerts() {
+  const { query } = await import("@/lib/db");
+  const now = new Date();
+  const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  try {
+    // 1. Reminders due within 7 days
+    const reminders = await query(
+      "SELECT * FROM reminders WHERE due_date >= $1 AND due_date <= $2 AND status = 'pending' ORDER BY due_date ASC",
+      [now.toISOString(), next7Days]
+    );
+    
+    // 2. Pending Invoices (top 5 oldest) with Schema Auto-Migration for contact_id
+    try {
+      await query("SELECT contact_id FROM invoices LIMIT 1");
+    } catch (e: any) {
+      if (e.code === '42703') { // undefined_column
+        await query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contact_id INTEGER");
+      }
+    }
+
+    const pendingInvoices = await query(
+      "SELECT i.id, i.invoice_number, i.net_amount, i.created_at, c.name as customer_name FROM invoices i LEFT JOIN contacts c ON i.contact_id = c.id WHERE i.status != 'paid' ORDER BY i.created_at ASC LIMIT 5"
+    );
+
+    return { 
+      success: true, 
+      data: {
+        reminders: reminders.rows,
+        invoices: pendingInvoices.rows
+      } 
+    };
+  } catch (error: any) {
+    console.error("Dashboard Alerts Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// --- RD API Portal Integration Functions ---
+
+// Initialize RD API Client with configuration
+export async function setupRDAPI(config: {
+  clientId: string;
+  clientSecret: string;
+  apiKey?: string;
+  baseUrl: string;
+}) {
+  try {
+    initializeRDClient(config);
+    return { success: true, message: "RD API client initialized successfully" };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Submit invoice to RD API Portal
+export async function submitInvoiceToRDPortal(invoiceId: string) {
+  try {
+    const result = await submitInvoiceToRD(invoiceId);
+    revalidatePath("/invoices");
+    revalidatePath("/tax-reports");
+    return result;
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Submit withholding tax to RD API Portal
+export async function submitWHTToRDPortal(voucherId: string) {
+  try {
+    const result = await submitWHTToRD(voucherId);
+    revalidatePath("/vouchers");
+    revalidatePath("/tax-reports");
+    return result;
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Check RD submission status
+export async function checkRDStatus(submissionId: string) {
+  try {
+    return await checkRDSubmissionStatus(submissionId);
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Batch submit multiple documents to RD
+export async function batchSubmitToRDPortal(documentIds: string[], type: 'invoice' | 'wht') {
+  try {
+    const result = await batchSubmitToRD(documentIds, type);
+    revalidatePath("/invoices");
+    revalidatePath("/vouchers");
+    revalidatePath("/tax-reports");
+    return result;
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Get RD submission history for dashboard
+export async function getRDSubmissions() {
+  try {
+    // Get recent RD submissions from both invoices and vouchers
+    const invoiceSubmissions = await query(`
+      SELECT
+        'invoice' as type,
+        invoice_number as document_number,
+        rd_submission_id,
+        rd_status,
+        rd_submitted_at,
+        net_amount + vat_amount as amount
+      FROM invoices
+      WHERE rd_submission_id IS NOT NULL
+      ORDER BY rd_submitted_at DESC
+      LIMIT 10
+    `);
+
+    const voucherSubmissions = await query(`
+      SELECT
+        'wht' as type,
+        voucher_no as document_number,
+        rd_submission_id,
+        rd_status,
+        rd_submitted_at,
+        amount
+      FROM payment_vouchers
+      WHERE rd_submission_id IS NOT NULL
+      ORDER BY rd_submitted_at DESC
+      LIMIT 10
+    `);
+
+    const allSubmissions = [
+      ...invoiceSubmissions.rows,
+      ...voucherSubmissions.rows
+    ].sort((a, b) => new Date(b.rd_submitted_at).getTime() - new Date(a.rd_submitted_at).getTime());
+
+    return { success: true, data: allSubmissions };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

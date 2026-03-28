@@ -89,72 +89,69 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
         {/* Invoices List Table */}
         <div className="bg-white rounded-3xl shadow-2xl shadow-violet-100/40 border border-violet-50 overflow-hidden text-left">
            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="bg-violet-50/10 border-b border-violet-50">
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">เลขที่เอกสาร</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อลูกค้า / คู่ค้า</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">วันที่ออก (Date)</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">ยอดรวมสุทธิ</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">สถานะ</th>
-                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">จัดการ</th>
+                  <tr className="bg-violet-50/30 border-b border-violet-100">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-36">เลขที่เอกสาร</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อลูกค้า</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-32">วันที่ออก</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-36">ยอดสุทธิ</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-28">สถานะ</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-32">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-violet-50/50">
                   {invoices.length > 0 ? invoices.map((inv: any) => (
-                    <tr key={inv.id} className="hover:bg-violet-50/5 transition-all group">
-                      <td className="px-10 py-6">
-                         <div className="flex flex-col">
-                            <span className="font-mono font-black text-violet-600 text-base">{inv.invoice_number}</span>
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Electronic Doc</span>
-                         </div>
+                    <tr key={inv.id} className="hover:bg-violet-50/10 transition-all group">
+                      <td className="px-6 py-4">
+                         <span className="font-mono font-bold text-violet-600 text-sm tracking-tight">{inv.invoice_number}</span>
                       </td>
-                      <td className="px-10 py-6">
-                         <span className="text-sm font-black text-slate-800 tracking-tight">{inv.customer_name || 'ไม่ระบุรายชื่อลูกค้า'}</span>
+                      <td className="px-6 py-4">
+                         <span className="text-sm font-semibold text-slate-700">{inv.customer_name || '-'}</span>
                       </td>
-                      <td className="px-10 py-6">
-                         <span className="text-xs font-bold text-slate-500">
+                      <td className="px-6 py-4">
+                         <span className="text-xs text-slate-500">
                             {new Date(inv.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
                          </span>
                       </td>
-                      <td className="px-10 py-6 text-right">
-                         <span className="text-lg font-black text-slate-900 tabular-nums tracking-tighter">฿{Number(inv.net_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <td className="px-6 py-4 text-right">
+                         <span className="text-sm font-bold text-slate-900 tabular-nums">฿{Number(inv.net_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       </td>
-                      <td className="px-10 py-6 text-center">
+                      <td className="px-6 py-4 text-center">
                         <span className={cn(
-                          "inline-block px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                          inv.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                          inv.status === 'sent' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                          'bg-amber-50 text-amber-600 border-amber-100'
+                          "inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                          inv.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
+                          inv.status === 'sent' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
+                          'bg-amber-50 text-amber-600 border-amber-200'
                         )}>
-                          {inv.status === 'paid' ? 'PAID / ชำระแล้ว' : inv.status === 'sent' ? 'SENT / ส่งแล้ว' : 'DRAFT / ฉบับร่าง'}
+                          {inv.status === 'paid' ? 'ชำระแล้ว' : inv.status === 'sent' ? 'ส่งแล้ว' : 'ฉบับร่าง'}
                         </span>
                       </td>
-                      <td className="px-10 py-6 text-right">
-                         <div className="flex justify-end gap-3 translate-x-2 group-hover:translate-x-0 transition-transform opacity-0 group-hover:opacity-100">
+                      <td className="px-6 py-4 text-right">
+                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Link 
                                href={`/invoices/preview/${inv.id}`} 
-                               className="p-3 bg-violet-600 text-white hover:bg-violet-700 rounded-xl transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+                               className="p-2 bg-violet-600 text-white hover:bg-violet-700 rounded-lg transition-all shadow-md hover:scale-105 active:scale-95 flex items-center gap-1.5"
                                title="Preview & Print PDF"
                             >
-                               <FileText size={16} />
-                               <span className="text-[10px] font-black uppercase tracking-wider pr-1">Preview</span>
+                               <FileText size={14} />
+                               <span className="text-[10px] font-black uppercase tracking-wider">Preview</span>
                             </Link>
-                            <Link href={`/invoices/edit/${inv.id}`} className="p-3 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-xl transition-all shadow-sm">
-                               <Edit size={16} />
+                            <Link href={`/invoices/edit/${inv.id}`} className="p-2 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-lg transition-all shadow-sm">
+                               <Edit size={14} />
                             </Link>
                          </div>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={6} className="py-32 text-center bg-violet-50/5">
+                      <td colSpan={6} className="py-24 text-center">
                          <div className="flex flex-col items-center gap-4">
-                            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl shadow-violet-100 border border-violet-50">
-                               <Receipt size={32} className="text-violet-200" />
+                            <div className="w-16 h-16 bg-violet-50 rounded-full flex items-center justify-center">
+                               <Receipt size={28} className="text-violet-200" />
                             </div>
-                            <p className="text-slate-400 font-black text-lg">ยังไม่มีรายการใบแจ้งหนี้เพื่อการเรียกเก็บเงิน</p>
-                            <Link href="/invoices/new" className="text-violet-600 font-black hover:text-violet-700 underline underline-offset-8 decoration-2 text-sm uppercase tracking-widest">Create First Invoice</Link>
+                            <p className="text-slate-400 font-bold">ยังไม่มีรายการใบแจ้งหนี้</p>
+                            <Link href="/invoices/new" className="text-violet-600 font-black hover:text-violet-700 underline underline-offset-4 text-sm uppercase tracking-widest">Create First Invoice</Link>
                          </div>
                       </td>
                     </tr>

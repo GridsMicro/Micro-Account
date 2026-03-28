@@ -1,6 +1,7 @@
 "use client";
+// Force recompile 1
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
   ArrowLeft, 
@@ -16,14 +17,44 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import BarcodeComponent from "react-barcode";
-import { createProduct } from "@/app/actions";
+import { createProduct, getNextSkuNumber, getCategories, createCategory } from "@/app/actions";
 import { useRouter } from "next/navigation";
 
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [sku, setSku] = useState("SKU-" + Math.floor(100000 + Math.random() * 900000));
+  const [sku, setSku] = useState("");
   const [type, setType] = useState("ในสต็อก (Physical)");
+  const [category, setCategory] = useState("");
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch Next SKU
+    getNextSkuNumber().then(res => {
+      if (res.success && res.sku) setSku(res.sku);
+    });
+    // Fetch Categories
+    getCategories().then(res => {
+      if (res.success && res.data) {
+        setCategoriesList(res.data);
+        if (res.data.length > 0) setCategory(res.data[0].name);
+      }
+    });
+  }, []);
+
+  const handleAddCategory = async () => {
+    const newCat = window.prompt("ระบุชื่อหมวดหมู่ใหม่:");
+    if (!newCat || newCat.trim() === "") return;
+    const res = await createCategory(newCat.trim(), "หมวดหมู่สร้างด่วน");
+    if (res.success) {
+      setCategoriesList([...categoriesList, { id: res.id, name: newCat.trim() }]);
+      setCategory(newCat.trim());
+      alert(`เพิ่มหมวดหมู่ '${newCat.trim()}' สำเร็จ!`);
+    } else {
+      alert("ไม่สามารถเพิ่มหมวดหมู่ได้ หรืออาจมีชื่อนี้อยู่แล้วในระบบ");
+    }
+  };
+
   const [name, setName] = useState("");
   const [source, setSource] = useState("");
   const [location, setLocation] = useState("");
@@ -36,6 +67,7 @@ export default function NewProductPage() {
     setLoading(true);
     const res = await createProduct({
       name,
+      category_name: category,
       type,
       sku_number: sku,
       source_info: source,
@@ -130,6 +162,25 @@ export default function NewProductPage() {
                               <option value="งานบริการ (Service)">งานบริการ (Service)</option>
                            </select>
                         </div>
+
+                        <div className="space-y-2">
+                           <div className="flex items-center justify-between">
+                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">หมวดหมู่ (Category)</label>
+                             <button type="button" onClick={handleAddCategory} className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full border border-blue-100 transition-colors">
+                               + เพิ่มใหม่
+                             </button>
+                           </div>
+                           <select 
+                             value={category}
+                             onChange={(e) => setCategory(e.target.value)}
+                             className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700"
+                           >
+                              {categoriesList.length === 0 && <option value="">(ไม่มีหมวดหมู่)</option>}
+                              {categoriesList.map(cat => (
+                                <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
+                              ))}
+                           </select>
+                        </div>
                         
                         <div className="space-y-2">
                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-2 font-black">
@@ -203,22 +254,30 @@ export default function NewProductPage() {
                   <h3 className="font-bold text-gray-700 mb-8 border-b border-gray-100 w-full pb-4 uppercase tracking-tighter text-center italic">QR & Barcode Preview</h3>
                   
                   <div className="bg-white p-4 border border-gray-200 rounded shadow-inner mb-6">
-                     <QRCodeSVG 
-                        value={sku} 
-                        size={140}
-                        level="Q"
-                     />
+                     {sku ? (
+                       <QRCodeSVG 
+                          value={sku} 
+                          size={140}
+                          level="Q"
+                       />
+                     ) : (
+                       <div className="w-40 h-40 flex items-center justify-center text-[10px] text-gray-400">Loading QR code...</div>
+                     )}
                   </div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-10">Scan to verify {sku}</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-10">Scan to verify {sku || "(generating...)"}</p>
 
                   <div className="bg-white px-6 py-4 border border-gray-200 rounded shadow-sm mb-6 w-full flex justify-center overflow-hidden">
-                     <BarcodeComponent 
-                        value={sku} 
-                        width={1.2} 
-                        height={50} 
-                        fontSize={11}
-                        background="transparent"
-                     />
+                     {sku ? (
+                       <BarcodeComponent 
+                          value={sku} 
+                          width={1.2} 
+                          height={50} 
+                          fontSize={11}
+                          background="transparent"
+                       />
+                     ) : (
+                       <div className="text-[10px] text-gray-400">Preparing barcode...</div>
+                     )}
                   </div>
 
                   <div className="w-full p-4 bg-blue-50 rounded border border-blue-100 flex items-center gap-3">

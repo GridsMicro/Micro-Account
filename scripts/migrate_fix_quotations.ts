@@ -1,20 +1,30 @@
 
 import { Pool } from 'pg';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 
-dotenv.config();
+// Load environment variables from .env.local
+config({ path: '.env.local' });
 
 async function migrate() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error('DATABASE_URL not found in environment variables');
+    process.exit(1);
+  }
+  
+  console.log('Connecting to database...');
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    connectionString: databaseUrl,
+    ssl: databaseUrl.includes('neon.tech') ? { rejectUnauthorized: false } : false
   });
 
   try {
+    console.log('Attempting to connect to database...');
     const client = await pool.connect();
-    console.log("Connected to database");
+    console.log("Successfully connected to database");
 
     // Check columns of quotations
+    console.log('Checking quotations table columns...');
     const res = await client.query(`
       SELECT column_name 
       FROM information_schema.columns 
