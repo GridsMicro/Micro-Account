@@ -21,6 +21,7 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isRecurringAutoEntry = (entry.description || "").includes("Auto: Recurring WHT 3%");
 
   // Edit form state
   const [accountName, setAccountName] = useState(entry.account_name);
@@ -173,6 +174,11 @@ export default function JournalEntryRow({ entry }: { entry: JournalEntry }) {
             )}>
               {entry.account_name}
             </span>
+            {isRecurringAutoEntry ? (
+              <span className="mt-1 inline-flex w-fit items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                Auto: Recurring WHT 3%
+              </span>
+            ) : null}
             <span className="text-[10px] text-gray-400 italic font-medium mt-0.5">{entry.description}</span>
          </div>
       </td>

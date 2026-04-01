@@ -49,6 +49,12 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
     currency: initialData?.currency || "THB",
     invoice_prefix: initialData?.invoice_prefix || "INV",
     quotation_prefix: initialData?.quotation_prefix || "QT",
+    receipt_prefix: initialData?.receipt_prefix || "REC",
+    journal_prefix: initialData?.journal_prefix || "GJ",
+    // Footer Notes
+    invoice_footer: initialData?.invoice_footer || "",
+    quotation_footer: initialData?.quotation_footer || "",
+    receipt_footer: initialData?.receipt_footer || "",
     // RD API Settings
     rd_client_id: initialData?.rd_client_id || "",
     rd_client_secret: initialData?.rd_client_secret || "",
@@ -119,7 +125,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                  <div className="max-w-3xl space-y-8 animate-in fade-in duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">ชื่อบริษัท (ไทย)</label>
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'ชื่อบริษัท (ไทย)'}</label>
                           <input 
                             type="text" 
                             value={formData.name} 
@@ -128,7 +134,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                           />
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">TAX ID (เลขที่ผู้เสียภาษี)</label>
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'TAX ID (เลขที่ผู้เสียภาษี)'}</label>
                           <input 
                             type="text" 
                             value={formData.tax_id} 
@@ -137,7 +143,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                           />
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">เบอร์โทรศัพท์</label>
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'เบอร์โทรศัพท์'}</label>
                           <input 
                             type="text" 
                             value={formData.phone} 
@@ -146,7 +152,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                           />
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">อีเมลติดต่อ</label>
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'อีเมลติดต่อ'}</label>
                           <input 
                             type="email" 
                             value={formData.email} 
@@ -155,7 +161,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                           />
                        </div>
                        <div className="md:col-span-2 space-y-2">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">ที่อยู่จดทะเบียน (Address)</label>
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'ที่อยู่จดทะเบียน (Address)'}</label>
                           <textarea 
                             rows={4} 
                             value={formData.address} 
@@ -172,8 +178,8 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                     <div className="bg-blue-50 border border-blue-100 p-4 rounded flex items-center gap-4 mb-6">
                         <ShieldCheck className="text-blue-500" size={32} />
                         <div>
-                            <p className="text-blue-800 font-bold text-sm">การจัดตั้งภาษี (VAT/WHT)</p>
-                            <p className="text-blue-600 text-xs italic">กำหนดค่ามาตรฐานสำหรับการออกเอกสารใบแจ้งหนี้และใบเสนอราคา</p>
+                            <p className="text-blue-800 font-bold text-sm">{'การจัดตั้งภาษี (VAT/WHT)'}</p>
+                            <p className="text-blue-600 text-xs italic">{'กำหนดค่ามาตรฐานสำหรับการออกเอกสารใบแจ้งหนี้และใบเสนอราคา'}</p>
                         </div>
                     </div>
 
@@ -221,17 +227,17 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                   <div className="max-w-3xl space-y-8 animate-in slide-in-from-bottom-2 duration-500">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">ชื่อธนาคาร</label>
+                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'ชื่อธนาคาร'}</label>
                            <input 
                              type="text" 
                              value={formData.bank_name} 
                              onChange={e => setFormData({...formData, bank_name: e.target.value})}
-                             placeholder="เช่น ธนาคารกสิกรไทย"
+                             placeholder={'เช่น ธนาคารกสิกรไทย'}
                              className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">สาขา</label>
+                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'สาขา'}</label>
                            <input 
                              type="text" 
                              value={formData.bank_branch} 
@@ -240,7 +246,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">ชื่อบัญชี</label>
+                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'ชื่อบัญชี'}</label>
                            <input 
                              type="text" 
                              value={formData.bank_account_name} 
@@ -249,7 +255,7 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">เลขที่บัญชี</label>
+                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{'เลขที่บัญชี'}</label>
                            <input 
                              type="text" 
                              value={formData.bank_account_number} 
@@ -266,15 +272,15 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
-                              <Coins size={10} /> สกุลเงินหลัก (Currency)
+                              <Coins size={10} /> {'สกุลเงินหลัก (Currency)'}
                            </label>
                            <select 
                              value={formData.currency}
                              onChange={e => setFormData({...formData, currency: e.target.value})}
                              className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700"
                            >
-                              <option value="THB text-gray-700 font-bold">THB - บาทไทย</option>
-                              <option value="USD text-gray-700 font-bold">USD - ดอลลาร์สหรัฐ</option>
+                              <option value="THB text-gray-700 font-bold">THB - {'บาทไทย'}</option>
+                              <option value="USD text-gray-700 font-bold">USD - {'ดอลลาร์สหรัฐ'}</option>
                            </select>
                         </div>
                         
@@ -301,6 +307,67 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                                    value={formData.quotation_prefix} 
                                    onChange={e => setFormData({...formData, quotation_prefix: e.target.value})}
                                    className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                    <FileDigit size={10} /> Receipt Prefix
+                                 </label>
+                                 <input 
+                                   type="text" 
+                                   value={formData.receipt_prefix} 
+                                   onChange={e => setFormData({...formData, receipt_prefix: e.target.value})}
+                                   className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                    <FileDigit size={10} /> Journal Prefix
+                                 </label>
+                                 <input 
+                                   type="text" 
+                                   value={formData.journal_prefix} 
+                                   onChange={e => setFormData({...formData, journal_prefix: e.target.value})}
+                                   className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                                 />
+                              </div>
+                           </div>
+                        </div>
+                        
+                        <div className="md:col-span-2">
+                           <h4 className="text-xs font-black text-blue-600 mb-4 uppercase tracking-widest border-b border-blue-50 pb-2">FOOTER NOTES</h4>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                    <FileDigit size={10} /> Invoice Footer
+                                 </label>
+                                 <textarea 
+                                   value={formData.invoice_footer} 
+                                   onChange={e => setFormData({...formData, invoice_footer: e.target.value})}
+                                   className="w-full h-20 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                                   placeholder="Enter invoice footer text..."
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                    <FileDigit size={10} /> Quotation Footer
+                                 </label>
+                                 <textarea 
+                                   value={formData.quotation_footer} 
+                                   onChange={e => setFormData({...formData, quotation_footer: e.target.value})}
+                                   className="w-full h-20 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                                   placeholder="Enter quotation footer text..."
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-1">
+                                    <FileDigit size={10} /> Receipt Footer
+                                 </label>
+                                 <textarea 
+                                   value={formData.receipt_footer} 
+                                   onChange={e => setFormData({...formData, receipt_footer: e.target.value})}
+                                   className="w-full h-20 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                                   placeholder="Enter receipt footer text..."
                                  />
                               </div>
                            </div>

@@ -1,15 +1,19 @@
 import { query } from "@/lib/db";
 import { UserCog, Plus, Mail, Shield, Trash2, Edit } from "lucide-react";
 import Link from "next/link";
+import { checkUserLimit, getDefaultCompanyId } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
 export default async function MembersPage() {
   // Attempt to fetch users, or use dummy if table doesn't exist/empty
   let users = [];
+  let licenseInfo: Awaited<ReturnType<typeof checkUserLimit>> | null = null;
   try {
     const res = await query('SELECT * FROM users ORDER BY created_at DESC');
     users = res.rows;
+    const companyId = await getDefaultCompanyId();
+    licenseInfo = await checkUserLimit(companyId);
   } catch (e) {
     // If table doesn't exist, we'll show dummy for demonstration
     users = [
@@ -35,6 +39,33 @@ export default async function MembersPage() {
             <Plus size={18} /> เพิ่มสมาชิกใหม่
           </Link>
         </div>
+
+        {licenseInfo ? (
+          <div className={`mb-6 rounded-2xl border px-6 py-5 shadow-sm ${
+            licenseInfo.allowed ? "border-blue-100 bg-blue-50" : "border-amber-200 bg-amber-50"
+          }`}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-500">SaaS License Status</p>
+                <h2 className="mt-1 text-lg font-black text-gray-800">
+                  {licenseInfo.planType} plan: {licenseInfo.currentUsers}/{licenseInfo.maxUsers} seats in use
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Status: {licenseInfo.subscriptionStatus}
+                  {licenseInfo.expiryDate ? ` • Expires ${new Date(licenseInfo.expiryDate).toLocaleDateString("th-TH")}` : ""}
+                </p>
+              </div>
+              {!licenseInfo.allowed ? (
+                <div className="rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm shadow-sm">
+                  <p className="font-black text-amber-700">Upgrade Plan</p>
+                  <p className="mt-1 text-gray-600">
+                    SME Pro Plan (300 THB/user/month) unlocks more seats for your finance team.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {/* Member Table Card */}
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">

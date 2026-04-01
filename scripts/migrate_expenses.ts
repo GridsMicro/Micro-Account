@@ -61,6 +61,21 @@ async function createExpensesTable() {
         await query(`ALTER TABLE expenses ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`);
       }
 
+      if (!existingColumns.includes('tax_invoice_no')) {
+        console.log("➕ Adding tax_invoice_no column...");
+        await query(`ALTER TABLE expenses ADD COLUMN tax_invoice_no VARCHAR(100)`);
+      }
+
+      if (!existingColumns.includes('tax_invoice_date')) {
+        console.log("➕ Adding tax_invoice_date column...");
+        await query(`ALTER TABLE expenses ADD COLUMN tax_invoice_date DATE`);
+      }
+
+      if (!existingColumns.includes('vat_amount')) {
+        console.log("➕ Adding vat_amount column...");
+        await query(`ALTER TABLE expenses ADD COLUMN vat_amount DECIMAL(15, 2) DEFAULT 0`);
+      }
+
     } else {
       // Create expenses table
       console.log("📊 Creating expenses table...");
@@ -72,6 +87,9 @@ async function createExpensesTable() {
           amount DECIMAL(15, 2) NOT NULL,
           expense_date DATE NOT NULL,
           reference_no VARCHAR(100),
+          tax_invoice_no VARCHAR(100),
+          tax_invoice_date DATE,
+          vat_amount DECIMAL(15, 2) DEFAULT 0,
           notes TEXT,
           status VARCHAR(50) DEFAULT 'paid',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -88,7 +106,7 @@ async function createExpensesTable() {
     await query(`CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status)`);
 
     console.log("✅ Expenses table migration completed successfully!");
-    console.log("📊 Table structure: id, title, category, amount, expense_date, reference_no, notes, status, created_at, updated_at");
+    console.log("📊 Table structure: id, title, category, amount, expense_date, reference_no, tax_invoice_no, tax_invoice_date, vat_amount, notes, status, created_at, updated_at");
 
     // Close the pool
     await pool.end();

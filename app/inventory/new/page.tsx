@@ -60,7 +60,36 @@ export default function NewProductPage() {
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState(0);
+  const [supplierCost, setSupplierCost] = useState(0);
+  const [markupRate, setMarkupRate] = useState(0);
   const [quantity, setQuantity] = useState(0);
+
+  // Markup Calculator Functions
+  const calculatePriceFromCost = (cost: number, markup: number) => {
+    return cost * (1 + markup);
+  };
+
+  const calculateMarkupFromPrice = (cost: number, price: number) => {
+    return cost > 0 ? (price - cost) / cost : 0;
+  };
+
+  const calculateMarginFromPrice = (cost: number, price: number) => {
+    return price > 0 ? (price - cost) / price : 0;
+  };
+
+  // Auto-calculate price when supplier cost or markup changes
+  useEffect(() => {
+    const newPrice = calculatePriceFromCost(supplierCost, markupRate);
+    setPrice(Math.round(newPrice * 100) / 100); // Round to 2 decimal places
+  }, [supplierCost, markupRate]);
+
+  // Auto-calculate markup when supplier cost or price changes
+  useEffect(() => {
+    if (supplierCost > 0 && price > 0) {
+      const newMarkup = calculateMarkupFromPrice(supplierCost, price);
+      setMarkupRate(Math.round(newMarkup * 10000) / 10000); // Round to 4 decimal places
+    }
+  }, [supplierCost, price]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +103,9 @@ export default function NewProductPage() {
       storage_location: location,
       stock_quantity: quantity,
       price: price,
-      product_notes: notes
+      product_notes: notes,
+      supplier_cost: supplierCost,
+      markup_rate: markupRate
     });
     setLoading(false);
     if (res.success) {
@@ -192,6 +223,46 @@ export default function NewProductPage() {
                               onChange={(e) => setPrice(Number(e.target.value))}
                               className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
                            />
+                        </div>
+
+                        {/* New Supplier Cost Field */}
+                        <div className="space-y-2">
+                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-2 font-black">
+                              <Truck size={14} className="text-orange-500" /> ต้นทุนจากผู้ขาย (Supplier Cost)
+                           </label>
+                           <input 
+                              type="number" 
+                              value={supplierCost}
+                              onChange={(e) => setSupplierCost(Number(e.target.value))}
+                              className="w-full h-11 px-4 bg-orange-50 border border-orange-200 rounded focus:border-orange-500 focus:bg-white text-sm font-bold text-orange-700" 
+                              placeholder="0.00"
+                              step="0.01"
+                           />
+                        </div>
+
+                        {/* New Markup Rate Field */}
+                        <div className="space-y-2">
+                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-2 font-black">
+                              <Zap size={14} className="text-purple-500" /> อัตรากำไร (Markup Rate %)
+                           </label>
+                           <div className="flex gap-2">
+                              <input 
+                                 type="number" 
+                                 value={markupRate}
+                                 onChange={(e) => setMarkupRate(Number(e.target.value))}
+                                 className="flex-1 h-11 px-4 bg-purple-50 border border-purple-200 rounded focus:border-purple-500 focus:bg-white text-sm font-bold text-purple-700" 
+                                 placeholder="0.30"
+                                 step="0.0001"
+                                 min="0"
+                                 max="10"
+                              />
+                              <div className="h-11 px-4 bg-purple-100 border border-purple-200 rounded flex items-center text-sm font-bold text-purple-600 min-w-[80px]">
+                                 {(markupRate * 100).toFixed(2)}%
+                              </div>
+                           </div>
+                           <div className="text-xs text-gray-500 mt-1">
+                              กำไร: ฿{(price - supplierCost).toFixed(2)} | Margin: {calculateMarginFromPrice(supplierCost, price).toFixed(2)}%
+                           </div>
                         </div>
 
                         <div className="space-y-2">

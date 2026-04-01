@@ -27,6 +27,9 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  secret:
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "micro-account-local-auth-secret",
   trustHost: true,
 } satisfies NextAuthConfig;

@@ -28,31 +28,34 @@ import {
   Palette,
   X,
   User,
-  Zap
+  Zap,
+  FileBadge,
+  PieChart
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { icon: Home, label: "หน้าแรก Dashboard", href: "/" },
-  { separator: "การดำเนินธุรกิจ" },
   { icon: FileText, label: "ใบเสนอราคา (QT)", href: "/quotations" },
   { icon: Receipt, label: "ใบแจ้งหนี้ (INV)", href: "/invoices" },
   { icon: Repeat, label: "รอบบิลอัตโนมัติ", href: "/recurring" },
-  { icon: CreditCard, label: "การชำระเงิน", href: "/payments" },
-  { icon: Package, label: "คลังสินค้า", href: "/inventory" },
-  { icon: Users, label: "ลูกค้า/คู่ค้า", href: "/contacts" },
+  { icon: CreditCard, label: "ใบเสร็จรับเงิน", href: "/receipts" },
   
-  { separator: "สมุดบัญชีรายวัน (5 เล่ม)" },
+  { separator: "Purchase/Inventory" },
+  { icon: Package, label: "คลังสินค้า", href: "/inventory" },
+  { icon: Wallet, label: "ค่าใช้จ่าย", href: "/expenses" },
+  
+  { separator: "Financial Journals" },
   { icon: ShoppingCart, label: "สมุดรายวันขาย (Sales)", href: "/journals?type=sales" },
-  { icon: Wallet, label: "สมุดรายวันรับเงิน (Receipt)", href: "/journals?type=receipt" },
+  { icon: CreditCard, label: "สมุดรายวันรับเงิน (Receipt)", href: "/journals?type=receipt" },
   { icon: Truck, label: "สมุดรายวันซื้อ (Purchase)", href: "/journals?type=purchase" },
   { icon: Banknote, label: "สมุดรายวันจ่ายเงิน (Payment)", href: "/journals?type=payment" },
   { icon: Library, label: "สมุดรายวันทั่วไป (General)", href: "/journals" },
   
-  { separator: "รายงานและตั้งค่า" },
-  { icon: Palette, label: "แพทเทิร์นเอกสาร", href: "/settings/patterns" },
+  { separator: "Reports & Tax" },
   { icon: BarChart3, label: "รายงานภาษี", href: "/tax-reports" },
+  { icon: BarChart3, label: "งบกำไรขาดทุน (P&L)", href: "/reports/profit-loss" },
   { icon: Settings, label: "ตั้งค่าระบบ", href: "/settings" },
 ];
 
@@ -111,7 +114,7 @@ export default function Sidebar({
       {/* Sidebar main body */}
       <aside 
         className={cn(
-          "bg-slate-900 text-slate-300 transition-all duration-500 flex flex-col shadow-2xl z-[60] fixed lg:static h-full",
+          "bg-slate-900 text-slate-300 transition-all duration-500 flex flex-col shadow-2xl z-60 fixed lg:static w-64 bg-[#0F172A] self-stretch",
           // Desktop Widths
           isCollapsed ? "lg:w-24" : "lg:w-80",
           // Mobile Widths & Animation
@@ -127,7 +130,7 @@ export default function Sidebar({
             </div>
             {(!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col">
-                 <span className="font-black text-white text-lg tracking-tight uppercase leading-none">MICROTRONIC</span>
+                 <span className="font-black text-white text-lg tracking-tight uppercase leading-none">MICRO-ACCOUNT</span>
                  <span className="text-[9px] font-black text-violet-400 uppercase tracking-[0.4em] mt-1">Autonomous</span>
               </div>
             )}
@@ -167,19 +170,19 @@ export default function Sidebar({
           <div className="space-y-1">
             {menuItems.map((item, idx) => {
               // 🛡️ Logic to restrict "Reports & Settings" segment
-              const isSettingsSegment = idx >= menuItems.findIndex(m => 'separator' in m && m.separator === "รายงานและตั้งค่า");
+              const isReportsTaxSegment = idx >= menuItems.findIndex(m => 'separator' in m && m.separator === "Reports & Tax");
               const hasAccessToSettings = userRole === "superadmin" || userRole === "Admin" || userRole === "Manager";
 
-              if (isSettingsSegment && !hasAccessToSettings) return null;
+              if (isReportsTaxSegment && !hasAccessToSettings) return null;
 
               if ('separator' in item) {
-                return (!isCollapsed || isMobileOpen) ? (
+                return (
                   <div key={`sep-${idx}`} className="mt-8 mb-3 px-4">
                     <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">
                       {item.separator}
                     </span>
                   </div>
-                ) : <div key={`sep-${idx}`} className="h-px bg-white/5 my-6 mx-4"></div>;
+                );
               }
 
               const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href || '#'));

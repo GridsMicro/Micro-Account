@@ -23,20 +23,20 @@
     "next-auth": "^5.0.0-beta.30",
     "pg": "^8.20.0",
     "qrcode.react": "^4.2.0",
-    "react": "19.2.3",
+    "react": "^19.2.4",
     "react-barcode": "^1.6.1",
-    "react-dom": "19.2.3",
+    "react-dom": "^19.2.4",
     "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^4.0.0",
-    "eslint-config-next": "^0.2.4",
-    "tailwindcss": "^4",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.1",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5"
   }
 }

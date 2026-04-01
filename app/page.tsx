@@ -1,5 +1,6 @@
 
 import { query } from "@/lib/db";
+import { getCompanySettings } from "@/lib/settings";
 import SyncMonthlyButton from "@/components/SyncMonthlyButton";
 import { 
   Building2, 
@@ -33,12 +34,69 @@ import WaitingRoom from "@/components/WaitingRoom";
 
 async function getDashboardData() {
   try {
-    const company = await query('SELECT * FROM company_settings LIMIT 1');
+    // Get company settings first
+    const companyResult = await getCompanySettings();
+    const company = companyResult.success ? companyResult.data : null;
+    
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
+    // Real expense data from expenses table for current month
+    let expenseTotal = 0;
+    let expenseCount = 0;
+    
+    try {
+      const expenseRes = await query(`
+        SELECT SUM(amount) as total, COUNT(*) as count 
+        FROM expenses 
+        WHERE expense_date >= $1 
+      `, [firstDayOfMonth]);
+      expenseTotal = Number(expenseRes.rows[0]?.total || 0);
+      expenseCount = Number(expenseRes.rows[0]?.count || 0);
+    } catch (error) {
+      console.warn('Expenses table query failed:', error);
+    }
+
+    // Fallback to journal entries if no expenses found
+    let journalExpenseTotal = 0;
+    let journalExpenseCount = 0;
+    
+    try {
+      const journalExpenseRes = await query(`
+        SELECT SUM(amount) as total, COUNT(*) as count 
+        FROM journal_entries 
+        WHERE entry_date >= $1 
+        AND debit_account_id IN (SELECT id FROM chart_of_accounts WHERE account_type = 'expense')
+      `, [firstDayOfMonth]);
+      journalExpenseTotal = Number(journalExpenseRes.rows[0]?.total || 0);
+      journalExpenseCount = Number(journalExpenseRes.rows[0]?.count || 0);
+    } catch (error) {
+      console.warn('Journal expenses query failed:', error);
+    }
+
+    // Cash flow summary - use defensive approach
+    let totalCashInflow = 0;
+    let totalCashOutflow = 0;
+    
+    try {
+      const cashFlowRes = await query(`
+        SELECT 
+          SUM(CASE WHEN debit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_inflow,
+          SUM(CASE WHEN credit_account_id IN (1111, 1112, 1113) THEN amount ELSE 0 END) as total_outflow
+        FROM journal_entries 
+        WHERE entry_date >= $1
+      `, [firstDayOfMonth]);
+      
+      const cashFlowData = cashFlowRes.rows[0];
+      if (cashFlowData) {
+        totalCashInflow = Number(cashFlowData.total_inflow || 0);
+        totalCashOutflow = Number(cashFlowData.total_outflow || 0);
+      }
+    } catch (error) {
+      console.warn('Cash flow query failed:', error);
+    }
+
     const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1`, [firstDayOfMonth]);
-    const expenseRes = await query(`SELECT SUM(amount) as total FROM payment_vouchers WHERE issue_date >= $1`, [firstDayOfMonth]);
     const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid'`);
     const journalsRes = await query(`SELECT * FROM journal_entries ORDER BY entry_date DESC, id DESC LIMIT 5`);
     const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending'`);
@@ -47,14 +105,25 @@ async function getDashboardData() {
     const { getDashboardAlerts } = await import("@/app/actions");
     const alertsRes = await getDashboardAlerts();
 
+    // Use real expense data or fallback to journal expenses
+    const finalExpenseTotal = expenseCount > 0 ? expenseTotal : journalExpenseTotal;
+    const finalExpenseCount = expenseCount > 0 ? expenseCount : journalExpenseCount;
+    const netCashFlow = totalCashInflow - totalCashOutflow;
+
     return {
-      company: company.rows[0],
+      company,
       stats: {
         monthlyIncome: Number(incomeRes.rows[0]?.total || 0),
-        monthlyExpense: Number(expenseRes.rows[0]?.total || 0),
+        monthlyExpense: finalExpenseTotal,
+        expenseCount: finalExpenseCount,
         totalPending: Number(pendingRes.rows[0]?.total || 0),
         customers: (await query('SELECT COUNT(*) FROM contacts')).rows[0].count,
-        pendingApprovals: Number(pendingUsersRes.rows[0]?.count || 0)
+        pendingApprovals: Number(pendingUsersRes.rows[0]?.count || 0),
+        cashFlow: {
+          totalInflow: totalCashInflow,
+          totalOutflow: totalCashOutflow,
+          netFlow: netCashFlow
+        }
       },
       recentJournals: journalsRes.rows,
       alerts: alertsRes.success
@@ -65,7 +134,15 @@ async function getDashboardData() {
     console.error("Dashboard DB Error:", error);
     return {
       company: null,
-      stats: { monthlyIncome: 0, monthlyExpense: 0, totalPending: 0, customers: 0, pendingApprovals: 0 },
+      stats: { 
+        monthlyIncome: 0, 
+        monthlyExpense: 0, 
+        expenseCount: 0, 
+        totalPending: 0, 
+        customers: 0, 
+        pendingApprovals: 0,
+        cashFlow: { totalInflow: 0, totalOutflow: 0, netFlow: 0 }
+      },
       recentJournals: [],
       alerts: { reminders: [], invoices: [] }
     };
@@ -115,7 +192,7 @@ export default async function Dashboard() {
             </div>
             <div className="text-left text-slate-900">
               <h1 className="text-3xl font-black tracking-tight leading-none">
-                {company?.name || "ระบบบัญชีอัจฉริยะ"}
+                {company?.company_name || "ระบบจัดการบัญชีอัจฉริยะ"}
               </h1>
               <p className="text-slate-400 font-bold text-sm mt-2 flex items-center gap-2">
                  <ShieldCheck size={16} className="text-indigo-500" /> Professional Insight Solutions
@@ -151,7 +228,20 @@ export default async function Dashboard() {
                     </div>
                     <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center text-left">
                        <span className="text-rose-400 text-xs font-bold uppercase tracking-widest">รายจ่าย</span>
-                       <span className="font-black">฿{stats.monthlyExpense.toLocaleString()}</span>
+                       <div className="text-right">
+                          <span className="font-black">฿{stats.monthlyExpense.toLocaleString()}</span>
+                          <div className="text-[10px] text-rose-300 font-bold">{stats.expenseCount || 0} รายการ</div>
+                       </div>
+                    </div>
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center text-left">
+                       <span className="text-blue-400 text-xs font-bold uppercase tracking-widest">กระแสนเงินสด</span>
+                       <div className="text-right">
+                          <span className="font-black">฿{stats.cashFlow?.netFlow?.toLocaleString()}</span>
+                          <div className="text-[10px] text-blue-300 font-bold">
+                             In: ฿{stats.cashFlow?.totalInflow?.toLocaleString()}<br/>
+                             Out: ฿{stats.cashFlow?.totalOutflow?.toLocaleString()}
+                          </div>
+                       </div>
                     </div>
                  </div>
               </div>
@@ -241,7 +331,7 @@ export default async function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
            {[
              { label: "ออกใบแจ้งหนี้", sub: "Sales Account", href: "/invoices/new", icon: Receipt, color: "bg-indigo-50 text-indigo-600" },
-             { label: "บันทึกรายจ่าย", sub: "Cash Flow", href: "/vouchers/new", icon: Wallet, color: "bg-emerald-50 text-emerald-600" },
+             { label: "บันทึกรายการแรก", sub: "Quick Entry", href: "/vouchers/new", icon: Plus, color: "bg-rose-50 text-rose-600" },
              { label: "ผู้ติดต่อ/ลูกค้า", sub: "CRM Data", href: "/contacts", icon: Users, color: "bg-amber-50 text-amber-600" },
              { label: "สมุดรายวัน", sub: "Journal Entries", href: "/journals", icon: BarChart3, color: "bg-slate-900 text-white" },
            ].map((item, i) => (

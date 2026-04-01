@@ -36,13 +36,14 @@ export default function LayoutWrapper({
         <Sidebar isLoggedIn={isLoggedIn} userName={userName} userRole={userRole} />
       )}
       
-      <div className="flex-1 overflow-x-hidden relative">
+      {/* Main Content Area - Full height and flex to fill remaining space */}
+      <div className="flex-1 flex flex-col overflow-x-hidden relative">
         {/* Subtle Gradient Overlay */}
         <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-violet-50/50 to-transparent pointer-events-none -z-10"></div>
         
-        {/* Main Content: ปรับ Padding ตามสถานะการโชว์ Sidebar */}
+        {/* Main Content: Takes full height and fills remaining space */}
         <div className={cn(
-          "relative z-10 transition-all duration-300",
+          "flex-1 relative z-10 transition-all duration-300",
           showSidebar ? "pt-16 lg:pt-0" : ""
         )}>
           {children}

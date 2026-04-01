@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { ToastProvider } from "@/components/ToastProvider";
 import LayoutWrapper from "@/components/LayoutWrapper";
+import { Providers } from "@/components/Providers";
 
 const fontOutfit = Outfit({
   subsets: ["latin"],
@@ -49,16 +50,18 @@ export default async function RootLayout({
       <body
         className="antialiased font-inter bg-[#fdfaff] text-slate-900 scroll-smooth"
       >
-        <ToastProvider>
-          <LayoutWrapper 
-            isLoggedIn={isLoggedIn} 
-            userName={userName} 
-            userRole={userRole} 
-            isPending={isPending}
-          >
-            {children}
-          </LayoutWrapper>
-        </ToastProvider>
+        <Providers>
+          <ToastProvider>
+            <LayoutWrapper 
+              isLoggedIn={isLoggedIn} 
+              userName={userName} 
+              userRole={userRole} 
+              isPending={isPending}
+            >
+              {children}
+            </LayoutWrapper>
+          </ToastProvider>
+        </Providers>
       </body>
     </html>
   );

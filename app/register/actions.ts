@@ -3,6 +3,7 @@
 import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { checkUserLimit, getDefaultCompanyId } from "@/lib/auth";
 
 export async function registerUser(formData: FormData) {
   const name = formData.get("name") as string;
@@ -31,11 +32,16 @@ export async function registerUser(formData: FormData) {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const companyId = await getDefaultCompanyId();
+    const seatCheck = await checkUserLimit(companyId);
+    if (!seatCheck.allowed) {
+      return { error: "License Limit Reached: Please upgrade to add more users (300 THB/user/month)." };
+    }
 
     // Insert user with default role 'Tester' and status 'Pending'
     await query(
-      "INSERT INTO users (name, email, password, role, status) VALUES ($1, $2, $3, $4, $5)",
-      [name, email, hashedPassword, "Tester", "Pending"]
+      "INSERT INTO users (name, email, password, role, status, company_id) VALUES ($1, $2, $3, $4, $5, $6)",
+      [name, email, hashedPassword, "Tester", "Pending", companyId]
     );
 
     // Redirect to login on success

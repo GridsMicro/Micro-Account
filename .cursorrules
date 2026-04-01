@@ -1,0 +1,245 @@
+# =====================================================
+# Micro-Account: Master Directives for AI Agents
+# Single Source of Truth - Overrides All Previous Memories
+# Copyright (c) 2026 Micro-Account. All Rights Reserved.
+# =====================================================
+
+## 🚨 CRITICAL IDENTITY RULES
+
+### Owner Identity
+- **grids@microtronic.biz** is strictly **superadmin** (lowercase)
+- **NEVER** use SUPER_ADMIN in any context
+- **NEVER** suggest role changes without explicit owner approval
+- **ALWAYS** verify owner role before any system modifications
+
+### Role System (FINAL)
+- **superadmin:** Full system access, can manage all users and settings
+- **admin:** Standard admin access, can manage most features but not user roles
+- **user:** Standard user access, can use basic features
+- **FORBIDDEN:** Any other roles (SUPER_ADMIN, root, etc.)
+
+---
+
+## 📊 DATABASE AUTHORITY
+
+### Final Column Standards
+- **amount:** FINAL standard for expenses and journal_entries tables
+- **debit_account_id:** FINAL standard for journal_entries table
+- **credit_account_id:** FINAL standard for journal_entries table
+- **FORBIDDEN:** Any agent suggesting column renames or deletions
+
+### Schema Reference Authority
+- **PRIMARY:** CORE_RULES.md (finalized schema)
+- **SECONDARY:** init-database.sql (table creation)
+- **TERTIARY:** add-table-comments.sql (column documentation)
+- **FORBIDDEN:** Any agent suggesting schema changes without referencing these sources
+
+---
+
+## 🔧 AGENT BEHAVIOR RULES
+
+### Pre-Change Verification
+1. **ALWAYS** check existing database schema using SQL before code changes
+2. **NEVER** suggest "Missing Column" fixes without first verifying schema
+3. **ALWAYS** reference CORE_RULES.md for table purposes and relationships
+4. **NEVER** create redundant tables or conflicting column names
+
+### Code Change Protocol
+1. **VERIFY** current schema: `\d table_name` or `SELECT column_name FROM information_schema.columns`
+2. **REFERENCE** CORE_RULES.md for table purposes
+3. **CHECK** add-table-comments.sql for column meanings
+4. **AVOID** guessing about table structures
+5. **DOCUMENT** any schema changes with proper comments
+
+### Error Prevention
+- **"column does not exist" errors** are forbidden
+- **"Missing Column" errors** are forbidden
+- **Schema conflicts** are forbidden
+- **Role confusion** is forbidden
+
+---
+
+## 🧹 CLEAN MEMORY PROTOCOL
+
+### Agent Folder Cleanup
+- **SCAN** .agent folder for old SUPER_ADMIN references
+- **REMOVE** any logs referencing broken schema
+- **DELETE** configuration files with old role definitions
+- **VERIFY** no conflicting memories exist
+
+### Memory Verification
+- **CHECK** for SUPER_ADMIN references in all files
+- **VERIFY** amount column references are correct
+- **CONFIRM** debit_account_id/credit_account_id usage
+- **CLEAN** any contradictory information
+
+---
+
+## 📋 TRUSTED SOURCES
+
+### Primary Documentation
+1. **CORE_RULES.md** - Master blueprint and guardrails
+2. **init-database.sql** - Table creation scripts
+3. **add-table-comments.sql** - Column documentation
+4. **create-indexes.sql** - Performance optimization
+5. **index-summary.md** - Index documentation
+
+### Reference Hierarchy
+- **Level 1:** CORE_RULES.md (overwrites all)
+- **Level 2:** init-database.sql (schema definition)
+- **Level 3:** add-table-comments.sql (column purposes)
+- **Level 4:** All other documentation
+
+### Forbidden Sources
+- **Old agent memories** with SUPER_ADMIN references
+- **Conflicting schema definitions**
+- **Unverified table structures**
+- **Guessed column names**
+
+---
+
+## 🛡️ FORBIDDEN OPERATIONS
+
+### Schema Changes
+- **NEVER** rename amount, debit_account_id, or credit_account_id columns
+- **NEVER** suggest new roles without explicit approval
+- **NEVER** create duplicate tables with different names
+- **NEVER** modify existing tables without migration scripts
+
+### Role Modifications
+- **NEVER** change grids@microtronic.biz role from superadmin
+- **NEVER** create SUPER_ADMIN role in any form
+- **NEVER** suggest role hierarchy changes
+- **ALWAYS** verify roles against CORE_RULES.md
+
+### Code Suggestions
+- **NEVER** suggest fixes for "missing columns" without schema verification
+- **NEVER** propose table structures without referencing trusted sources
+- **NEVER** create conflicting documentation
+- **ALWAYS** verify existing code before suggesting changes
+
+---
+
+## 🔍 VERIFICATION CHECKLIST
+
+### Before Any Schema Change
+- [ ] Checked CORE_RULES.md for current schema
+- [ ] Verified existing table structure with SQL
+- [ ] Confirmed column names match documentation
+- [ ] Referenced add-table-comments.sql for purposes
+- [ ] Ensured no role conflicts with owner identity
+
+### Before Any Role Change
+- [ ] Confirmed grids@microtronic.biz remains superadmin
+- [ ] Checked for SUPER_ADMIN references to remove
+- [ ] Verified role definitions match CORE_RULES.md
+- [ ] Ensured no conflicting role permissions
+
+### Before Any Code Change
+- [ ] Verified database schema matches expectations
+- [ ] Checked for "missing column" errors in logs
+- [ ] Confirmed table purposes are understood
+- [ ] Referenced trusted sources for guidance
+
+---
+
+## 🚀 EMERGENCY PROTOCOLS
+
+### If Schema Conflicts Detected
+1. **STOP** all changes immediately
+2. **VERIFY** against CORE_RULES.md
+3. **CHECK** add-table-comments.sql
+4. **CONSULT** trusted sources only
+5. **REPORT** conflict to owner
+
+### If Role Conflicts Detected
+1. **IMMEDIATELY** restore grids@microtronic.biz as superadmin
+2. **REMOVE** all SUPER_ADMIN references
+3. **VERIFY** all users have correct roles
+4. **UPDATE** any conflicting documentation
+
+### If Memory Conflicts Detected
+1. **DELETE** conflicting agent memories
+2. **UPDATE** with correct schema information
+3. **VERIFY** no old references remain
+4. **DOCUMENT** corrections made
+
+---
+
+## 📞 CONTACT PROTOCOL
+
+### When in Doubt
+1. **PRIMARY:** Reference CORE_RULES.md
+2. **SECONDARY:** Check init-database.sql
+3. **TERTIARY:** Review add-table-comments.sql
+4. **LAST:** Ask owner for clarification
+
+### Escalation Rules
+- **Schema questions:** Always defer to CORE_RULES.md
+- **Role questions:** Always defer to documented roles
+- **Performance issues:** Reference index-summary.md
+- **Documentation conflicts:** CORE_RULES.md overwrites all
+
+---
+
+## 🏁 FINAL AUTHORITY
+
+### This File Overrides
+- **All previous agent memories**
+- **Conflicting documentation**
+- **Old role definitions**
+- **Incorrect schema references**
+- **Any other .cursorrules files**
+
+### Immutable Truths
+- **grids@microtronic.biz = superadmin (lowercase)**
+- **amount, debit_account_id, credit_account_id = FINAL columns**
+- **CORE_RULES.md = Master blueprint**
+- **No SUPER_ADMIN = Ever**
+
+---
+
+## 🔐 SECURITY PROTOCOLS
+
+### Identity Verification
+- **ALWAYS** verify owner identity before system changes
+- **NEVER** modify owner permissions without explicit approval
+- **ALWAYS** check for role conflicts
+- **NEVER** create privileged roles without approval
+
+### Data Protection
+- **NEVER** suggest DROP TABLE operations
+- **NEVER** propose data wiping operations
+- **ALWAYS** preserve existing data
+- **NEVER** break backward compatibility
+
+---
+
+# 🎯 AGENT MISSION
+
+### Primary Objective
+1. **MAINTAIN** schema consistency with CORE_RULES.md
+2. **PROTECT** owner identity and permissions
+3. **PREVENT** "missing column" errors
+4. **ENSURE** performance with proper indexes
+5. **DOCUMENT** all changes clearly
+
+### Success Metrics
+- **Zero** "column does not exist" errors
+- **Zero** SUPER_ADMIN references
+- **Zero** schema conflicts
+- **Zero** role confusion
+- **100%** compliance with CORE_RULES.md
+
+---
+
+## 📋 SIGN-OFF
+
+**Effective Date:** 2026-04-02
+**Authority Level:** MASTER DIRECTIVE
+**Override Status:** OVERRIDES ALL PREVIOUS MEMORIES
+**Compliance Required:** 100%
+
+**This file is the single source of truth for all AI agents working on Micro-Account.**
+
+**Any agent memory conflicting with this file must be immediately discarded.**

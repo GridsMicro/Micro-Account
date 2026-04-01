@@ -27,7 +27,7 @@ export default function NewContactPage() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    type: "customer",
+    type: "CUSTOMER",
     email: "",
     phone: "",
     address: "",
@@ -128,9 +128,9 @@ export default function NewContactPage() {
                               onChange={e => setFormData({...formData, type: e.target.value})}
                               className="w-full h-14 px-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl focus:border-indigo-500 focus:bg-white text-sm font-bold text-indigo-700 outline-none cursor-pointer transition-all shadow-inner"
                             >
-                               <option value="customer">Customer (ลูกค้า)</option>
-                               <option value="vendor">Vendor (ซัพพลายเออร์)</option>
-                               <option value="internal">Internal (ภายใน)</option>
+                               <option value="CUSTOMER">Customer (ลูกค้า)</option>
+                               <option value="SUPPLIER">Supplier (ผู้ขาย / Vendor)</option>
+                               <option value="BOTH">Both (ซื้อ-ขาย)</option>
                             </select>
                          </div>
                          <div className="space-y-2">

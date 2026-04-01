@@ -8,6 +8,26 @@ import ExportButton from "./ExportButton";
 
 export const dynamic = 'force-dynamic';
 
+function normalizeJournalType(entry: any) {
+  const currentType = String(entry.journal_type || "general").toLowerCase();
+  const ref = String(entry.reference_no || "").toUpperCase();
+  const description = String(entry.description || "").toLowerCase();
+
+  if (currentType !== "general") {
+    return currentType;
+  }
+
+  if (ref.startsWith("INV") || description.includes("ใบแจ้งหนี้") || description.includes("wht")) {
+    return "sales";
+  }
+
+  if (ref.startsWith("PV")) {
+    return "payment";
+  }
+
+  return currentType;
+}
+
 export default async function JournalsPage({ searchParams }: { searchParams: { type?: string, search?: string } }) {
   const type = (await searchParams)?.type;
   const search = (await searchParams)?.search || "";
@@ -24,15 +44,9 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
   let stats = { sales: 0, receipt: 0, purchase: 0, payment: 0 };
 
   try {
-    // 1. Fetch Entries
     let q = 'SELECT * FROM journal_entries WHERE 1=1';
     const params: any[] = [];
-    
-    if (type) {
-      params.push(type);
-      q += ` AND journal_type = $${params.length}`;
-    }
-    
+
     if (search) {
       params.push(`%${search}%`);
       q += ` AND (reference_no ILIKE $${params.length} OR description ILIKE $${params.length} OR account_name ILIKE $${params.length})`;
@@ -40,17 +54,19 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
 
     q += ' ORDER BY entry_date DESC, reference_no ASC, id ASC';
     const res = await query(q, params);
-    entries = res.rows;
+    const normalizedEntries = res.rows.map((entry) => ({
+      ...entry,
+      journal_type: normalizeJournalType(entry),
+    }));
 
-    // 2. Fetch Stats
-    const statsRes = await query(`
-      SELECT journal_type, SUM(debit + credit) as total 
-      FROM journal_entries 
-      WHERE journal_type IN ('sales', 'receipt', 'purchase', 'payment')
-      GROUP BY journal_type
-    `);
-    statsRes.rows.forEach(row => {
-      if (row.journal_type in stats) (stats as any)[row.journal_type] = Number(row.total) / 2;
+    entries = type
+      ? normalizedEntries.filter((entry) => entry.journal_type === type)
+      : normalizedEntries;
+
+    normalizedEntries.forEach((entry) => {
+      if (entry.journal_type in stats) {
+        (stats as any)[entry.journal_type] += Number(entry.debit || 0);
+      }
     });
   } catch (e) {
     console.error("Journal Dashboard Error:", e);

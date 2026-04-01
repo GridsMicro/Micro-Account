@@ -63,11 +63,11 @@ export default function TaxExportButton({ id }: TaxExportButtonProps) {
       const type = id === "pp30" ? "invoice" : "wht";
       const result = await batchSubmitToRDPortal(sampleIds, type);
 
-      if (result.success && "summary" in result) {
+      if (result.success && result.summary) {
         alert(`✅ ส่งสำเร็จ ${result.summary.successful}/${result.summary.total} เอกสาร`);
       } else {
-        const errorMessage = "results" in result
-          ? result.results.find((r: { id: string; result: { success: boolean; error?: string } }) => !r.result.success)?.result.error
+        const errorMessage = result.results
+          ? result.results.find((r: any) => !r.result?.success)?.result?.error
           : result.error;
         alert(`❌ ส่งไม่สำเร็จ: ${errorMessage || "Unknown error"}`);
       }

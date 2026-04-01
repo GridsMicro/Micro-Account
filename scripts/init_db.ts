@@ -24,6 +24,7 @@ async function setupDatabase() {
         password VARCHAR(255),
         role VARCHAR(50) DEFAULT 'Member',
         status VARCHAR(50) DEFAULT 'Active',
+        company_id INTEGER,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);

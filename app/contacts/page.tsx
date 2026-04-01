@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { Users, Plus, Mail, Phone, MapPin, ArrowRight, UserCheck, Edit, ShieldCheck, Heart, Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { normalizeContactType } from "@/lib/contacts";
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: { s
     
     if (search) {
       params.push(`%${search}%`);
-      q += ` AND (name ILIKE $1 OR contact_type ILIKE $1)`;
+      q += ` AND (name ILIKE $1 OR COALESCE(contact_type, type, '') ILIKE $1)`;
     }
     
     q += ' ORDER BY name ASC';
@@ -95,7 +96,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: { s
                         {contact.name.charAt(0)}
                      </div>
                      <span className="px-4 py-2 bg-violet-50 text-violet-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-violet-100">
-                        {contact.contact_type || 'GENERAL'}
+                        {normalizeContactType(contact.contact_type || contact.type)}
                      </span>
                   </div>
 

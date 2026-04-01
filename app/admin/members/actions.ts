@@ -2,6 +2,65 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { auth, checkUserLimit, getUserCompanyId } from "@/lib/auth";
+
+function hasMemberAdminAccess(role?: string | null) {
+  const normalized = String(role || "").trim().toLowerCase();
+  return ["admin", "super admin", "super_admin", "manager"].includes(normalized);
+}
+
+export async function createUserAction(data: {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  status: string;
+}) {
+  try {
+    const session = await auth();
+    if (!session?.user || !hasMemberAdminAccess((session.user as any).role)) {
+      return { success: false, error: "Unauthorized: Admin access required" };
+    }
+
+    if (!data.name || !data.email || !data.password) {
+      return { success: false, error: "กรุณากรอกชื่อ อีเมล และรหัสผ่านให้ครบถ้วน" };
+    }
+
+    if (data.password.length < 6) {
+      return { success: false, error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" };
+    }
+
+    const companyId = await getUserCompanyId((session.user as any).id);
+    const seatCheck = await checkUserLimit(companyId);
+    if (!seatCheck.allowed) {
+      return {
+        success: false,
+        error: "License Limit Reached: Please upgrade to add more users (300 THB/user/month).",
+      };
+    }
+
+    const existingUser = await query(`SELECT id FROM users WHERE email = $1 LIMIT 1`, [data.email]);
+    if (existingUser.rows.length > 0) {
+      return { success: false, error: "อีเมลนี้ถูกใช้งานแล้ว" };
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    await query(
+      `
+        INSERT INTO users (name, email, password, role, status, company_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `,
+      [data.name, data.email, hashedPassword, data.role, data.status, companyId]
+    );
+
+    revalidatePath("/admin/members");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Create User Error:", error);
+    return { success: false, error: error.message || "เกิดข้อผิดพลาดในการสร้างผู้ใช้งาน" };
+  }
+}
 
 export async function updateUserAction(id: string, data: { name: string, email: string, role: string, status: string }) {
   try {

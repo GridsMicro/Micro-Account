@@ -2,6 +2,7 @@
 import { query } from "@/lib/db";
 import { Receipt, Plus, Search, FileText, ArrowLeft, ArrowRight, Edit, Filter, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import InvoiceRowActions from "./InvoiceRowActions";
 import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
@@ -129,17 +130,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
                       </td>
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Link 
-                               href={`/invoices/preview/${inv.id}`} 
-                               className="p-2 bg-violet-600 text-white hover:bg-violet-700 rounded-lg transition-all shadow-md hover:scale-105 active:scale-95 flex items-center gap-1.5"
-                               title="Preview & Print PDF"
-                            >
-                               <FileText size={14} />
-                               <span className="text-[10px] font-black uppercase tracking-wider">Preview</span>
-                            </Link>
-                            <Link href={`/invoices/edit/${inv.id}`} className="p-2 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-lg transition-all shadow-sm">
-                               <Edit size={14} />
-                            </Link>
+                            <InvoiceRowActions id={inv.id} invoiceNumber={inv.invoice_number} />
                          </div>
                       </td>
                     </tr>

@@ -1,10 +1,12 @@
 
 import { query } from "@/lib/db";
-import { Package, Plus, Search, Layers, ArrowRight, Tag, Edit, Barcode, ShieldCheck, Box } from "lucide-react";
+import { Package, Plus, Search, Layers, Box, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
+
+import InventoryRowActions from "./InventoryRowActions";
 
 export default async function InventoryPage({ searchParams }: { searchParams: { search?: string } }) {
   const search = (await searchParams)?.search || "";
@@ -52,6 +54,12 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
                 <ShieldCheck size={16} className="text-indigo-500" />
                 <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-widest leading-none">Real-time Stock Tracking</span>
              </div>
+             <Link 
+              href="/inventory/categories" 
+              className="h-14 px-8 bg-white border border-violet-100 text-violet-600 font-medium rounded-xl flex items-center gap-3 shadow-xl hover:-translate-y-1 active:scale-95 transition-all text-sm"
+             >
+                <Layers size={20} /> จัดการหมวดหมู่
+             </Link>
              <Link 
               href="/inventory/new" 
               className="h-14 px-8 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-xl flex items-center gap-3 shadow-xl hover:-translate-y-1 active:scale-95 transition-all text-sm"
@@ -139,14 +147,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
                          <span className="text-lg font-semibold text-slate-900 tabular-nums tracking-tighter">฿{Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       </td>
                       <td className="px-10 py-6 text-right">
-                         <div className="flex justify-end gap-3 translate-x-3 group-hover:translate-x-0 transition-all opacity-0 group-hover:opacity-100">
-                            <Link href={`/inventory/edit/${p.id}`} className="p-3 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-lg transition-all shadow-sm">
-                               <Edit size={16} />
-                            </Link>
-                            <button className="p-3 bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white rounded-lg transition-all shadow-sm">
-                               <Barcode size={16} />
-                            </button>
-                         </div>
+                         <InventoryRowActions id={p.id} name={p.name} />
                       </td>
                     </tr>
                   )) : (
