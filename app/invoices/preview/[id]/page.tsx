@@ -1,5 +1,5 @@
 import { query } from "@/lib/db";
-import { ArrowLeft, ReceiptText, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ReceiptText } from "lucide-react"; // [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ลบ ShieldCheck ที่ไม่ได้ใช้
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PrintButton from "./PrintButton";
@@ -44,7 +44,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
   const subtotal = Number(invoice.net_amount || 0);
   const vat = Number(invoice.vat_amount || 0);
   const total = subtotal + vat;
-  const headerLabel = String(invoice.status || "").toLowerCase() === "paid" ? "Tax Invoice / Receipt" : "Tax Invoice";
+  const headerLabel = String(invoice.status || "").toLowerCase() === "paid" ? "Tax Invoice / Receipt" : "Invoice (ใบแจ้งหนี้)";
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-12 print:bg-white print:p-0 md:px-0">
@@ -133,9 +133,13 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
             </div>
 
             <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-violet-100 bg-white/50 p-8">
-              <ShieldCheck size={32} className="text-violet-200" />
+              <img
+                src="/microtronic_logo6.png"
+                alt="Microtronic Watermark"
+                className="w-16 h-16 opacity-[0.20]" // [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - เปลี่ยนโลโก้เป็น Microtronic
+              />
               <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-slate-400">Verified Digital Document</p>
-              <p className="mt-1 text-[8px] font-bold text-slate-300">Tax Invoice / Receipt ready for print</p>
+              <p className="mt-1 text-[8px] font-bold text-slate-300">Invoice ready for print</p>
             </div>
           </div>
 
@@ -210,6 +214,46 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
               </div>
             </div>
           </div>
+
+          <div className="invoice-signatures px-12 py-2 pb-12 md:px-16">
+            {/* [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - เพิ่ม Signature Block 2 คอลัมน์ */}
+            <div className="grid grid-cols-2 gap-12">
+              <div className="space-y-2">
+                <h4 className="text-[10px] uppercase tracking-widest text-slate-400">
+                  {/* [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ข้อความด้านบน */}
+                  {'บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด'}
+                </h4>
+                <div className="flex items-end gap-4 pt-8">
+                  <div className="flex-1 border-b-2 border-dashed border-slate-300 pb-1 flex flex-col items-center">
+                    {/* [CHANGE] - โดย Cascade | เพิ่ม flex flex-col items-center เพื่อจัดกึ่งกลางรูปและข้อความ */}
+                    <img
+                      src="/Untitled-10.png"
+                      className="h-8 w-auto object-contain -mb-1 pb-2" // ปรับความสูงเล็กน้อย และใช้ negative margin ดึงข้อความขึ้นมา
+                      alt="signature"
+                    />
+                    <p className="text-[9px] text-slate-400 text-center w-full">
+                      กฤศ จิวะพงศ์ (ผู้ออกใบแจ้งหนี้)
+                    </p>
+                    {/* [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - จัดรูปแบบกึ่งกลางสมบูรณ์ */}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-[10px] uppercase tracking-widest text-slate-400">
+                  {/* [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ข้อความด้านบน */}
+                  {'ผู้รับสินค้า / CUSTOMER'}
+                </h4>
+                <div className="flex items-end gap-4 pt-8">
+                  <div className="flex-1 border-b-2 border-dashed border-slate-300 pb-1">
+                    {/* [จุดสำคัญ] - เพิ่ม Space ตรงนี้ให้สูง h-8 และมี margin ลบเท่ากับฝั่งลายเซ็น เพื่อให้เส้นประขนานกัน */}
+                    <div className="h-8 -mb-1"></div>
+                    <p className="text-[9px] text-slate-400 text-center">{issueDate.toLocaleDateString("th-TH", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                    {/* [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ข้อความด้านล่าง */}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="pb-20 text-center text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 opacity-30 print:hidden">
@@ -227,7 +271,29 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
               /* กำจัดองค์ประกอบที่ทำให้เกิดหน้าที่ 2 */
               html, body { height: auto !important; overflow: visible !important; background: white !important; -webkit-print-color-adjust: exact !important; }
               main { min-height: 0 !important; height: auto !important; padding: 0 !important; }
-              .print\\:hidden { display: none !important; }
+              /* [จุดตาย] - สั่งซ่อน Navbar และ Sidebar ทุกรูปแบบ */
+              nav, 
+              aside, 
+              header, 
+              [class*="Navbar"], 
+              [class*="sidebar"], 
+              [class*="Header"],
+              .print\\:hidden,
+              /* ดักจับ div ที่ชอบทำตัวเป็น Navbar (fixed/sticky) */
+              div[class*="fixed"], 
+              div[class*="sticky"] { 
+                display: none !important; 
+                height: 0 !important;
+                width: 0 !important;
+                position: absolute !important; 
+                visibility: hidden !important;
+              }
+
+              /* [ดันเนื้อหา] - บังคับให้ใบแจ้งหนี้ดีดขึ้นไปชิดขอบบนสุด */
+              body, main, #__next, .min-h-screen {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+              }
               
               /* ขยายให้เต็มแผ่น (Fix อาการย่อจนเล็ก) */
               .mx-auto { margin: 0 !important; max-width: 100% !important; width: 100% !important; }
@@ -239,10 +305,10 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
               .border, .rounded-\\[2\\.5rem\\] { border-radius: 0 !important; border: none !important; }
               
               /* เส้นแบ่งรายการที่จำเป็น */
-              .invoice-header { border-bottom: 1px solid #f1f5f9 !important; padding: 2rem 4rem !important; }
-              .invoice-bill-to { border-bottom: 1px solid #f1f5f9 !important; padding: 2rem 4rem !important; background: transparent !important; }
+              .invoice-header { border-bottom: 1px solid #f1f5f9 !important; padding: 1rem 3rem !important; }
+              .invoice-bill-to { border-bottom: 1px solid #f1f5f9 !important; padding: 1rem 3rem !important; background: transparent !important; }
               .invoice-body { padding: 1rem 4rem !important; }
-              .invoice-footer { border-top: 1px solid #f1f5f9 !important; padding: 2rem 4rem !important; }
+              .invoice-footer { border-top: 1px solid #f1f5f9 !important; padding: 2rem 3rem !important; }
               
               /* จัดการตารางให้ดูดี */
               .invoice-item-row { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; border-bottom: 1px solid #f8fafc !important; }
@@ -250,7 +316,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
               
               /* ย่อขนาดตัวอักษรให้ดู Enterprise Premium */
               h1 { font-size: 1.5rem !important; }
-              h4 { font-size: 1.1rem !important; }
+              h4 { font-size: 0.8rem !important; }
               .invoice-number { font-size: 2rem !important; color: #7c3aed !important; }
               .text-xs { font-size: 10px !important; }
               .text-sm { font-size: 11px !important; }
