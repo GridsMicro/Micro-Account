@@ -176,16 +176,126 @@ superadmin > admin > user
 
 ---
 
-## 🏢 COMPANY SETTINGS (REQUIRED)
+## 🔐 DYNAMIC RBAC GROUPS SYSTEM (IMPLEMENTED)
 
-### Default Configuration
+### Overview
+Dynamic Role-Based Access Control system with granular group permissions. Replaces hardcoded roles with flexible group-based permissions.
+
+### System Groups (Pre-defined)
+| Group ID | Group Name | Description |
+|----------|------------|-------------|
+| 1 | Super Administrators | Full access + system management |
+| 2 | Administrators | Full access except system groups |
+| 3 | Accountants | Invoices, Journals, Vouchers, Reports |
+| 4 | Sales Staff | Quotations, Invoices, Contacts |
+| 5 | Warehouse Staff | Inventory, Expenses (read) |
+| 6 | Viewers | Read-only all modules |
+
+### Permission Actions
+- **create** - Can add new records
+- **read** - Can view records
+- **update** - Can edit records
+- **delete** - Can remove records
+- **export** - Can export Excel/PDF
+- **manage** - Can manage sub-features
+
+### Modules (18 total)
+Dashboard, Quotations, Invoices, Recurring, Receipts, Inventory, Expenses, Journals, Vouchers, Contacts, Payments, Tax Reports, Reports, Calendar, Settings, Member Management, Permissions, Groups
+
+### Database Tables
 ```sql
-INSERT INTO company_settings (company_name, tax_id, address) 
-VALUES ('Micro-Account Professional', '', '123 Accounting Street, Bangkok, Thailand')
-ON CONFLICT DO NOTHING;
+-- Groups table
+CREATE TABLE groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    color VARCHAR(7) DEFAULT '#6366f1',
+    is_system BOOLEAN DEFAULT false,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Group permissions table
+CREATE TABLE group_permissions (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    module VARCHAR(50) NOT NULL,
+    can_create BOOLEAN DEFAULT false,
+    can_read BOOLEAN DEFAULT false,
+    can_update BOOLEAN DEFAULT false,
+    can_delete BOOLEAN DEFAULT false,
+    can_export BOOLEAN DEFAULT false,
+    can_manage BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(group_id, module)
+);
+
+-- User groups assignment table
+CREATE TABLE user_groups (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, group_id)
+);
+
+-- Activity log table
+CREATE TABLE activity_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(50) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INTEGER,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### Required Fields
+### API Endpoints
+- `GET /api/groups` - List all groups
+- `POST /api/groups` - Create new group
+- `GET /api/groups/[id]` - Get group details
+- `PUT /api/groups/[id]` - Update group
+- `DELETE /api/groups/[id]` - Delete group
+- `GET /api/groups/[id]/permissions` - Get group permissions
+- `PUT /api/groups/[id]/permissions` - Update group permissions
+- `GET /api/users/[id]/groups` - Get user's groups
+- `POST /api/users/[id]/groups` - Assign user to groups
+- `GET /api/users` - List all users with groups
+- `GET /api/user/permissions` - Get current user's permissions
+
+### UI Components
+- `/admin/groups` - Groups management page (create, edit, delete, set permissions)
+- `/admin/members` - Member management with group assignment modal
+- `PermissionGate.tsx` - Permission gate component for client-side checks
+- Sidebar updated with Groups management link
+
+### Access Control
+- **Super Admin**: Full control including system groups (ID: 1)
+- **Admin**: Can create/manage custom groups (ID: 2)
+- **Users**: Inherit permissions from assigned groups
+- **System Groups**: Protected from deletion (only Super Admin can modify)
+
+### Migration
+**File:** `scripts/migrate_rbac_groups.sql`
+- Creates all 4 tables
+- Inserts 6 system groups with permissions
+- Migrates existing users to groups based on role
+- Sets up activity logging
+
+### Implementation Date
+**Completed:** April 4, 2026
+**Status:** PRODUCTION READY
+
+---
+
+## 🏢 COMPANY SETTINGS (REQUIRED)
 - **company_name:** VARCHAR(255) - Display name on dashboard
 - **tax_id:** VARCHAR(50) - Company tax identification
 - **address:** TEXT - Company address
@@ -286,6 +396,6 @@ ON CONFLICT (company_name) DO UPDATE SET
 
 **🔐 THIS IS A LIVING DOCUMENT - UPDATE IT FOR ANY CHANGES!**
 
-**Last Updated:** 2026-04-02
-**System Version:** 1.0.0
-**Status:** PRODUCTION-READY WITH GUARDRAILS**
+**Last Updated:** 2026-04-04
+**System Version:** 1.1.0
+**Status:** PRODUCTION-READY WITH RBAC**

@@ -61,6 +61,7 @@ const menuItems = [
 
 const adminItems = [
   { icon: UserCog, label: "จัดการสมาชิก", href: "/admin/members" },
+  { icon: ShieldCheck, label: "จัดการกลุ่ม", href: "/admin/groups" },
   { icon: ShieldCheck, label: "จัดการสิทธิ์", href: "/admin/permissions" },
 ];
 

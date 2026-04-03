@@ -2,7 +2,7 @@
 
 import { query } from "@/lib/db";
 import { google } from "googleapis";
-import * as xlsx from "xlsx";
+import * as ExcelJS from "exceljs";
 import { revalidatePath } from "next/cache";
 import { googleSheets, googleDrive } from "@/lib/google-server";
 import { Readable } from "stream";
@@ -690,19 +690,46 @@ export async function exportJournalsToExcel() {
     const res = await query('SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC');
     const entries = res.rows;
     if (entries.length === 0) throw new Error("No data to export");
-    const data = entries.map(e => ({
-      "วันที่": new Date(e.entry_date).toLocaleDateString('th-TH'),
-      "เอกสาร": e.reference_no || "-",
-      "ชื่อบัญชี": e.account_name,
-      "รายการ": e.description,
-      "เดบิต": Number(e.debit) || 0,
-      "เครดิต": Number(e.credit) || 0
-    }));
-    const worksheet = xlsx.utils.json_to_sheet(data);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, "Journals");
-    const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
-    return { success: true, data: buffer.toString("base64"), filename: `Journal_${new Date().toISOString().split('T')[0]}.xlsx` };
+    
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Journals");
+    
+    // Add columns
+    worksheet.columns = [
+      { header: "วันที่", key: "date", width: 15 },
+      { header: "เอกสาร", key: "reference", width: 20 },
+      { header: "ชื่อบัญชี", key: "account", width: 25 },
+      { header: "รายการ", key: "description", width: 35 },
+      { header: "เดบิต", key: "debit", width: 15 },
+      { header: "เครดิต", key: "credit", width: 15 }
+    ];
+    
+    // Add data rows
+    entries.forEach((e: any) => {
+      worksheet.addRow({
+        date: new Date(e.entry_date).toLocaleDateString('th-TH'),
+        reference: e.reference_no || "-",
+        account: e.account_name,
+        description: e.description,
+        debit: Number(e.debit) || 0,
+        credit: Number(e.credit) || 0
+      });
+    });
+    
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
+    
+    // Format number columns
+    worksheet.getColumn('debit').numFmt = '#,##0.00';
+    worksheet.getColumn('credit').numFmt = '#,##0.00';
+    
+    const buffer = await workbook.xlsx.writeBuffer();
+    return { success: true, data: Buffer.from(buffer).toString("base64"), filename: `Journal_${new Date().toISOString().split('T')[0]}.xlsx` };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
