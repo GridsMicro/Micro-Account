@@ -15,7 +15,8 @@ import {
   Percent,
   Coins,
   FileDigit,
-  CloudUpload
+  CloudUpload,
+  Cloud
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateCompanySettings } from "@/app/actions";
@@ -26,6 +27,7 @@ const menuItems = [
   { id: 'tax', icon: ShieldCheck, label: "ข้อมูลภาษี (Tax Info)" },
   { id: 'bank', icon: Briefcase, label: "บัญชีธนาคาร (Bank)" },
   { id: 'rd-api', icon: CloudUpload, label: "RD API Portal" },
+  { id: 'google-drive', icon: Cloud, label: "Google Drive (OAuth2)" },
   { id: 'system', icon: Database, label: "ฐานข้อมูล (System)" },
 ];
 
@@ -61,6 +63,12 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
     rd_api_key: initialData?.rd_api_key || "",
     rd_base_url: initialData?.rd_base_url || "https://api-portal.rd.go.th",
     rd_enabled: initialData?.rd_enabled ?? false,
+    // Google Drive OAuth2 Settings
+    google_client_id: initialData?.google_client_id || "",
+    google_client_secret: initialData?.google_client_secret || "",
+    google_refresh_token: initialData?.google_refresh_token || "",
+    google_redirect_uri: initialData?.google_redirect_uri || "https://developers.google.com/oauthplayground",
+    google_drive_enabled: initialData?.google_drive_enabled ?? false,
   });
 
   const handleSave = async () => {
@@ -264,6 +272,157 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                            />
                         </div>
                      </div>
+                  </div>
+               )}
+
+               {activeTab === 'rd-api' && (
+                  <div className="max-w-3xl space-y-8 animate-in slide-in-from-bottom-2 duration-500">
+                    <div className="bg-orange-50 border border-orange-100 p-4 rounded flex items-center gap-4 mb-6">
+                        <CloudUpload className="text-orange-500" size={32} />
+                        <div>
+                            <p className="text-orange-800 font-bold text-sm">{'กรมสรรพากร API (RD Portal)'}</p>
+                            <p className="text-orange-600 text-xs italic">{'เชื่อมต่อกระบวนการยื่นภาษีอัตโนมัติกับกรมสรรพากร'}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded border border-gray-100">
+                           <input 
+                             type="checkbox" 
+                             id="rd_enabled"
+                             checked={formData.rd_enabled}
+                             onChange={e => setFormData({...formData, rd_enabled: e.target.checked})}
+                             className="w-5 h-5 rounded text-blue-600" 
+                           />
+                           <label htmlFor="rd_enabled" className="text-sm font-bold text-gray-700">เปิดใช้งาน RD API</label>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">RD Client ID</label>
+                             <input 
+                               type="text" 
+                               value={formData.rd_client_id} 
+                               onChange={e => setFormData({...formData, rd_client_id: e.target.value})}
+                               className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                             />
+                           </div>
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">RD Client Secret</label>
+                             <input 
+                               type="password" 
+                               value={formData.rd_client_secret} 
+                               onChange={e => setFormData({...formData, rd_client_secret: e.target.value})}
+                               className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                             />
+                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">RD API Key</label>
+                          <input 
+                            type="text" 
+                            value={formData.rd_api_key} 
+                            onChange={e => setFormData({...formData, rd_api_key: e.target.value})}
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">RD Base URL</label>
+                          <input 
+                            type="text" 
+                            value={formData.rd_base_url} 
+                            onChange={e => setFormData({...formData, rd_base_url: e.target.value})}
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                          />
+                        </div>
+                    </div>
+                  </div>
+               )}
+
+               {activeTab === 'google-drive' && (
+                  <div className="max-w-3xl space-y-8 animate-in slide-in-from-bottom-2 duration-500">
+                    <div className="bg-blue-50 border border-blue-100 p-4 rounded flex items-center gap-4 mb-6">
+                        <Cloud className="text-blue-500" size={32} />
+                        <div>
+                            <p className="text-blue-800 font-bold text-sm">{'Google Drive OAuth2 Configuration'}</p>
+                            <p className="text-blue-600 text-xs italic">{'กำหนดค่าการเชื่อมต่อ Google Drive สำหรับเก็บไฟล์เอกสาร'}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-6">
+                        <p className="text-yellow-800 text-sm font-bold mb-2">ขั้นตอนการขอ OAuth2 Credentials:</p>
+                        <ol className="text-yellow-700 text-xs list-decimal list-inside space-y-1">
+                            <li>ไปที่ <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="underline">Google Cloud Console</a></li>
+                            <li>สร้าง Project ใหม่ หรือเลือก Project ที่มีอยู่</li>
+                            <li>เปิดใช้งาน Google Drive API</li>
+                            <li>ไปที่ Credentials → Create Credentials → OAuth 2.0 Client ID</li>
+                            <li>เลือก Application type: Web application</li>
+                            <li>ใส่ Authorized redirect URI: <code>https://developers.google.com/oauthplayground</code></li>
+                            <li>คัดลอก Client ID และ Client Secret มาใส่ด้านล่าง</li>
+                            <li>ไปที่ <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noreferrer" className="underline">OAuth2 Playground</a> เพื่อขอ Refresh Token</li>
+                        </ol>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded border border-gray-100">
+                           <input 
+                             type="checkbox" 
+                             id="google_drive_enabled"
+                             checked={formData.google_drive_enabled}
+                             onChange={e => setFormData({...formData, google_drive_enabled: e.target.checked})}
+                             className="w-5 h-5 rounded text-blue-600" 
+                           />
+                           <label htmlFor="google_drive_enabled" className="text-sm font-bold text-gray-700">เปิดใช้งาน Google Drive OAuth2 (แทน Service Account)</label>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Google Client ID</label>
+                             <input 
+                               type="text" 
+                               value={formData.google_client_id} 
+                               onChange={e => setFormData({...formData, google_client_id: e.target.value})}
+                               placeholder="xxxxx.apps.googleusercontent.com"
+                               className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                             />
+                           </div>
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Google Client Secret</label>
+                             <input 
+                               type="password" 
+                               value={formData.google_client_secret} 
+                               onChange={e => setFormData({...formData, google_client_secret: e.target.value})}
+                               placeholder="GOCSPX-xxxxx"
+                               className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                             />
+                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Refresh Token</label>
+                          <textarea 
+                            rows={3}
+                            value={formData.google_refresh_token} 
+                            onChange={e => setFormData({...formData, google_refresh_token: e.target.value})}
+                            placeholder="1//xxxxx-xxxxxx..."
+                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700 resize-none font-mono"
+                          />
+                          <p className="text-xs text-gray-500">Refresh Token ใช้สำหรับเข้าถึง Google Drive โดยไม่ต้อง Login ซ้ำ</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Redirect URI</label>
+                          <input 
+                            type="text" 
+                            value={formData.google_redirect_uri} 
+                            onChange={e => setFormData({...formData, google_redirect_uri: e.target.value})}
+                            placeholder="https://developers.google.com/oauthplayground"
+                            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700" 
+                          />
+                        </div>
+                    </div>
                   </div>
                )}
 

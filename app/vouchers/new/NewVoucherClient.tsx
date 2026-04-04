@@ -29,6 +29,12 @@ const PAYMENT_METHODS = [
   { id: 'Credit Card', label: 'บัตรเครดิต', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-50' },
 ];
 
+const WHT_RATES = [
+  { value: 0, label: 'ไม่มีการหัก', description: 'ไม่หัก ณ ที่จ่าย' },
+  { value: 3, label: 'หัก 3%', description: 'ค่าบริการ/ค่าจ้างเหมา' },
+  { value: 5, label: 'หัก 5%', description: 'ค่า License / ลิขสิทธิ์' },
+];
+
 export default function NewVoucherClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -38,9 +44,15 @@ export default function NewVoucherClient() {
     new Date().toISOString().split("T")[0]
   );
   const [amount, setAmount] = useState("");
+  const [whtRate, setWhtRate] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("Bank Transfer");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [receiptFileName, setReceiptFileName] = useState("");
+
+  // Calculate WHT
+  const amountNum = Number(amount) || 0;
+  const whtAmount = (amountNum * whtRate) / 100;
+  const netPayment = amountNum - whtAmount;
 
   // Auto-generate Voucher Number
   useEffect(() => {
@@ -68,7 +80,10 @@ export default function NewVoucherClient() {
         voucher_no: voucherNo || "AUTO",
         payee_name: payeeName,
         issue_date: issueDate,
-        amount: Number(amount),
+        amount: amountNum,
+        wht_rate: whtRate,
+        wht_amount: whtAmount,
+        net_payment: netPayment,
         payment_method: paymentMethod,
         receipt_url: receiptUrl,
         status: 'Paid' // Default to Paid for simplicity in this demo
@@ -173,7 +188,7 @@ export default function NewVoucherClient() {
 
                       <div className="space-y-4">
                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                            <DollarSign size={12} className="text-emerald-500" /> จำนวนเงินจ่ายสุทธิ (Amount)
+                            <DollarSign size={12} className="text-emerald-500" /> จำนวนเงินตามใบแจ้งหนี้ (Amount)
                          </label>
                          <div className="relative group">
                             <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-300 group-focus-within:text-emerald-500 text-xl transition-colors">฿</span>
@@ -188,6 +203,44 @@ export default function NewVoucherClient() {
                             />
                          </div>
                       </div>
+                   </div>
+
+                   {/* WHT Section */}
+                   <div className="space-y-6">
+                      <label className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                         <ScrollText size={12} /> ภาษีหัก ณ ที่จ่าย (WHT)
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                         {WHT_RATES.map((rate) => (
+                            <button
+                              key={rate.value}
+                              type="button"
+                              onClick={() => setWhtRate(rate.value)}
+                              className={cn(
+                                "flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2",
+                                whtRate === rate.value 
+                                  ? "border-red-500 bg-red-50 shadow-inner" 
+                                  : "border-slate-50 hover:border-red-100 bg-white"
+                              )}
+                            >
+                               <span className={cn("text-lg font-black", whtRate === rate.value ? "text-red-600" : "text-slate-600")}>
+                                  {rate.label}
+                               </span>
+                               <span className={cn("text-[10px] font-medium", whtRate === rate.value ? "text-red-500" : "text-slate-400")}>
+                                  {rate.description}
+                               </span>
+                            </button>
+                         ))}
+                      </div>
+                      {whtRate > 0 && (
+                        <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                           <div className="flex justify-between items-center">
+                              <span className="text-sm text-red-600 font-bold">ยอดหัก ณ ที่จ่าย ({whtRate}%):</span>
+                              <span className="text-xl font-black text-red-600">฿{whtAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                           </div>
+                           <p className="text-[10px] text-red-400 mt-2">ต้องนำส่งสรรพากรภายใน 15 ของเดือนถัดไป (ภ.ง.ด. {whtRate === 3 ? '3' : '53'})</p>
+                        </div>
+                      )}
                    </div>
 
                    <div className="h-px bg-slate-50"></div>
@@ -261,9 +314,27 @@ export default function NewVoucherClient() {
                          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">AUTO-PAID</span>
                       </div>
                       <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                         <span className="text-xs text-slate-400">สรุปยอดที่จ่าย</span>
-                         <span className="text-sm font-black text-white italic">฿{Number(amount || 0).toLocaleString()}</span>
+                         <span className="text-xs text-slate-400">ยอดตามใบแจ้งหนี้</span>
+                         <span className="text-sm font-black text-white">฿{amountNum.toLocaleString()}</span>
                       </div>
+                      {whtRate > 0 && (
+                        <>
+                          <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                             <span className="text-xs text-red-400">หัก ณ ที่จ่าย ({whtRate}%)</span>
+                             <span className="text-sm font-black text-red-400">- ฿{whtAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                          </div>
+                          <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                             <span className="text-xs text-emerald-400">ยอดโอนจริง</span>
+                             <span className="text-lg font-black text-emerald-400">฿{netPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                          </div>
+                        </>
+                      )}
+                      {whtRate === 0 && (
+                        <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                           <span className="text-xs text-slate-400">สรุปยอดที่จ่าย</span>
+                           <span className="text-lg font-black text-white italic">฿{amountNum.toLocaleString()}</span>
+                        </div>
+                      )}
                    </div>
 
                    <p className="mt-12 text-[9px] text-slate-500 font-medium leading-relaxed italic border-t border-white/5 pt-6">

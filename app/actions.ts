@@ -932,8 +932,11 @@ export async function updateCompanySettings(data: any) {
     await query(
       `UPDATE company_settings SET name=$1, tax_id=$2, phone=$3, email=$4, address=$5, bank_name=$6, 
        bank_account_name=$7, bank_account_number=$8, bank_branch=$9, vat_rate=$10, withholding_tax_rate=$11, 
-       is_vat_registered=$12, currency=$13, invoice_prefix=$14, quotation_prefix=$15 WHERE id=(SELECT id FROM company_settings LIMIT 1)`,
-      [data.name, data.tax_id, data.phone, data.email, data.address, data.bank_name, data.bank_account_name, data.bank_account_number, data.bank_branch, data.vat_rate, data.withholding_tax_rate, data.is_vat_registered, data.currency, data.invoice_prefix, data.quotation_prefix]
+       is_vat_registered=$12, currency=$13, invoice_prefix=$14, quotation_prefix=$15,
+       google_client_id=$16, google_client_secret=$17, google_refresh_token=$18, google_redirect_uri=$19, google_drive_enabled=$20
+       WHERE id=(SELECT id FROM company_settings LIMIT 1)`,
+      [data.name, data.tax_id, data.phone, data.email, data.address, data.bank_name, data.bank_account_name, data.bank_account_number, data.bank_branch, data.vat_rate, data.withholding_tax_rate, data.is_vat_registered, data.currency, data.invoice_prefix, data.quotation_prefix,
+       data.google_client_id, data.google_client_secret, data.google_refresh_token, data.google_redirect_uri, data.google_drive_enabled]
     );
     revalidatePath("/settings");
     return { success: true };

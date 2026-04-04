@@ -92,7 +92,7 @@ CREATE TABLE users (
 ```
 
 ### company_settings Table
-**Purpose:** Company branding and configuration settings for documents and dashboard display.
+**Purpose:** Company branding, configuration settings, and Google Drive OAuth2 credentials for document storage.
 ```sql
 CREATE TABLE company_settings (
     id SERIAL PRIMARY KEY,                    -- Primary key for company settings
@@ -103,6 +103,12 @@ CREATE TABLE company_settings (
     phone VARCHAR(50),                        -- Company phone number
     email VARCHAR(255),                       -- Company contact email
     website VARCHAR(255),                     -- Company website URL
+    -- Google Drive OAuth2 Configuration (NEW 2026-04-04)
+    google_client_id VARCHAR(255),           -- Google OAuth2 Client ID
+    google_client_secret VARCHAR(255),       -- Google OAuth2 Client Secret
+    google_refresh_token TEXT,               -- Google OAuth2 Refresh Token
+    google_redirect_uri VARCHAR(255) DEFAULT 'https://developers.google.com/oauthplayground', -- OAuth2 Redirect URI
+    google_drive_enabled BOOLEAN DEFAULT false, -- Enable OAuth2 mode (vs Service Account)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -394,8 +400,30 @@ ON CONFLICT (company_name) DO UPDATE SET
 
 ---
 
+## 📜 RECENT CHANGES & HISTORY
+
+### 2026-04-04 - Google Drive OAuth2 Integration
+**Features Added:**
+- ✅ **Google Drive OAuth2 Settings Page** (`/settings`) - New tab for configuring OAuth2 credentials
+- ✅ **Database Migration** - Added columns to `company_settings`: `google_client_id`, `google_client_secret`, `google_refresh_token`, `google_redirect_uri`, `google_drive_enabled`
+- ✅ **Updated google-server.ts** - Now reads OAuth2 credentials from database (priority 1) with fallback to environment variables
+- ✅ **Voucher Monthly Summary** - Added monthly summary report, history view, and print functionality to `/vouchers`
+- ✅ **WHT Withholding Tax** - Added 3% WHT deduction feature to voucher creation form
+
+**Files Modified:**
+- `components/SettingsClient.tsx` - Added Google Drive OAuth2 configuration UI
+- `app/actions.ts` - Updated `updateCompanySettings` to handle new OAuth2 fields
+- `lib/google-server.ts` - Refactored to support database-driven OAuth2 configuration
+- `app/vouchers/page.tsx` - Converted to client component with monthly summary features
+- `app/vouchers/new/NewVoucherClient.tsx` - Added WHT withholding tax feature
+
+**Migration:**
+- Created: `migrations/add_google_oauth2_columns.sql`
+
+---
+
 **🔐 THIS IS A LIVING DOCUMENT - UPDATE IT FOR ANY CHANGES!**
 
 **Last Updated:** 2026-04-04
-**System Version:** 1.1.0
-**Status:** PRODUCTION-READY WITH RBAC**
+**System Version:** 1.2.0
+**Status:** PRODUCTION-READY WITH RBAC & GOOGLE DRIVE OAUTH2**
