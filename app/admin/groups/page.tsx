@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { 
   Shield, 
   Plus, 
@@ -18,6 +19,36 @@ import {
 import Link from "next/link";
 import { useToast } from "@/components/ToastProvider";
 
+// Modal Portal Component - renders outside normal DOM hierarchy
+function ModalPortal({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    // Use requestAnimationFrame to avoid cascading renders
+    const rafId = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+  
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+  
+  if (!mounted || !isOpen) return null;
+  
+  return createPortal(
+    children,
+    document.body
+  );
+}
 // Module definitions with Thai labels
 const MODULES = [
   { id: "dashboard", name: "แดชบอร์ด", icon: "📊" },
@@ -450,9 +481,9 @@ export default function GroupsPage() {
         </div>
 
         {/* Create Group Modal */}
-        {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
+        <ModalPortal isOpen={isCreateModalOpen}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-black text-slate-900">สร้างกลุ่มใหม่</h2>
                 <button 
@@ -520,12 +551,12 @@ export default function GroupsPage() {
               </form>
             </div>
           </div>
-        )}
+        </ModalPortal>
 
         {/* Edit Group Modal */}
-        {isEditModalOpen && selectedGroup && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
+        <ModalPortal isOpen={isEditModalOpen}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-black text-slate-900">แก้ไขกลุ่ม</h2>
                 <button 
@@ -591,32 +622,89 @@ export default function GroupsPage() {
               </form>
             </div>
           </div>
-        )}
+        </ModalPortal>
 
-        {/* Permission Matrix Modal */}
-        {isPermissionModalOpen && selectedGroup && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[2rem] p-8 max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-              <div className="flex items-center justify-between mb-6">
+        {/* Permission Matrix Modal - Side Drawer */}
+        <ModalPortal isOpen={isPermissionModalOpen}>
+          <div className="fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/50 transition-opacity"
+              onClick={() => setIsPermissionModalOpen(false)}
+            />
+            {/* Side Drawer */}
+            <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900">จัดการสิทธิ์: {selectedGroup.name}</h2>
+                  <h2 className="text-2xl font-black text-slate-900">จัดการสิทธิ์: {selectedGroup?.name}</h2>
                   <p className="text-sm text-slate-500 mt-1">กำหนดสิทธิ์การเข้าถึงแต่ละโมดูล</p>
                 </div>
-                <button 
-                  onClick={() => setIsPermissionModalOpen(false)}
-                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* Check All Buttons */}
+                  <div className="flex gap-2 mr-4">
+                    <button
+                      onClick={() => {
+                        const allChecked: Record<string, GroupPermission> = {};
+                        MODULES.forEach((mod) => {
+                          allChecked[mod.id] = {
+                            id: groupPermissions[mod.id]?.id || 0,
+                            group_id: selectedGroup?.id || 0,
+                            module: mod.id,
+                            can_create: true,
+                            can_read: true,
+                            can_update: true,
+                            can_delete: true,
+                            can_export: true,
+                            can_manage: true,
+                          };
+                        });
+                        setGroupPermissions(allChecked);
+                      }}
+                      className="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
+                    >
+                      เลือกทั้งหมด
+                    </button>
+                    <button
+                      onClick={() => {
+                        const allUnchecked: Record<string, GroupPermission> = {};
+                        MODULES.forEach((mod) => {
+                          allUnchecked[mod.id] = {
+                            id: groupPermissions[mod.id]?.id || 0,
+                            group_id: selectedGroup?.id || 0,
+                            module: mod.id,
+                            can_create: false,
+                            can_read: false,
+                            can_update: false,
+                            can_delete: false,
+                            can_export: false,
+                            can_manage: false,
+                          };
+                        });
+                        setGroupPermissions(allUnchecked);
+                      }}
+                      className="px-3 py-1.5 text-xs font-bold bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
+                    >
+                      ยกเลิกทั้งหมด
+                    </button>
+                  </div>
+                  <button 
+                    onClick={() => setIsPermissionModalOpen(false)}
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
               </div>
               
-              <div className="overflow-auto flex-1 -mx-8 px-8">
+              {/* Table Content */}
+              <div className="flex-1 overflow-auto p-6">
                 <table className="w-full">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b-2 border-slate-100">
                       <th className="text-left py-4 px-4 font-black text-slate-700 text-sm">โมดูล</th>
                       {PERMISSIONS.map((perm) => (
-                        <th key={perm.key} className="text-center py-4 px-2 font-black text-slate-700 text-xs uppercase tracking-wider w-24">
+                        <th key={perm.key} className="text-center py-4 px-2 font-black text-slate-700 text-xs uppercase tracking-wider w-20">
                           <div className={`w-3 h-3 rounded-full ${perm.color} mx-auto mb-1`}></div>
                           {perm.label}
                         </th>
@@ -654,7 +742,8 @@ export default function GroupsPage() {
                 </table>
               </div>
               
-              <div className="flex gap-3 pt-6 border-t border-slate-100 mt-6">
+              {/* Footer Actions */}
+              <div className="flex gap-3 p-6 border-t border-slate-100">
                 <button
                   onClick={() => setIsPermissionModalOpen(false)}
                   className="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors"
@@ -670,7 +759,7 @@ export default function GroupsPage() {
               </div>
             </div>
           </div>
-        )}
+        </ModalPortal>
 
         <div className="py-10 text-center opacity-30">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Microtronic Security Shield • RBAC Groups v1.0</p>

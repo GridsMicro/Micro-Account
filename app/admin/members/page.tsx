@@ -1,9 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { UserCog, Plus, Mail, Shield, Trash2, Edit, Users, X, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ToastProvider";
+
+// Modal Portal Component - safely renders to body
+function ModalPortal({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) {
+  const [mounted, setMounted] = useState(false);
+  
+  // Mount once on client
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+  
+  // Handle body scroll lock
+  useEffect(() => {
+    if (!mounted) return;
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, mounted]);
+  
+  if (!mounted || !isOpen) return null;
+  
+  return createPortal(children, document.body);
+}
 
 interface User {
   id: number;
@@ -241,13 +270,13 @@ export default function MembersPage() {
       </div>
 
       {/* Group Assignment Modal */}
-      {isGroupModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+      <ModalPortal isOpen={isGroupModalOpen}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-black text-gray-900">จัดการกลุ่ม</h2>
-                <p className="text-sm text-gray-500">{selectedUser.name}</p>
+                <p className="text-sm text-gray-500">{selectedUser?.name}</p>
               </div>
               <button 
                 onClick={() => setIsGroupModalOpen(false)}
@@ -303,7 +332,7 @@ export default function MembersPage() {
             </div>
           </div>
         </div>
-      )}
+      </ModalPortal>
     </main>
   );
 }
