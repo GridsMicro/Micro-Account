@@ -4,16 +4,15 @@ import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { createExpenseJournalEntry } from "@/lib/journaling";
 
-function getExpenseJournalAccount(classification?: string) {
-  switch (String(classification || "OPEX").toUpperCase()) {
-    case "COGS":
-      return "Purchases/Cost of Sales";
-    case "CAPEX":
-      return "Fixed Assets";
-    case "OPEX":
-    default:
-      return "Operating Expenses";
-  }
+async function deleteExpenseJournalEntries(expenseId: number) {
+  const journalReference = `EXP-${expenseId}`;
+  await query(
+    `DELETE FROM journal_entries
+     WHERE (reference_type = 'expense' AND reference_id = $1)
+        OR reference_no = $2
+        OR document_number = $2`,
+    [expenseId, journalReference]
+  );
 }
 
 async function ensureExpensesTable() {
@@ -140,20 +139,20 @@ export async function createExpense(data: {
     const { rows } = await query(
       `INSERT INTO expenses (
          title,
-        category,
-        amount,
-        expense_date,
-        reference_no,
-        tax_invoice_no,
-        tax_invoice_date,
-        vat_amount,
-        contact_id,
-        classification,
-        notes,
-        receipt_url,
-        receipt_file_name,
-        receipt_mime_type,
-        status
+         category,
+         amount,
+         expense_date,
+         reference_no,
+         tax_invoice_no,
+         tax_invoice_date,
+         vat_amount,
+         contact_id,
+         classification,
+         notes,
+         receipt_url,
+         receipt_file_name,
+         receipt_mime_type,
+         status
        )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'paid')
        RETURNING id`,
@@ -176,8 +175,6 @@ export async function createExpense(data: {
     );
 
     const expenseId = rows[0].id;
-    
-    // Create automated journal entry using new system
     const journalResult = await createExpenseJournalEntry(
       expenseId,
       data.contact_id || 0,
@@ -186,7 +183,7 @@ export async function createExpense(data: {
       data.category,
       data.expense_date
     );
-    
+
     if (!journalResult.success) {
       throw new Error(`Journal entry failed: ${journalResult.error}`);
     }
@@ -261,26 +258,19 @@ export async function updateExpense(
       ]
     );
 
-    const journalReference = `EXP-${id}`;
-    const mappedAccount = getExpenseJournalAccount(data.classification);
-    const vendorRes = data.contact_id
-      ? await query(`SELECT name FROM contacts WHERE id = $1 LIMIT 1`, [data.contact_id])
-      : { rows: [] };
-    const vendorName = vendorRes.rows[0]?.name ? ` | Vendor: ${vendorRes.rows[0].name}` : "";
-    const description = `${data.title}${vendorName}${data.reference_no ? ` | Ref: ${data.reference_no}` : ""}${
-      data.receipt_url ? " | Attached bill" : ""
-    }`;
-    await query(`DELETE FROM journal_entries WHERE reference_no = $1`, [journalReference]);
-    await query(
-      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit, receipt_url, journal_type)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, 'payment')`,
-      [data.expense_date, journalReference, description, mappedAccount, data.amount, data.receipt_url || null]
+    await deleteExpenseJournalEntries(id);
+    const journalResult = await createExpenseJournalEntry(
+      id,
+      data.contact_id || 0,
+      data.amount,
+      data.vat_amount || 0,
+      data.category,
+      data.expense_date
     );
-    await query(
-      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit, receipt_url, journal_type)
-       VALUES ($1, $2, $3, 'เงินสด/ธนาคาร', 0, $4, $5, 'payment')`,
-      [data.expense_date, journalReference, `จ่ายค่าใช้จ่าย: ${data.title}`, data.amount, data.receipt_url || null]
-    );
+
+    if (!journalResult.success) {
+      throw new Error(`Journal entry failed: ${journalResult.error}`);
+    }
 
     revalidatePath("/expenses");
     revalidatePath("/reports/profit-loss");
@@ -295,7 +285,7 @@ export async function updateExpense(
 export async function deleteExpense(id: number) {
   try {
     await ensureExpensesTable();
-    await query(`DELETE FROM journal_entries WHERE reference_no = $1`, [`EXP-${id}`]);
+    await deleteExpenseJournalEntries(id);
     const result = await query(`DELETE FROM expenses WHERE id = $1 RETURNING id`, [id]);
 
     if (result.rows.length === 0) {

@@ -44,18 +44,41 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
   let stats = { sales: 0, receipt: 0, purchase: 0, payment: 0 };
 
   try {
-    let q = 'SELECT * FROM journal_entries WHERE 1=1';
+    let q = `
+      SELECT
+        je.*,
+        debit_acc.account_code AS debit_account_code,
+        credit_acc.account_code AS credit_account_code,
+        debit_acc.account_name_th AS debit_account_name_th,
+        credit_acc.account_name_th AS credit_account_name_th
+      FROM journal_entries je
+      LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
+      LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
+      WHERE 1=1
+    `;
     const params: any[] = [];
 
     if (search) {
       params.push(`%${search}%`);
-      q += ` AND (reference_no ILIKE $${params.length} OR description ILIKE $${params.length} OR account_name ILIKE $${params.length})`;
+      q += ` AND (
+        reference_no ILIKE $${params.length}
+        OR description ILIKE $${params.length}
+        OR account_name ILIKE $${params.length}
+        OR COALESCE(debit_acc.account_name_th, '') ILIKE $${params.length}
+        OR COALESCE(credit_acc.account_name_th, '') ILIKE $${params.length}
+      )`;
     }
 
     q += ' ORDER BY entry_date DESC, reference_no ASC, id ASC';
     const res = await query(q, params);
     const normalizedEntries = res.rows.map((entry) => ({
       ...entry,
+      account_name:
+        entry.account_name ||
+        (Number(entry.debit || 0) > 0
+          ? entry.debit_account_name_th
+          : entry.credit_account_name_th) ||
+        "-",
       journal_type: normalizeJournalType(entry),
     }));
 

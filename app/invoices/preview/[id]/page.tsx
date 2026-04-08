@@ -315,7 +315,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
               th { border-bottom: 2px solid #0f172a !important; padding-bottom: 1rem !important; }
               
               /* ย่อขนาดตัวอักษรให้ดู Enterprise Premium */
-              h1 { font-size: 1.5rem !important; }
+              h1 { font-size: 1rem !important; }
               h4 { font-size: 0.8rem !important; }
               .invoice-number { font-size: 2rem !important; color: #7c3aed !important; }
               .text-xs { font-size: 10px !important; }

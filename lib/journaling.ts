@@ -5,6 +5,10 @@
 
 import { query } from "@/lib/db";
 
+type Queryable = {
+  query: (text: string, params?: any[]) => Promise<{ rows: any[] }>;
+};
+
 // Chart of Accounts Mapping
 export const COA_ACCOUNTS = {
   // Assets
@@ -65,13 +69,17 @@ export interface JournalEntry {
 }
 
 // Generate Document Number (e.g., SJ-2026-04-001)
-export async function generateDocumentNumber(journalType: JournalType, date: Date): Promise<string> {
+export async function generateDocumentNumber(
+  journalType: JournalType,
+  date: Date,
+  db: Queryable = { query }
+): Promise<string> {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const prefix = journalType.toUpperCase().substring(0, 2); // SA, RE, PU, PA, GE
   
   try {
-    const { rows } = await query(
+    const { rows } = await db.query(
       `SELECT COUNT(*) as count FROM journal_entries 
        WHERE journal_type = $1 AND fiscal_year = $2 AND fiscal_month = $3`,
       [journalType, year, parseInt(month)]
@@ -85,23 +93,27 @@ export async function generateDocumentNumber(journalType: JournalType, date: Dat
 }
 
 // Create Single Journal Entry (Double-Entry Pair)
-export async function createJournalEntry(entry: JournalEntry): Promise<{ success: boolean; error?: string; id?: number }> {
+export async function createJournalEntry(
+  entry: JournalEntry,
+  db: Queryable = { query }
+): Promise<{ success: boolean; error?: string; id?: number }> {
   try {
     const date = new Date(entry.entry_date);
     const fiscal_year = date.getFullYear();
     const fiscal_month = date.getMonth() + 1;
-    const document_number = entry.document_number || await generateDocumentNumber(entry.journal_type, date);
+    const document_number = entry.document_number || await generateDocumentNumber(entry.journal_type, date, db);
     
-    const { rows } = await query(
+    const { rows } = await db.query(
       `INSERT INTO journal_entries (
-        entry_date, journal_type, reference_type, reference_id, description,
+        reference_no, entry_date, journal_type, reference_type, reference_id, description,
         debit_account_id, credit_account_id, amount,
         vat_rate, vat_amount, withholding_rate, withholding_amount,
         fiscal_year, fiscal_month, document_number, notes, created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW()
       ) RETURNING id`,
       [
+        document_number,
         entry.entry_date, entry.journal_type, entry.reference_type, entry.reference_id, entry.description,
         entry.debit_account_id, entry.credit_account_id, entry.amount,
         entry.vat_rate || 0, entry.vat_amount || 0, entry.withholding_rate || 0, entry.withholding_amount || 0,
@@ -124,11 +136,12 @@ export async function createSalesJournalEntry(
   netAmount: number, 
   vatAmount: number,
   totalAmount: number,
-  invoiceDate: string
+  invoiceDate: string,
+  db: Queryable = { query }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // 1. Debit Accounts Receivable (ลูกหนี้การค้า)
-    const arEntry = await createJournalEntry({
+    const saleEntry = await createJournalEntry({
       entry_date: invoiceDate,
       journal_type: 'sales',
       reference_type: 'invoice',
@@ -137,14 +150,14 @@ export async function createSalesJournalEntry(
       debit_account_id: COA_ACCOUNTS.ACCOUNTS_RECEIVABLE,
       credit_account_id: COA_ACCOUNTS.SALES_REVENUE,
       amount: netAmount,
-      document_number: `INV-${invoiceNumber}`,
+      document_number: invoiceNumber,
       notes: `Customer ID: ${customerId}`
-    });
+    }, db);
     
-    if (!arEntry.success) return arEntry;
+    if (!saleEntry.success) return saleEntry;
     
     // 2. Credit Sales Revenue (รายได้จากการขาย)
-    const revenueEntry = await createJournalEntry({
+    /* const revenueEntry = await createJournalEntry({
       entry_date: invoiceDate,
       journal_type: 'sales',
       reference_type: 'invoice',
@@ -155,7 +168,7 @@ export async function createSalesJournalEntry(
       amount: netAmount,
       document_number: `INV-${invoiceNumber}`,
       notes: `Customer ID: ${customerId}`
-    });
+    }); */
     
     // 3. Handle VAT if applicable
     if (vatAmount > 0) {
@@ -170,9 +183,9 @@ export async function createSalesJournalEntry(
         amount: vatAmount,
         vat_rate: 7,
         vat_amount: vatAmount,
-        document_number: `INV-${invoiceNumber}`,
+        document_number: invoiceNumber,
         notes: `VAT 7% - Customer ID: ${customerId}`
-      });
+      }, db);
       
       if (!vatEntry.success) return vatEntry;
     }
@@ -189,7 +202,8 @@ export async function createReceiptJournalEntry(
   receiptNumber: string,
   customerId: number,
   amount: number,
-  receiptDate: string
+  receiptDate: string,
+  db: Queryable = { query }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Debit Cash/Bank and Credit Accounts Receivable
@@ -202,9 +216,9 @@ export async function createReceiptJournalEntry(
       debit_account_id: COA_ACCOUNTS.CASH, // Could be BANK_KTB or BANK_KBANK based on payment method
       credit_account_id: COA_ACCOUNTS.ACCOUNTS_RECEIVABLE,
       amount: amount,
-      document_number: `RCT-${receiptNumber}`,
+      document_number: receiptNumber,
       notes: `Customer ID: ${customerId} - Payment received`
-    });
+    }, db);
     
     return entry;
   } catch (error: any) {
@@ -219,7 +233,8 @@ export async function createExpenseJournalEntry(
   amount: number,
   vatAmount: number,
   category: string,
-  expenseDate: string
+  expenseDate: string,
+  db: Queryable = { query }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Map expense category to COA account
@@ -251,7 +266,7 @@ export async function createExpenseJournalEntry(
       amount: amount - vatAmount,
       document_number: `EXP-${expenseId}`,
       notes: `Vendor ID: ${vendorId} - Category: ${category}`
-    });
+    }, db);
     
     if (!expenseEntry.success) return expenseEntry;
     
@@ -270,7 +285,7 @@ export async function createExpenseJournalEntry(
         vat_amount: vatAmount,
         document_number: `EXP-${expenseId}`,
         notes: `Input VAT 7% - Vendor ID: ${vendorId}`
-      });
+      }, db);
       
       if (!vatEntry.success) return vatEntry;
     }
