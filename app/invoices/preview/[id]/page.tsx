@@ -55,6 +55,12 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
           </Link>
           <div className="flex items-center gap-3">
             <Link
+              href={`/invoices/wht50/${id}`}
+              className="flex h-12 items-center rounded-xl border border-slate-100 bg-white px-6 text-sm font-bold text-violet-600 transition-all hover:bg-violet-50"
+            >
+              ใบหัก ณ ที่จ่าย (ทวิ 50)
+            </Link>
+            <Link
               href={`/invoices/edit/${id}`}
               className="flex h-12 items-center rounded-xl border border-slate-100 bg-white px-6 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50"
             >

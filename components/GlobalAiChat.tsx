@@ -137,6 +137,25 @@ export default function GlobalAiChat() {
               <div className="p-6 bg-slate-950/20 border-t border-white/5">
                 <form onSubmit={submit} className="relative group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-violet-600/10 to-blue-600/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  
+                  {/* Quick Prompts */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <button 
+                      type="button"
+                      onClick={() => setPrompt("ทุนสินค้า 10,000 บาท จ้างคน 2,000 บาท หัก WHT 3% แล้วควรตั้งราคาขายเท่าไหร่ให้บริษัทมีกำไร 35%?")}
+                      className="text-[9px] font-bold text-violet-300 bg-violet-600/20 hover:bg-violet-600/40 px-3 py-1.5 rounded border border-violet-500/20 transition-colors"
+                    >
+                      ช่วยคำนวณราคาขาย (Smart Pricing)
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setPrompt("การหักภาษี ณ ที่จ่าย 3% (ทวิ 50) สำหรับโมเดล Service มีลอจิกบัญชียังไง?")}
+                      className="text-[9px] font-bold text-emerald-300 bg-emerald-600/20 hover:bg-emerald-600/40 px-3 py-1.5 rounded border border-emerald-500/20 transition-colors"
+                    >
+                      ลอจิกภาษี 3% หัก ณ ที่จ่าย
+                    </button>
+                  </div>
+
                   <div className="relative space-y-3">
                     <textarea
                       className="w-full p-4 bg-slate-950 border border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500/50 text-white placeholder:text-slate-700 transition-all resize-none text-sm leading-relaxed"
