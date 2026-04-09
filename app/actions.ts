@@ -22,7 +22,8 @@ import {
 import { 
   createSalesJournalEntry,
   createReceiptJournalEntry,
-  createExpenseJournalEntry
+  createExpenseJournalEntry,
+  expandJournalRowsForPresentation
 } from "@/lib/journaling";
 
 // --- HELPERS ---
@@ -105,8 +106,7 @@ export async function uploadToGoogleDrive(base64Data: string, fileName: string, 
 
 export async function exportJournalsToSheets() {
   try {
-    const res = await query('SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC');
-    const entries = res.rows;
+    const entries = await getJournalRowsForPresentation();
     if (entries.length === 0) throw new Error("ไม่มีข้อมูลให้ส่งออก");
     const folderId = await getOrCreateFolder('Micro Account Reports');
     const spreadsheet = await googleSheets.spreadsheets.create({
@@ -333,6 +333,7 @@ export async function deleteCategory(id: number) {
   }
 }
 
+
 // --- INVOICES ACTIONS ---
 
 export async function getCompanySettings() {
@@ -344,10 +345,24 @@ export async function getCompanySettings() {
   }
 }
 
-export async function getNextInvoiceNumber() {
-  const yearShort = new Date().getFullYear().toString().slice(-2);
-  const prefix = `INV${yearShort}-`;
+export async function getQuotation(id: number | string) {
   try {
+    const qRes = await query(`SELECT * FROM quotations WHERE id = $1`, [id]);
+    if (qRes.rows.length === 0) throw new Error("Quotation not found");
+    const iRes = await query(`SELECT * FROM quotation_items WHERE quotation_id = $1 ORDER BY id ASC`, [id]);
+    return { success: true, data: { ...qRes.rows[0], items: iRes.rows } };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getNextInvoiceNumber() {
+  // Fallback prefix if settings fail
+  let prefix = "INV";
+  try {
+    const sRes = await query(`SELECT invoice_prefix FROM company_settings LIMIT 1`);
+    if (sRes.rows.length > 0) prefix = sRes.rows[0].invoice_prefix;
+    
     const { rows } = await query(
       `SELECT invoice_number FROM invoices WHERE invoice_number LIKE $1 ORDER BY id DESC LIMIT 1`,
       [`${prefix}%`]
@@ -391,35 +406,37 @@ async function deleteInvoiceJournalEntries(client: any, invoiceId: number | stri
   );
 }
 
-async function insertLegacyInvoiceJournalEntries(
+async function assertStableInvoiceJournal(
   client: any,
-  data: {
-    invoice_number: string;
-    date: string;
-    net_amount: number;
-    vat_amount: number;
-  }
+  invoiceId: number | string,
+  invoiceNumber: string,
+  netAmount: number,
+  vatAmount: number
 ) {
-  const total = Number(data.net_amount) + Number(data.vat_amount);
-
-  await client.query(
-    `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
-     VALUES ($1, $2, $3, 'ลูกหนี้การค้า', $4, 0)`,
-    [data.date, data.invoice_number, `ลูกหนี้ #${data.invoice_number}`, total]
+  const { rows } = await client.query(
+    `SELECT reference_no, document_number, credit_account_id, amount
+     FROM journal_entries
+     WHERE reference_type = 'invoice' AND reference_id = $1
+     ORDER BY id ASC`,
+    [invoiceId]
   );
 
-  await client.query(
-    `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
-     VALUES ($1, $2, $3, 'รายได้จากการขาย/บริการ', 0, $4)`,
-    [data.date, data.invoice_number, `รายได้ #${data.invoice_number}`, data.net_amount]
+  const revenueRows = rows.filter((row: any) => Number(row.credit_account_id || 0) === 4110);
+  const vatRows = rows.filter((row: any) => Number(row.credit_account_id || 0) === 2121);
+
+  const hasStableReference = rows.every(
+    (row: any) => row.reference_no === invoiceNumber && row.document_number === invoiceNumber
   );
 
-  if (Number(data.vat_amount) > 0) {
-    await client.query(
-      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit)
-       VALUES ($1, $2, $3, 'ภาษีขาย', 0, $4)`,
-      [data.date, data.invoice_number, `ภาษีขาย #${data.invoice_number}`, data.vat_amount]
-    );
+  if (
+    rows.length !== (vatAmount > 0 ? 2 : 1) ||
+    revenueRows.length !== 1 ||
+    Number(revenueRows[0]?.amount || 0) !== Number(netAmount || 0) ||
+    vatRows.length !== (vatAmount > 0 ? 1 : 0) ||
+    Number(vatRows[0]?.amount || 0) !== Number(vatAmount || 0) ||
+    !hasStableReference
+  ) {
+    throw new Error(`Invoice journal failed stability check for ${invoiceNumber}`);
   }
 }
 
@@ -429,8 +446,8 @@ export async function createInvoice(data: any) {
   try {
     await client.query("BEGIN");
     const invRes = await client.query(
-      `INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date, created_at, issue_date) 
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7) RETURNING id`,
+      `INSERT INTO invoices (invoice_number, contact_id, net_amount, vat_amount, status, due_date, created_at, issue_date, quotation_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8) RETURNING id`,
       [
         data.invoice_number,
         data.contact_id,
@@ -439,9 +456,15 @@ export async function createInvoice(data: any) {
         data.status || "sent",
         data.due_date,
         data.date || new Date().toISOString().split("T")[0],
+        data.quotation_id || null,
       ]
     );
     const invoiceId = invRes.rows[0].id;
+
+    if (data.quotation_id) {
+      await client.query("UPDATE quotations SET status = 'invoiced' WHERE id = $1", [data.quotation_id]);
+    }
+
     for (const item of data.items) {
       const description = item.detail ? `${item.desc} (${item.detail})` : item.desc;
       await client.query(
@@ -469,17 +492,26 @@ export async function createInvoice(data: any) {
       Number(data.vat_amount),
       totalAmount,
       invoiceDate,
-      client
+      client,
+      data.is_service === true 
     );
 
     if (!journalResult.success) {
       throw new Error(`Journal entry failed: ${journalResult.error}`);
     }
+    await assertStableInvoiceJournal(
+      client,
+      invoiceId,
+      data.invoice_number,
+      Number(data.net_amount),
+      Number(data.vat_amount)
+    );
     await client.query("COMMIT");
     revalidatePath("/invoices");
     return { success: true, id: invoiceId };
   } catch (error: any) {
     try { await client.query("ROLLBACK"); } catch {}
+    console.error("Invoice Error:", error);
     return { success: false, error: error.message };
   } finally {
     client.release();
@@ -510,25 +542,6 @@ export async function updateInvoice(id: string | number, data: any) {
     const invRes = await client.query("SELECT invoice_number FROM invoices WHERE id = $1", [id]);
     const invNum = invRes.rows[0]?.invoice_number;
     if (invNum) {
-      /* await client.query(`DELETE FROM journal_entries WHERE reference_no=$1`, [invNum]);
-      const total = Number(data.net_amount) + Number(data.vat_amount);
-      await client.query(
-        `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit) 
-         VALUES ($1, $2, $3, 'ลูกหนี้การค้า', $4, 0)`,
-        [data.due_date, invNum, `ลูกหนี้ #${invNum} (แก้ไข)`, total]
-      );
-      await client.query(
-        `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit) 
-         VALUES ($1, $2, $3, 'รายได้จากการขาย/บริการ', 0, $4)`,
-        [data.due_date, invNum, `รายได้ #${invNum} (แก้ไข)`, data.net_amount]
-      );
-      if (Number(data.vat_amount) > 0) {
-        await client.query(
-          `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit) 
-           VALUES ($1, $2, $3, 'ภาษีขาย', 0, $4)`,
-          [data.due_date, invNum, `ภาษีขาย #${invNum} (แก้ไข)`, data.vat_amount]
-        );
-      } */
       await deleteInvoiceJournalEntries(client, id, invNum);
       const journalResult = await createSalesJournalEntry(
         Number(id),
@@ -543,6 +556,13 @@ export async function updateInvoice(id: string | number, data: any) {
       if (!journalResult.success) {
         throw new Error(`Journal entry failed: ${journalResult.error}`);
       }
+      await assertStableInvoiceJournal(
+        client,
+        id,
+        invNum,
+        Number(data.net_amount),
+        Number(data.vat_amount)
+      );
     }
     await client.query("COMMIT");
     revalidatePath("/invoices");
@@ -697,11 +717,27 @@ export async function updateQuotationStatus(id: number | string, status: string)
 
 export async function getJournalEntries() {
   try {
-    const { rows } = await query(`SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC`);
-    return { success: true, data: rows };
+    return { success: true, data: await getJournalRowsForPresentation() };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
+}
+
+async function getJournalRowsForPresentation() {
+  const { rows } = await query(`
+    SELECT
+      je.*,
+      inv.invoice_number,
+      debit_acc.account_name_th AS debit_account_name_th,
+      credit_acc.account_name_th AS credit_account_name_th
+    FROM journal_entries je
+    LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
+    LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
+    LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
+    ORDER BY je.entry_date DESC, COALESCE(je.reference_no, inv.invoice_number, je.document_number, '') ASC, je.id ASC
+  `);
+
+  return expandJournalRowsForPresentation(rows);
 }
 
 function extractAccountCode(accountLabel: string) {
@@ -886,48 +922,14 @@ export async function deleteJournalEntry(id: number | string) {
   }
 }
 
-export async function getAccounts(search: string = "") {
-  try {
-    let q = `
-      SELECT
-        id,
-        account_code AS code,
-        COALESCE(account_name_th, account_name_en, account_code) AS name,
-        INITCAP(COALESCE(account_type, account_category, 'other')) AS category,
-        account_name_th,
-        account_name_en,
-        account_type,
-        account_category,
-        description
-      FROM chart_of_accounts
-    `;
-    const params: any[] = [];
-    if (search) {
-      q += `
-        WHERE account_code ILIKE $1
-           OR COALESCE(account_name_th, '') ILIKE $1
-           OR COALESCE(account_name_en, '') ILIKE $1
-      `;
-      params.push(`%${search}%`);
-    }
-    q += " ORDER BY account_code ASC LIMIT 50";
-    const res = await query(q, params);
-    return { success: true, data: res.rows };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-}
-
 export async function exportJournalsToExcel() {
   try {
-    const res = await query('SELECT * FROM journal_entries ORDER BY entry_date DESC, id ASC');
-    const entries = res.rows;
+    const entries = await getJournalRowsForPresentation();
     if (entries.length === 0) throw new Error("No data to export");
     
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Journals");
     
-    // Add columns
     worksheet.columns = [
       { header: "วันที่", key: "date", width: 15 },
       { header: "เอกสาร", key: "reference", width: 20 },
@@ -937,7 +939,6 @@ export async function exportJournalsToExcel() {
       { header: "เครดิต", key: "credit", width: 15 }
     ];
     
-    // Add data rows
     entries.forEach((e: any) => {
       worksheet.addRow({
         date: new Date(e.entry_date).toLocaleDateString('th-TH'),
@@ -949,7 +950,6 @@ export async function exportJournalsToExcel() {
       });
     });
     
-    // Style header row
     worksheet.getRow(1).font = { bold: true };
     worksheet.getRow(1).fill = {
       type: 'pattern',
@@ -957,7 +957,6 @@ export async function exportJournalsToExcel() {
       fgColor: { argb: 'FFE0E0E0' }
     };
     
-    // Format number columns
     worksheet.getColumn('debit').numFmt = '#,##0.00';
     worksheet.getColumn('credit').numFmt = '#,##0.00';
     
@@ -975,39 +974,214 @@ export async function createPaymentVoucher(data: any) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    
     const res = await client.query(
-      `INSERT INTO payment_vouchers (voucher_no, payee_name, issue_date, amount, payment_method, status, receipt_url) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [data.voucher_no, data.payee_name, data.issue_date, data.amount, data.payment_method, data.status, data.receipt_url || null]
+      `INSERT INTO payment_vouchers (
+        voucher_no, payee_name, issue_date, amount, payment_method, 
+        status, receipt_url, vat_amount, tax_id, expense_id, vendor_id, wht_amount
+      ) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      [
+        data.voucher_no, 
+        data.payee_name, 
+        data.issue_date, 
+        data.amount, 
+        data.payment_method, 
+        data.status, 
+        data.receipt_url || null,
+        data.vat_amount || 0,
+        data.tax_id || null,
+        data.expense_id || null,
+        data.vendor_id || null,
+        data.withholding_amount || 0
+      ]
     );
-    await client.query(
-      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit) 
-       VALUES ($1, $2, $3, 'ค่าใช้จ่ายทั่วไป', $4, 0)`,
-      [data.issue_date, data.voucher_no, `จ่ายให้ ${data.payee_name}`, data.amount]
+    const voucherId = res.rows[0].id;
+
+    if (data.expense_id) {
+      await client.query("UPDATE expenses SET status = 'paid' WHERE id = $1", [data.expense_id]);
+    }
+
+    const journalResult = await createExpenseJournalEntry(
+      voucherId,
+      data.vendor_id || 0, 
+      Number(data.amount),
+      Number(data.vat_amount || 0),
+      data.category || "อื่นๆ",
+      data.issue_date,
+      Number(data.withholding_amount || 0),
+      client
     );
-    const bankAcc = data.payment_method === "Transfer" ? "เงินฝากธนาคาร" : "เงินสด";
-    await client.query(
-      `INSERT INTO journal_entries (entry_date, reference_no, description, account_name, debit, credit) 
-       VALUES ($1, $2, $3, $4, 0, $5)`,
-      [data.issue_date, data.voucher_no, `จ่ายโดย ${data.payment_method}`, bankAcc, data.amount]
-    );
+
+    if (!journalResult.success) {
+      throw new Error(`Auto-Journal failed: ${journalResult.error}`);
+    }
+
     await client.query("COMMIT");
     revalidatePath("/vouchers");
+    revalidatePath("/expenses");
     revalidatePath("/journals");
-    return { success: true, id: res.rows[0].id };
+    return { success: true, id: voucherId };
   } catch (error: any) {
     try { await client.query("ROLLBACK"); } catch {}
+    console.error("Voucher Error:", error);
     return { success: false, error: error.message };
   } finally {
     client.release();
   }
 }
 
+export async function createPayment(data: any) {
+  const pool = (await import("@/lib/db")).default;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    const res = await client.query(
+      `INSERT INTO payments (
+        payment_no, contact_id, invoice_id, amount, payment_date, 
+        payment_method, status, notes
+      ) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7) RETURNING id`,
+      [
+        data.reference, 
+        data.contactId, 
+        data.invoiceId || null, 
+        data.amount, 
+        data.date, 
+        data.paymentMethod, 
+        data.description || null
+      ]
+    );
+    const paymentId = res.rows[0].id;
+    
+    let vatAmount = 0;
+    let isService = false;
+    
+    if (data.invoiceId) {
+      const invRes = await client.query("SELECT vat_amount, is_service FROM invoices WHERE id = $1", [data.invoiceId]);
+      if (invRes.rows.length > 0) {
+        vatAmount = Number(invRes.rows[0].vat_amount || 0);
+        isService = invRes.rows[0].is_service === true;
+      }
+      await client.query("UPDATE invoices SET status = 'paid' WHERE id = $1", [data.invoiceId]);
+    }
+    
+    const journalResult = await createReceiptJournalEntry(
+      paymentId,
+      data.reference,
+      Number(data.contactId),
+      Number(data.amount),
+      data.date,
+      client,
+      Number(data.withholdingAmount || 0),
+      vatAmount,
+      isService
+    );
+
+    if (!journalResult.success) {
+      throw new Error(`Auto-Journal failed: ${journalResult.error}`);
+    }
+
+    await client.query("COMMIT");
+    revalidatePath("/payments");
+    revalidatePath("/invoices");
+    revalidatePath("/journals");
+    return { success: true, id: paymentId };
+  } catch (error: any) {
+    try { await client.query("ROLLBACK"); } catch {}
+    console.error("Payment Error:", error);
+    return { success: false, error: error.message };
+  } finally {
+    client.release();
+  }
+}
+
+export async function markInvoiceAsPaid(id: number | string) {
+  try {
+    await query("UPDATE invoices SET status = 'paid' WHERE id = $1", [id]);
+    revalidatePath("/invoices");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getPaymentVouchers() {
   try {
-    const { rows } = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');
+    const { rows } = await query(`SELECT * FROM payment_vouchers ORDER BY issue_date DESC`);
     return { success: true, data: rows };
-  } catch (err: any) { return { success: false, error: err.message }; }
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// --- CHART OF ACCOUNTS CRUD ---
+
+export async function getAccounts(search: string = "") {
+  try {
+    const queryStr = search
+      ? `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category 
+         FROM chart_of_accounts 
+         WHERE account_code ILIKE $1 OR account_name_th ILIKE $1 OR account_name_en ILIKE $1
+         ORDER BY account_code ASC`
+      : `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category 
+         FROM chart_of_accounts 
+         ORDER BY account_code ASC`;
+    
+    const params = search ? [`%${search}%`] : [];
+    const { rows } = await query(queryStr, params);
+    return { success: true, data: rows };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createAccount(data: any) {
+  try {
+    const { rows } = await query(
+      `INSERT INTO chart_of_accounts (account_code, account_name_th, account_name_en, account_type, account_category)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [data.account_code, data.account_name_th, data.account_name_en || null, data.account_type, data.account_category]
+    );
+    revalidatePath("/admin/coa");
+    return { success: true, id: rows[0].id };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateAccount(id: number, data: any) {
+  try {
+    await query(
+      `UPDATE chart_of_accounts 
+       SET account_code=$1, account_name_th=$2, account_name_en=$3, account_type=$4, account_category=$5
+       WHERE id=$6`,
+      [data.account_code, data.account_name_th, data.account_name_en || null, data.account_type, data.account_category, id]
+    );
+    revalidatePath("/admin/coa");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteAccount(id: number) {
+  try {
+    const usage = await query(
+      `SELECT id FROM journal_entries WHERE debit_account_id = $1 OR credit_account_id = $1 LIMIT 1`,
+      [id]
+    );
+    if (usage.rows.length > 0) {
+      throw new Error("ไม่สามารถลบบัญชีนี้ได้เนื่องจากมีการใช้งานในสมุดรายวันแล้ว");
+    }
+
+    await query(`DELETE FROM chart_of_accounts WHERE id = $1`, [id]);
+    revalidatePath("/admin/coa");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function exportVouchersToSheets() {
@@ -1195,5 +1369,25 @@ export async function updateDocumentPattern(id: number, data: any) {
 }
 
 export async function getNextReferenceNo(type: string) {
-  return { success: true, data: `${type.toUpperCase()}-001` };
+  try {
+    const journalType = type.toLowerCase();
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    
+    const { rows } = await query(
+      `SELECT COUNT(*) as count FROM journal_entries 
+       WHERE journal_type = $1 AND fiscal_year = $2 AND fiscal_month = $3`,
+      [journalType, year, month]
+    );
+    
+    const prefix = type.toUpperCase().substring(0, 2);
+    const nextNum = (parseInt(rows[0].count) + 1).toString().padStart(3, '0');
+    const result = `${prefix}-${year}-${String(month).padStart(2, '0')}-${nextNum}`;
+    
+    return { success: true, data: result };
+  } catch (error: any) {
+    const fallback = `${type.toUpperCase().substring(0, 2)}-${new Date().getFullYear()}-001`;
+    return { success: true, data: fallback };
+  }
 }

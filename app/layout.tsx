@@ -6,6 +6,7 @@ import { query } from "@/lib/db";
 import { ToastProvider } from "@/components/ToastProvider";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import { Providers } from "@/components/Providers";
+import GlobalAiChat from "@/components/GlobalAiChat";
 
 const fontOutfit = Outfit({
   subsets: ["latin"],
@@ -62,6 +63,8 @@ export default async function RootLayout({
             </LayoutWrapper>
           </ToastProvider>
         </Providers>
+        <GlobalAiChat />
+        <GlobalAiChat />
       </body>
     </html>
   );

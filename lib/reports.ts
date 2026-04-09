@@ -5,6 +5,7 @@
 // =====================================================
 
 import { query } from './db';
+import { filterShadowInvoiceJournalRows } from './journaling';
 
 export interface PLSummary {
   period: {
@@ -91,7 +92,6 @@ export async function calculateProfitLoss(
        LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
        LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
        WHERE je.entry_date >= $1 AND je.entry_date <= $2
-         AND je.is_reversed = FALSE
        ORDER BY je.entry_date, je.created_at`,
       [startDate, endDate]
     );
@@ -128,7 +128,7 @@ export async function calculateProfitLoss(
     const revenueMap = new Map<string, number>();
     const expenseMap = new Map<string, number>();
     
-    for (const entry of journalEntries) {
+    for (const entry of filterShadowInvoiceJournalRows(journalEntries)) {
       const amount = parseFloat(entry.amount);
       const debitType = entry.debit_account_type;
       const creditType = entry.credit_account_type;

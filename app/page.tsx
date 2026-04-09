@@ -1,6 +1,7 @@
 
 import { query } from "@/lib/db";
 import { getCompanySettings } from "@/lib/settings";
+import { expandJournalRowsForPresentation } from "@/lib/journaling";
 import SyncMonthlyButton from "@/components/SyncMonthlyButton";
 import { 
   Building2, 
@@ -96,9 +97,29 @@ async function getDashboardData() {
       console.warn('Cash flow query failed:', error);
     }
 
-    const incomeRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status = 'paid' AND created_at >= $1`, [firstDayOfMonth]);
+    // Dashboard accounting rule:
+    // monthly profit should use accrual-basis invoice issue_date, not cash-basis paid-only invoices.
+    const incomeRes = await query(
+      `SELECT SUM(net_amount) as total
+       FROM invoices
+       WHERE status != 'cancelled'
+         AND issue_date >= $1::date`,
+      [firstDayOfMonth.split("T")[0]]
+    );
     const pendingRes = await query(`SELECT SUM(net_amount) as total FROM invoices WHERE status != 'paid'`);
-    const journalsRes = await query(`SELECT * FROM journal_entries ORDER BY entry_date DESC, id DESC LIMIT 5`);
+    const journalsRes = await query(`
+      SELECT
+        je.*,
+        inv.invoice_number,
+        debit_acc.account_name_th AS debit_account_name_th,
+        credit_acc.account_name_th AS credit_account_name_th
+      FROM journal_entries je
+      LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
+      LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
+      LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
+      ORDER BY je.entry_date DESC, je.id DESC
+      LIMIT 5
+    `);
     const pendingUsersRes = await query(`SELECT COUNT(*) FROM users WHERE status = 'Pending'`);
 
     // Fetch alerts for Phase 2
@@ -125,7 +146,8 @@ async function getDashboardData() {
           netFlow: netCashFlow
         }
       },
-      recentJournals: journalsRes.rows,
+      // Compatibility rule: recent journals must pass through the shared presenter to avoid mixed-schema regressions.
+      recentJournals: expandJournalRowsForPresentation(journalsRes.rows).slice(0, 5),
       alerts: alertsRes.success
         ? (alertsRes.data ?? { reminders: [], invoices: [] })
         : { reminders: [], invoices: [] }
@@ -356,7 +378,8 @@ export default async function Dashboard() {
            
            <div className="space-y-3">
               {recentJournals.length > 0 ? recentJournals.map((j: any) => (
-                <div key={j.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300 text-left">
+                // Mixed-schema guard: expanded modern rows can share a base id, so prefer row_key when present.
+                <div key={j.row_key || `${j.id}-${Number(j.debit) > 0 ? "debit" : "credit"}`} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300 text-left">
                    <div className="flex items-center gap-4 text-left">
                       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px]", Number(j.debit) > 0 ? "bg-emerald-50 text-emerald-600" : "bg-indigo-50 text-indigo-600")}>
                          {Number(j.debit) > 0 ? "DR" : "CR"}

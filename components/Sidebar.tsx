@@ -30,13 +30,15 @@ import {
   User,
   Zap,
   FileBadge,
-  PieChart
+  PieChart,
+  Database
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { icon: Home, label: "หน้าแรก Dashboard", href: "/" },
+  { icon: Users, label: "ผู้ติดต่อ / คู่ค้า", href: "/contacts" },
   { icon: FileText, label: "ใบเสนอราคา (QT)", href: "/quotations" },
   { icon: Receipt, label: "ใบแจ้งหนี้ (INV)", href: "/invoices" },
   { icon: Repeat, label: "รอบบิลอัตโนมัติ", href: "/recurring" },
@@ -52,6 +54,7 @@ const menuItems = [
   { icon: Truck, label: "สมุดรายวันซื้อ (Purchase)", href: "/journals?type=purchase" },
   { icon: Banknote, label: "สมุดรายวันจ่ายเงิน (Payment)", href: "/journals?type=payment" },
   { icon: Library, label: "สมุดรายวันทั่วไป (General)", href: "/journals" },
+  { icon: PieChart, label: "ผังบัญชี (COA)", href: "/admin/coa" },
   
   { separator: "Reports & Tax" },
   { icon: BarChart3, label: "รายงานภาษี", href: "/tax-reports" },
@@ -63,6 +66,7 @@ const adminItems = [
   { icon: UserCog, label: "จัดการสมาชิก", href: "/admin/members" },
   { icon: ShieldCheck, label: "จัดการกลุ่ม", href: "/admin/groups" },
   { icon: ShieldCheck, label: "จัดการสิทธิ์", href: "/admin/permissions" },
+  { icon: Database, label: "Database Backup", href: "/admin/backup" },
 ];
 
 type SidebarProps = {

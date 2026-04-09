@@ -130,7 +130,14 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
                       </td>
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <InvoiceRowActions id={inv.id} invoiceNumber={inv.invoice_number} />
+                            <InvoiceRowActions 
+                              id={inv.id} 
+                              invoiceNumber={inv.invoice_number} 
+                              netAmount={inv.net_amount}
+                              vatAmount={inv.vat_amount}
+                              contactId={inv.contact_id}
+                              status={inv.status}
+                            />
                          </div>
                       </td>
                     </tr>

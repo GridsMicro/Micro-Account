@@ -11,7 +11,9 @@ import {
   getCompanySettings,
   getContacts,
   getNextInvoiceNumber,
+  getQuotation,
 } from "@/app/actions";
+import { useSearchParams } from "next/navigation";
 
 const PROFIT_OPTIONS = [10, 15, 20, 25, 30, 50, 100, 200];
 const DISCOUNT_OPTIONS = [0, 3, 5, 10, 15];
@@ -46,6 +48,9 @@ function createEmptyItem(): InvoiceItem {
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const quotationId = searchParams.get("quotationId");
+  
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -86,6 +91,30 @@ export default function NewInvoicePage() {
 
       if (nextRefRes.success) {
         setInvoiceData((prev) => ({ ...prev, reference: nextRefRes.data || prev.reference }));
+      }
+
+      // Check for Quotation Linkage
+      if (quotationId) {
+        const qRes = await getQuotation(quotationId);
+        if (qRes.success && qRes.data) {
+          const qData = qRes.data;
+          setInvoiceData((prev) => ({
+            ...prev,
+            contactId: String(qData.contact_id),
+            items: qData.items.map((it: any) => ({
+              id: Date.now() + Math.random(),
+              productId: "",
+              isCustom: true,
+              desc: it.description,
+              detail: "",
+              qty: Number(it.quantity),
+              price: Number(it.unit_price),
+              discount: 0,
+              markupCost: "",
+              markupProfit: 20,
+            })),
+          }));
+        }
       }
 
       if (!companyRes.success) {
@@ -250,6 +279,7 @@ export default function NewInvoicePage() {
         due_date: invoiceData.dueDate,
         date: invoiceData.date,
         items: invoiceData.items,
+        quotation_id: quotationId, // ส่ง ID เชื่อมโยงไปด้วย
       });
 
       if (!res.success) throw new Error(res.error);

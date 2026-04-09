@@ -68,7 +68,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
           <div className="invoice-header relative overflow-hidden border-b border-slate-50 pt-16 pb-4 px-12 md:pt-16 md:pb-4 md:px-16">
             <div className="absolute right-0 top-0 h-64 w-64 translate-x-32 -translate-y-32 rounded-full bg-violet-600/5 print:hidden" />
 
-            <div className="relative z-10 flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
+            <div className="relative z-10 flex flex-col justify-between gap-12 md:flex-row">
               <div className="flex-1 space-y-6">
                 <div className="flex items-center gap-4">
                   <div className="rounded-2xl bg-violet-600 p-4 shadow-xl shadow-violet-200">
@@ -95,7 +95,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
                 </div>
               </div>
 
-              <div className="space-y-4 text-right md:self-start">
+              <div className="space-y-4 text-right">
                 <div className="inline-block rounded-full bg-slate-900 px-5 py-2 text-[9px] font-black uppercase tracking-widest text-white">
                   {headerLabel}
                 </div>

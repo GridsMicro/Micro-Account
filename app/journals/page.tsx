@@ -1,5 +1,6 @@
 
 import { query } from "@/lib/db";
+import { expandJournalRowsForPresentation, getEffectiveJournalReference } from "@/lib/journaling";
 import { BookOpen, Plus, Calendar, ShoppingCart, Wallet, Truck, Banknote, Library, AlertCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 function normalizeJournalType(entry: any) {
   const currentType = String(entry.journal_type || "general").toLowerCase();
-  const ref = String(entry.reference_no || "").toUpperCase();
+  const ref = String(getEffectiveJournalReference(entry) || "").toUpperCase();
   const description = String(entry.description || "").toLowerCase();
 
   if (currentType !== "general") {
@@ -26,6 +27,69 @@ function normalizeJournalType(entry: any) {
   }
 
   return currentType;
+}
+
+// Deprecated local helper:
+// invoice compaction moved to lib/journaling.ts as the shared single-source presenter.
+// Keep this block untouched during the encoding cleanup window; it is no longer called.
+function compactInvoiceVoucherItems(items: any[]) {
+  if (items.length === 0) return items;
+  if (!items.every((item) => String(item.reference_no || "").toUpperCase().startsWith("INV"))) {
+    return items;
+  }
+
+  const receivableRows = items.filter((item) => String(item.account_name || "").includes("ลูกหนี้"));
+  const revenueRows = items.filter((item) => String(item.account_name || "").includes("รายได้"));
+  const vatRows = items.filter((item) => String(item.account_name || "").includes("ภาษี"));
+
+  const totalRevenue = revenueRows.reduce((max, item) => Math.max(max, Number(item.credit || 0)), 0);
+  const totalVat = vatRows.reduce((max, item) => Math.max(max, Number(item.credit || 0)), 0);
+  const totalReceivable = Math.max(
+    receivableRows.reduce((max, item) => Math.max(max, Number(item.debit || 0)), 0),
+    totalRevenue + totalVat
+  );
+  const sample = items[0];
+  const reference = sample.reference_no;
+
+  const compactRows: any[] = [];
+
+  if (totalReceivable > 0) {
+    compactRows.push({
+      ...sample,
+      row_key: `${reference}-ar-compact`,
+      readonly: true,
+      account_name: "ลูกหนี้การค้าทั่วไป",
+      description: `ลูกหนี้ #${reference}`,
+      debit: totalReceivable,
+      credit: 0,
+    });
+  }
+
+  if (totalRevenue > 0) {
+    compactRows.push({
+      ...sample,
+      row_key: `${reference}-revenue-compact`,
+      readonly: true,
+      account_name: "รายได้จากการขายสินค้าทั่วไป",
+      description: `รายได้จากใบแจ้งหนี้ #${reference}`,
+      debit: 0,
+      credit: totalRevenue,
+    });
+  }
+
+  if (totalVat > 0) {
+    compactRows.push({
+      ...sample,
+      row_key: `${reference}-vat-compact`,
+      readonly: true,
+      account_name: "ภาษีมูลค่าเพิ่มที่ต้องจ่าย",
+      description: `ภาษีขาย #${reference}`,
+      debit: 0,
+      credit: totalVat,
+    });
+  }
+
+  return compactRows.length > 0 ? compactRows : items;
 }
 
 export default async function JournalsPage({ searchParams }: { searchParams: { type?: string, search?: string } }) {
@@ -47,11 +111,13 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
     let q = `
       SELECT
         je.*,
+        inv.invoice_number,
         debit_acc.account_code AS debit_account_code,
         credit_acc.account_code AS credit_account_code,
         debit_acc.account_name_th AS debit_account_name_th,
         credit_acc.account_name_th AS credit_account_name_th
       FROM journal_entries je
+      LEFT JOIN invoices inv ON je.reference_type = 'invoice' AND je.reference_id = inv.id
       LEFT JOIN chart_of_accounts debit_acc ON je.debit_account_id = debit_acc.id
       LEFT JOIN chart_of_accounts credit_acc ON je.credit_account_id = credit_acc.id
       WHERE 1=1
@@ -61,7 +127,7 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
     if (search) {
       params.push(`%${search}%`);
       q += ` AND (
-        reference_no ILIKE $${params.length}
+        COALESCE(reference_no, inv.invoice_number, document_number, '') ILIKE $${params.length}
         OR description ILIKE $${params.length}
         OR account_name ILIKE $${params.length}
         OR COALESCE(debit_acc.account_name_th, '') ILIKE $${params.length}
@@ -69,16 +135,12 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
       )`;
     }
 
-    q += ' ORDER BY entry_date DESC, reference_no ASC, id ASC';
+    q += ' ORDER BY entry_date DESC, COALESCE(reference_no, inv.invoice_number, document_number, \'\') ASC, id ASC';
     const res = await query(q, params);
-    const normalizedEntries = res.rows.map((entry) => ({
+    // Shared presentation rule:
+    // never render raw journal rows directly during the mixed-schema transition.
+    const normalizedEntries = expandJournalRowsForPresentation(res.rows).map((entry) => ({
       ...entry,
-      account_name:
-        entry.account_name ||
-        (Number(entry.debit || 0) > 0
-          ? entry.debit_account_name_th
-          : entry.credit_account_name_th) ||
-        "-",
       journal_type: normalizeJournalType(entry),
     }));
 
@@ -120,7 +182,14 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
 
   const voucherList = Object.values(vouchers).sort((a: any, b: any) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  ).map((voucher: any) => ({
+    ...voucher,
+    // Shared presenter rule:
+    // invoice vouchers are already compacted in lib/journaling.ts and must not be recomputed locally.
+    items: voucher.items,
+    totalDebit: voucher.items.reduce((sum: number, item: any) => sum + Number(item.debit || 0), 0),
+    totalCredit: voucher.items.reduce((sum: number, item: any) => sum + Number(item.credit || 0), 0),
+  }));
 
   const activeBook = journalBooks.find(b => b.type === type) || journalBooks[4];
 
@@ -297,7 +366,7 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
                         <table className="w-full text-sm">
                           <tbody className="divide-y divide-slate-50">
                             {voucher.items.map((item: any) => (
-                              <JournalEntryRow key={item.id} entry={item} />
+                              <JournalEntryRow key={item.row_key || item.id} entry={item} />
                             ))}
                           </tbody>
                         </table>

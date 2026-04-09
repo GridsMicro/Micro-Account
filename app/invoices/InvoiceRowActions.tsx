@@ -1,12 +1,25 @@
 "use client";
 import React from "react";
 import { useSession } from "next-auth/react";
-import { FileText, Edit, Trash2 } from "lucide-react";
+import { FileText, Edit, Trash2, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteInvoice } from "@/app/actions";
 
-export default function InvoiceRowActions({ id, invoiceNumber }: { id: number | string; invoiceNumber?: string }) {
+export default function InvoiceRowActions({  id, 
+  invoiceNumber, 
+  netAmount, 
+  vatAmount, 
+  contactId,
+  status 
+}: { 
+  id: number | string; 
+  invoiceNumber?: string;
+  netAmount?: number;
+  vatAmount?: number;
+  contactId?: number;
+  status?: string;
+}) {
   const router = useRouter();
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
@@ -33,8 +46,20 @@ export default function InvoiceRowActions({ id, invoiceNumber }: { id: number | 
     }
   }
 
+  const isPaid = status === 'paid';
+
   return (
     <div className="flex items-center gap-2">
+      {!isPaid && (
+        <Link
+          href={`/payments/new?invoiceId=${id}&amount=${netAmount}&vat=${vatAmount}&contact=${contactId}&ref=${invoiceNumber}`}
+          className="p-2.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all shadow-md flex items-center gap-2 group/pay"
+          title="Receive Payment"
+        >
+          <DollarSign size={14} className="group-hover/pay:rotate-12 transition-transform" />
+          <span className="text-[10px] font-black uppercase tracking-wider">Pay</span>
+        </Link>
+      )}
       <Link
         href={`/invoices/preview/${id}`}
         className="p-2.5 bg-violet-600 text-white hover:bg-violet-700 rounded-lg transition-all shadow-md flex items-center gap-2 group/preview"

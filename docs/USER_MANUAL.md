@@ -34,3 +34,15 @@
 
 ---
 *จัดทำโดย: Antigravity AI*
+## Invoice Journal Standard Update
+
+- Invoice journals now follow one display standard across old and new data.
+- The receivable account shown in the UI should resolve to `ลูกหนี้การค้าทั่วไป`.
+- The VAT line shown in the UI should resolve to `ภาษีขายจากใบแจ้งหนี้ #...`.
+- If a historical invoice was posted under an older structure, the system will normalize the display instead of rewriting the original evidence immediately.
+
+## Dashboard Profit Meaning
+
+- `กำไรสุทธิประจำเดือน` on the dashboard is accrual-based.
+- This means the system looks at invoices issued in the month, not only invoices already paid.
+- Cash movement should be interpreted separately from accounting profit.

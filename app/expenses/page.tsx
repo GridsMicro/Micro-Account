@@ -19,6 +19,7 @@ import {
   Trash2,
   User,
   Wallet,
+  Banknote,
 } from "lucide-react";
 import GoogleDrivePicker from "@/components/GoogleDrivePicker";
 import {
@@ -601,7 +602,14 @@ export default function ExpensesPage() {
                             ฿{Number(expense.amount).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                          <Link
+                            href={`/vouchers/new?expenseId=${expense.id}&amount=${expense.amount}&payee=${encodeURIComponent(expense.vendor_name || '')}&contactId=${expense.contact_id || ''}`}
+                            className="rounded-lg p-2 text-slate-300 opacity-0 transition-all hover:bg-emerald-50 hover:text-emerald-600 group-hover:opacity-100"
+                            title="จ่ายเงิน (Pay Bill)"
+                          >
+                            <Banknote size={14} />
+                          </Link>
                           <button
                             onClick={() => handleDelete(expense.id, expense.title)}
                             className="rounded-lg p-2 text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"

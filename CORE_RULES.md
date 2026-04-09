@@ -391,6 +391,200 @@ ON CONFLICT (company_name) DO UPDATE SET
 - **Database Issues:** Contact database administrator
 - **Role Problems:** Contact system architect
 - **Security Concerns:** Contact security team immediately
+### Permission Actions
+- **create** - Can add new records
+- **read** - Can view records
+- **update** - Can edit records
+- **delete** - Can remove records
+- **export** - Can export Excel/PDF
+- **manage** - Can manage sub-features
+
+### Modules (18 total)
+Dashboard, Quotations, Invoices, Recurring, Receipts, Inventory, Expenses, Journals, Vouchers, Contacts, Payments, Tax Reports, Reports, Calendar, Settings, Member Management, Permissions, Groups
+
+### Database Tables
+```sql
+-- Groups table
+CREATE TABLE groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    color VARCHAR(7) DEFAULT '#6366f1',
+    is_system BOOLEAN DEFAULT false,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Group permissions table
+CREATE TABLE group_permissions (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    module VARCHAR(50) NOT NULL,
+    can_create BOOLEAN DEFAULT false,
+    can_read BOOLEAN DEFAULT false,
+    can_update BOOLEAN DEFAULT false,
+    can_delete BOOLEAN DEFAULT false,
+    can_export BOOLEAN DEFAULT false,
+    can_manage BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(group_id, module)
+);
+
+-- User groups assignment table
+CREATE TABLE user_groups (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, group_id)
+);
+
+-- Activity log table
+CREATE TABLE activity_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(50) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INTEGER,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### API Endpoints
+- `GET /api/groups` - List all groups
+- `POST /api/groups` - Create new group
+- `GET /api/groups/[id]` - Get group details
+- `PUT /api/groups/[id]` - Update group
+- `DELETE /api/groups/[id]` - Delete group
+- `GET /api/groups/[id]/permissions` - Get group permissions
+- `PUT /api/groups/[id]/permissions` - Update group permissions
+- `GET /api/users/[id]/groups` - Get user's groups
+- `POST /api/users/[id]/groups` - Assign user to groups
+- `GET /api/users` - List all users with groups
+- `GET /api/user/permissions` - Get current user's permissions
+
+### UI Components
+- `/admin/groups` - Groups management page (create, edit, delete, set permissions)
+- `/admin/members` - Member management with group assignment modal
+- `PermissionGate.tsx` - Permission gate component for client-side checks
+- Sidebar updated with Groups management link
+
+### Access Control
+- **Super Admin**: Full control including system groups (ID: 1)
+- **Admin**: Can create/manage custom groups (ID: 2)
+- **Users**: Inherit permissions from assigned groups
+- **System Groups**: Protected from deletion (only Super Admin can modify)
+
+### Migration
+**File:** `scripts/migrate_rbac_groups.sql`
+- Creates all 4 tables
+- Inserts 6 system groups with permissions
+- Migrates existing users to groups based on role
+- Sets up activity logging
+
+### Implementation Date
+**Completed:** April 4, 2026
+**Status:** PRODUCTION READY
+
+---
+
+## 🏢 COMPANY SETTINGS (REQUIRED)
+- **company_name:** VARCHAR(255) - Display name on dashboard
+- **tax_id:** VARCHAR(50) - Company tax identification
+- **address:** TEXT - Company address
+- **logo_url:** TEXT - Company logo URL
+- **phone:** VARCHAR(50) - Company phone
+- **email:** VARCHAR(255) - Company email
+- **website:** VARCHAR(255) - Company website
+
+---
+
+## 🔧 MAINTENANCE RULES
+
+### Schema Changes
+1. **Create Migration Script:** `scripts/migrations/` with version numbers
+2. **Use ALTER TABLE:** For schema modifications, never recreate
+3. **Backup Data:** Always backup before major changes
+4. **Test Migrations:** Verify in staging before production
+
+### Code Deployment
+1. **Database First:** Ensure database is ready before code changes
+2. **Test Queries:** Verify all queries work with new schema
+3. **No Data Loss:** Never implement changes that wipe user data
+4. **Rollback Plan:** Always have rollback strategy
+
+---
+
+## 🚨 EMERGENCY PROCEDURES
+
+### If Data is Accidentally Wiped
+1. **STOP IMMEDIATELY:** Do not continue with deployment
+2. **RESTORE FROM BACKUP:** Use latest database backup
+3. **INVESTIGATE:** Root cause analysis required
+4. **PREVENT RECURRENCE:** Update procedures to prevent future occurrences
+
+### Data Recovery Script
+```sql
+-- Emergency data restoration (run ONLY if data wiped)
+INSERT INTO company_settings (company_name, tax_id, address) 
+VALUES ('Micro-Account Professional', '123456789012', '123 Accounting Street, Bangkok, Thailand')
+ON CONFLICT (company_name) DO UPDATE SET 
+  tax_id = EXCLUDED.tax_id,
+  address = EXCLUDED.address;
+```
+
+---
+
+## 📋 FINAL MEMBER AUDIT CHECKLIST
+
+### Before Sign-Off Verification
+- [ ] Verify all 3 users have correct roles: `superadmin`/`admin`
+- [ ] Confirm `grids@microtronic.biz` shows role `superadmin`
+- [ ] Confirm `neon13@microtronic.biz` shows role `admin`
+- [ ] Confirm no `SUPER_ADMIN` roles exist in database
+- [ ] Verify dashboard shows real data (not ฿0 if expenses exist)
+- [ ] Test all admin functionality with both roles
+- [ ] Confirm company settings display correctly on dashboard
+
+### System Health Indicators
+- ✅ **All Users Access:** Admin panel accessible to authorized users
+- ✅ **Data Integrity:** No accidental data loss
+- ✅ **Role Consistency:** Code and database roles match
+- ✅ **UI Functionality:** All features working as expected
+- ✅ **Production Ready:** System safe for commercial use
+
+---
+
+## 🎯 DEVELOPMENT GUIDELINES
+
+### Code Standards
+- **TypeScript Required:** All new code must have proper types
+- **Error Handling:** All database operations must have try-catch
+- **Logging:** Use structured logging, not console.log for debugging
+- **Testing:** All features must work with sample data
+- **Documentation:** Update this file for any architectural changes
+
+### AI Development Rules
+- **READ CORE_RULES.md:** Always review before making changes
+- **NEVER MODIFY ROLES:** Without updating this blueprint
+- **NEVER WIPE DATA:** Use migrations instead of destructive operations
+- **PRESERVE USER DATA:** Commercial systems must protect client data
+
+---
+
+## 📞 CONTACT & ESCALATION
+
+### System Architecture Questions
+- **Database Issues:** Contact database administrator
+- **Role Problems:** Contact system architect
+- **Security Concerns:** Contact security team immediately
 - **Data Recovery:** Contact database administrator with backup requirements
 
 ### Emergency Contacts
@@ -401,6 +595,26 @@ ON CONFLICT (company_name) DO UPDATE SET
 ---
 
 ## 📜 RECENT CHANGES & HISTORY
+
+### 2026-04-09 - Dragon AI Brain Upgrade & Business Model Finalization
+**Features Added:**
+- ✅ **Dragon AI Side Assistant** - Redesigned the AI chat to a side-panel layout with minimize/maximize functionality.
+- ✅ **Knowledge Cloning** - Synchronized the in-app AI with business-specific context (Intermediary model, key partners).
+- ✅ **Side-by-Side Workflow** - Optimized UI for accounting work (scanning documents while consulting AI).
+
+**Business Rules Established:**
+- **Model:** Intermediary (Agent) business model.
+- **WHT Policy:** Fixed at **3%** for software license services (Renews/Provisioning).
+- **Accounts:** Standardized 5110 (Cost) and 4110 (Revenue) for renewal operations.
+- **Key Partners:** Noventiq (Supplier - Teechada P.) and MICROTRONIC (B2B Customer).
+
+**Files Modified:**
+- `components/GlobalAiChat.tsx` - Full UI/UX Overhaul.
+- `app/api/ai/accounting/route.ts` - Brain Upgrade (Context Injection).
+- `docs/BUSINESS_CONTEXT.md` - New persistent knowledge base.
+- `components/Sidebar.tsx` - Restored Contacts menu.
+
+---
 
 ### 2026-04-04 - Google Drive OAuth2 Integration
 **Features Added:**
@@ -422,8 +636,22 @@ ON CONFLICT (company_name) DO UPDATE SET
 
 ---
 
-**🔐 THIS IS A LIVING DOCUMENT - UPDATE IT FOR ANY CHANGES!**
+### 2026-04-08 - Invoice Journal Stability Rules
+**Rules Added:**
+- `chart_of_accounts` is the accounting master. `accounts` is legacy compatibility only.
+- For invoice journals, `reference_no` and `document_number` must both equal the real invoice number such as `INV26-003`.
+- Standard invoice posting is one pattern only:
+  - Debit `1121 ลูกหนี้การค้าทั่วไป`
+  - Credit `4110 รายได้จากการขายสินค้าทั่วไป` for net amount
+  - Credit `2121 ภาษีมูลค่าเพิ่มที่ต้องจ่าย` for VAT amount
+- Do not re-enable duplicate revenue shadow rows like `รายได้จากใบแจ้งหนี้ #...` when they mirror the same A/R and revenue amount.
+- UI, dashboard, journals, and exports must read mixed legacy/modern journal rows through the shared compatibility layer in `lib/journaling.ts`.
+- Dashboard monthly profit must use accrual basis by `issue_date`, not a paid-only cash basis.
+- Historical evidence must be preserved. Prefer presentation normalization first and targeted cleanup only when a specific broken posting is confirmed.
 
-**Last Updated:** 2026-04-04
-**System Version:** 1.2.0
-**Status:** PRODUCTION-READY WITH RBAC & GOOGLE DRIVE OAUTH2**
+**Files to Respect:**
+- `lib/journaling.ts`
+- `app/journals/page.tsx`
+- `app/actions.ts`
+- `app/page.tsx`
+- `lib/reports.ts`
