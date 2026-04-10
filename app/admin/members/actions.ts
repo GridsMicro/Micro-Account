@@ -4,10 +4,10 @@ import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth, checkUserLimit, getUserCompanyId } from "@/lib/auth";
+import { canAccessAdmin, normalizeRole } from "@/lib/core-standards";
 
 function hasMemberAdminAccess(role?: string | null) {
-  const normalized = String(role || "").trim().toLowerCase();
-  return ["admin", "super admin", "super_admin", "manager"].includes(normalized);
+  return canAccessAdmin(role);
 }
 
 export async function createUserAction(data: {
@@ -20,7 +20,7 @@ export async function createUserAction(data: {
   try {
     const session = await auth();
     if (!session?.user || !hasMemberAdminAccess((session.user as any).role)) {
-      return { success: false, error: "Unauthorized: Admin access required" };
+      return { success: false, error: "Unauthorized: admin access required" };
     }
 
     if (!data.name || !data.email || !data.password) {
@@ -51,7 +51,7 @@ export async function createUserAction(data: {
         INSERT INTO users (name, email, password, role, status, company_id)
         VALUES ($1, $2, $3, $4, $5, $6)
       `,
-      [data.name, data.email, hashedPassword, data.role, data.status, companyId]
+      [data.name, data.email, hashedPassword, normalizeRole(data.role), data.status, companyId]
     );
 
     revalidatePath("/admin/members");
@@ -64,10 +64,15 @@ export async function createUserAction(data: {
 
 export async function updateUserAction(id: string, data: { name: string, email: string, role: string, status: string }) {
   try {
+    const session = await auth();
+    if (!session?.user || !hasMemberAdminAccess((session.user as any).role)) {
+      return { success: false, error: "Unauthorized: admin access required" };
+    }
+
     // 1. Update the user in the database
     await query(
       `UPDATE users SET name = $1, email = $2, role = $3, status = $4 WHERE id = $5`,
-      [data.name, data.email, data.role, data.status, id]
+      [data.name, data.email, normalizeRole(data.role), data.status, id]
     );
 
     // 2. Revalidate paths to show fresh data

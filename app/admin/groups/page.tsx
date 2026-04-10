@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ToastProvider";
+import { getPermissionModules } from "@/lib/module-registry";
 
 // Modal Portal Component - renders outside normal DOM hierarchy
 function ModalPortal({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) {
@@ -49,27 +50,7 @@ function ModalPortal({ children, isOpen }: { children: React.ReactNode; isOpen: 
     document.body
   );
 }
-// Module definitions with Thai labels
-const MODULES = [
-  { id: "dashboard", name: "แดชบอร์ด", icon: "📊" },
-  { id: "quotations", name: "ใบเสนอราคา", icon: "📄" },
-  { id: "invoices", name: "ใบแจ้งหนี้", icon: "🧾" },
-  { id: "recurring", name: "ใบแจ้งหนี้ประจำ", icon: "🔄" },
-  { id: "receipts", name: "ใบเสร็จ", icon: "🧾" },
-  { id: "inventory", name: "คลังสินค้า", icon: "📦" },
-  { id: "expenses", name: "ค่าใช้จ่าย", icon: "💸" },
-  { id: "journals", name: "สมุดรายวัน", icon: "📒" },
-  { id: "vouchers", name: "ใบสำคัญ", icon: "📋" },
-  { id: "contacts", name: "รายชื่อ", icon: "👥" },
-  { id: "payments", name: "การชำระเงิน", icon: "💳" },
-  { id: "tax_reports", name: "รายงานภาษี", icon: "📈" },
-  { id: "reports", name: "รายงาน", icon: "📊" },
-  { id: "calendar", name: "ปฏิทิน", icon: "📅" },
-  { id: "settings", name: "ตั้งค่า", icon: "⚙️" },
-  { id: "member_management", name: "จัดการสมาชิก", icon: "👤" },
-  { id: "permissions", name: "สิทธิ์การใช้งาน", icon: "🔐" },
-  { id: "groups", name: "กลุ่มผู้ใช้", icon: "🏢" },
-];
+const MODULES = getPermissionModules();
 
 // Permission actions with Thai labels
 const PERMISSIONS = [
@@ -112,7 +93,6 @@ export default function GroupsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
   
   // Form states
   const [formData, setFormData] = useState({
@@ -183,16 +163,6 @@ export default function GroupsPage() {
       console.error("Error fetching permissions:", error);
       showToast("ไม่สามารถโหลดข้อมูลสิทธิ์ได้", "error");
     }
-  };
-
-  const toggleGroupExpand = (groupId: number) => {
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(groupId)) {
-      newExpanded.delete(groupId);
-    } else {
-      newExpanded.add(groupId);
-    }
-    setExpandedGroups(newExpanded);
   };
 
   const handleCreateGroup = async (e: React.FormEvent) => {
@@ -716,7 +686,7 @@ export default function GroupsPage() {
                       <tr key={module.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-xl">{module.icon}</span>
+                            <span className="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-500 uppercase font-black">{module.icon}</span>
                             <span className="font-bold text-slate-700">{module.name}</span>
                           </div>
                         </td>

@@ -5,6 +5,7 @@ import { FileText, Edit, Trash2, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteInvoice } from "@/app/actions";
+import { canAccessAdmin } from "@/lib/core-standards";
 
 export default function InvoiceRowActions({  id, 
   invoiceNumber, 
@@ -23,7 +24,7 @@ export default function InvoiceRowActions({  id,
   const router = useRouter();
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
-  const isAuthorized = role === 'admin' || role === 'SUPER_ADMIN';
+  const isAuthorized = canAccessAdmin(role);
 
   const [isDeleting, setIsDeleting] = React.useState(false);
 

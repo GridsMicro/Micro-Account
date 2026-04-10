@@ -12,9 +12,9 @@ async function getUser(id: string) {
     return user;
   } catch (e) {
     // Return dummy data if DB not setup
-    if (id === '1') return { id: 1, name: "Administrator", email: "admin@microtronic.biz", role: "Super Admin", status: "Active" };
-    if (id === '2') return { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "Manager", status: "Active" };
-    if (id === '3') return { id: 3, name: "New Member", email: "pending@example.com", role: "Pending", status: "Inactive" };
+    if (id === '1') return { id: 1, name: "Administrator", email: "admin@microtronic.biz", role: "superadmin", status: "Active" };
+    if (id === '2') return { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "admin", status: "Active" };
+    if (id === '3') return { id: 3, name: "New Member", email: "pending@example.com", role: "user", status: "Pending" };
     return null;
   }
 }

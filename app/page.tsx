@@ -201,7 +201,7 @@ export default async function Dashboard() {
                    <p className="text-xs text-amber-700 font-bold mt-1">มีผู้สมัครใช้งานใหม่ {stats.pendingApprovals} ราย กำลังรอการอนุมัติสิทธิ์</p>
                 </div>
              </div>
-             <Link href="/admin/users" className="h-10 px-5 bg-amber-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all flex items-center gap-2">
+             <Link href="/admin/members" className="h-10 px-5 bg-amber-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all flex items-center gap-2">
                 จัดการผู้ใช้ <ArrowRight size={14} />
              </Link>
           </div>

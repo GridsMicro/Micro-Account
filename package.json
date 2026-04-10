@@ -6,8 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node --test tests/**/*.test.mjs",
     "lint": "eslint",
-    "tax:update": "ts-node jobs/scheduleTaxUpdate.ts"
+    "tax:update": "ts-node jobs/scheduleTaxUpdate.ts",
+    "check:knowledge": "node scripts/verify-knowledge-sync.mjs",
+    "check:consistency": "node scripts/weekly-consistency-audit.mjs"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",

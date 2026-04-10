@@ -79,9 +79,9 @@ export default function MembersPage() {
       console.error("Error fetching users:", error);
       setError(error instanceof Error ? error.message : "Failed to fetch users");
       setUsers([
-        { id: 1, name: "Administrator", email: "admin@microtronic.biz", role: "Super Admin", status: "Active" },
-        { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "Manager", status: "Active" },
-        { id: 3, name: "New Member", email: "pending@example.com", role: "Pending", status: "Inactive" },
+        { id: 1, name: "Administrator", email: "admin@microtronic.biz", role: "superadmin", status: "Active" },
+        { id: 2, name: "Urasaya Pruksanusak", email: "urasayap@gmail.com", role: "admin", status: "Active" },
+        { id: 3, name: "New Member", email: "pending@example.com", role: "user", status: "Pending" },
       ]);
     } finally {
       setLoading(false);

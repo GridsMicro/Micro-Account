@@ -38,10 +38,10 @@ export async function registerUser(formData: FormData) {
       return { error: "License Limit Reached: Please upgrade to add more users (300 THB/user/month)." };
     }
 
-    // Insert user with default role 'Tester' and status 'Pending'
+    // Insert user with core role standard and pending review status
     await query(
       "INSERT INTO users (name, email, password, role, status, company_id) VALUES ($1, $2, $3, $4, $5, $6)",
-      [name, email, hashedPassword, "Tester", "Pending", companyId]
+      [name, email, hashedPassword, "user", "Pending", companyId]
     );
 
     // Redirect to login on success

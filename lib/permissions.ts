@@ -12,7 +12,9 @@ export const MODULES = [
   'recurring',
   'receipts',
   'inventory',
+  'services',
   'expenses',
+  'payroll',
   'journals',
   'vouchers',
   'contacts',
@@ -187,17 +189,17 @@ export async function isInGroup(userId: string | number, groupId: number): Promi
 }
 
 /**
- * Check if user is Super Admin
+ * Check if user is superadmin
  */
 export async function isSuperAdmin(userId: string | number): Promise<boolean> {
-  return isInGroup(userId, 1); // Super Administrators group ID
+  return isInGroup(userId, 1); // canonical superadmin group ID
 }
 
 /**
- * Check if user is Admin (includes Super Admin)
+ * Check if user is admin (includes superadmin)
  */
 export async function isAdmin(userId: string | number): Promise<boolean> {
-  return isInGroup(userId, 1) || isInGroup(userId, 2); // Super Admin or Admin group
+  return isInGroup(userId, 1) || isInGroup(userId, 2); // superadmin or admin group
 }
 
 /**

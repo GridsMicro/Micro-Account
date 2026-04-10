@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { User, Mail, Phone, Building2, Lock, Save, Camera, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { normalizeRole } from "@/lib/core-standards";
 
 interface Member {
   id?: number;
@@ -13,6 +14,7 @@ interface Member {
 }
 
 export default function ProfileClient({ member }: { member: Member | null }) {
+  const normalizedRole = normalizeRole(member?.role);
   const [name, setName] = useState(member?.name || "Administrator");
   const [email, setEmail] = useState(member?.email || "admin@microtronic.biz");
   const [phone, setPhone] = useState(member?.phone || "");
@@ -72,10 +74,14 @@ export default function ProfileClient({ member }: { member: Member | null }) {
                 <p className="font-black text-slate-900 text-2xl tracking-tighter">{name}</p>
                 <div className="flex items-center gap-3 mt-2">
                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-md uppercase tracking-widest ${
-                     member?.role === 'admin' ? 'bg-violet-100 text-violet-700 border border-violet-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                     normalizedRole !== 'user' ? 'bg-violet-100 text-violet-700 border border-violet-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
                    }`}>
                      <Building2 size={11} />
-                     {member?.role === 'admin' ? 'ผู้ดูแลระบบ (ADMIN)' : member?.role || 'Personal Account'}
+                     {normalizedRole === 'superadmin'
+                      ? 'เจ้าของระบบ (SUPERADMIN)'
+                      : normalizedRole === 'admin'
+                      ? 'ผู้ดูแลระบบ (ADMIN)'
+                      : 'ผู้ใช้งาน (USER)'}
                    </span>
                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Status ACTIVE</span>

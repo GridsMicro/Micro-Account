@@ -86,7 +86,7 @@ export default async function TaxReportsPage() {
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-black text-gray-800">PP.30 Draft Engine</h2>
-              <p className="text-sm text-gray-500">Aggregates output VAT from sales and input VAT from purchase tax invoices in Expense Manager.</p>
+              <p className="text-sm text-gray-500">Aggregates output VAT from sales and input VAT from purchase tax invoices in the expenses module.</p>
             </div>
             <div className={cn("rounded-xl px-4 py-3 text-sm font-black", (pp30Draft?.netVatPayable || 0) >= 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600")}>
               Net VAT {pp30Draft ? `฿${Math.abs(pp30Draft.netVatPayable).toLocaleString("th-TH", { minimumFractionDigits: 2 })}` : "N/A"}

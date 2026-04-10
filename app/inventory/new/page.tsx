@@ -77,19 +77,35 @@ export default function NewProductPage() {
     return price > 0 ? (price - cost) / price : 0;
   };
 
+  const round2 = (value: number) => Math.round(value * 100) / 100;
+  const round4 = (value: number) => Math.round(value * 10000) / 10000;
+
   // Auto-calculate price when supplier cost or markup changes
   useEffect(() => {
     const newPrice = calculatePriceFromCost(supplierCost, markupRate);
-    setPrice(Math.round(newPrice * 100) / 100); // Round to 2 decimal places
+    setPrice((prev) => {
+      const rounded = round2(newPrice);
+      return prev === rounded ? prev : rounded;
+    });
   }, [supplierCost, markupRate]);
 
-  // Auto-calculate markup when supplier cost or price changes
-  useEffect(() => {
-    if (supplierCost > 0 && price > 0) {
-      const newMarkup = calculateMarkupFromPrice(supplierCost, price);
-      setMarkupRate(Math.round(newMarkup * 10000) / 10000); // Round to 4 decimal places
+  const handlePriceChange = (value: number) => {
+    const normalizedPrice = round2(Number.isFinite(value) ? value : 0);
+    setPrice(normalizedPrice);
+    if (supplierCost > 0 && normalizedPrice > 0) {
+      setMarkupRate(round4(calculateMarkupFromPrice(supplierCost, normalizedPrice)));
     }
-  }, [supplierCost, price]);
+  };
+
+  const handleSupplierCostChange = (value: number) => {
+    const normalizedCost = round2(Number.isFinite(value) ? value : 0);
+    setSupplierCost(normalizedCost);
+  };
+
+  const handleMarkupRateChange = (value: number) => {
+    const normalizedMarkup = round4(Number.isFinite(value) ? value : 0);
+    setMarkupRate(normalizedMarkup);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +236,7 @@ export default function NewProductPage() {
                            <input 
                               type="number" 
                               value={price}
-                              onChange={(e) => setPrice(Number(e.target.value))}
+                              onChange={(e) => handlePriceChange(Number(e.target.value))}
                               className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700" 
                            />
                         </div>
@@ -233,7 +249,7 @@ export default function NewProductPage() {
                            <input 
                               type="number" 
                               value={supplierCost}
-                              onChange={(e) => setSupplierCost(Number(e.target.value))}
+                              onChange={(e) => handleSupplierCostChange(Number(e.target.value))}
                               className="w-full h-11 px-4 bg-orange-50 border border-orange-200 rounded focus:border-orange-500 focus:bg-white text-sm font-bold text-orange-700" 
                               placeholder="0.00"
                               step="0.01"
@@ -249,7 +265,7 @@ export default function NewProductPage() {
                               <input 
                                  type="number" 
                                  value={markupRate}
-                                 onChange={(e) => setMarkupRate(Number(e.target.value))}
+                                 onChange={(e) => handleMarkupRateChange(Number(e.target.value))}
                                  className="flex-1 h-11 px-4 bg-purple-50 border border-purple-200 rounded focus:border-purple-500 focus:bg-white text-sm font-bold text-purple-700" 
                                  placeholder="0.30"
                                  step="0.0001"

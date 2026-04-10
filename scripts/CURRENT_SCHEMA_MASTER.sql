@@ -102,7 +102,42 @@ CREATE TABLE IF NOT EXISTS payment_vouchers (
     status VARCHAR(20) DEFAULT 'issued'
 );
 
+-- 8. SERVICES CATALOG (Rate Card)
+CREATE TABLE IF NOT EXISTS services (
+    id SERIAL PRIMARY KEY,
+    service_code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    service_type VARCHAR(50) DEFAULT 'service', -- 'professional', 'maintenance', 'agent_fee'
+    unit_price DECIMAL(15,2) DEFAULT 0,
+    is_wht_applicable BOOLEAN DEFAULT TRUE, -- Automatically applies 3% WHT
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. PAYROLL ENTRIES (HR/Payroll Integration Contract)
+CREATE TABLE IF NOT EXISTS payroll_entries (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_code VARCHAR(100),
+    employee_name VARCHAR(255) NOT NULL,
+    payroll_month DATE NOT NULL,
+    gross_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    tax_withheld DECIMAL(15,2) NOT NULL DEFAULT 0,
+    net_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    currency VARCHAR(10) NOT NULL DEFAULT 'THB',
+    source_system VARCHAR(100) NOT NULL DEFAULT 'manual',
+    external_ref VARCHAR(150),
+    notes TEXT,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- INDEXES FOR PERFORMANCE & AUDIT
 CREATE INDEX IF NOT EXISTS idx_journal_ref ON journal_entries(reference_type, reference_id);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_expense ON payment_vouchers(expense_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_entries_company_month ON payroll_entries(company_id, payroll_month DESC);

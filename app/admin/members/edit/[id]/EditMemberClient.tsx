@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider"; // Use our custom hook
 import { updateUserAction } from "../../actions";
+import { normalizeRole } from "@/lib/core-standards";
 
 export default function EditMemberClient({ user }: { user: any }) {
   const router = useRouter();
@@ -23,17 +24,14 @@ export default function EditMemberClient({ user }: { user: any }) {
   const [formData, setFormData] = useState({
     name: user.name || "",
     email: user.email || "",
-    role: user.role || "Tester",
+    role: normalizeRole(user.role),
     status: user.status || "Pending"
   });
 
   const roles = [
     "superadmin",
-    "Admin",
-    "Manager",
-    "Staff",
-    "Tester",
-    "User"
+    "admin",
+    "user"
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {

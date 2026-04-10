@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteInvoice } from "@/app/actions";
+import { canAccessAdmin } from "@/lib/core-standards";
 
 export async function POST(req: Request) {
   try {
@@ -11,11 +12,11 @@ export async function POST(req: Request) {
     try {
       const { auth } = await import('@/lib/auth');
       const session = await auth();
-      if (!session?.user || (session.user as any).role !== 'admin') {
-        return NextResponse.json({ success: false, error: 'Unauthorized: Admin access required' }, { status: 403 });
+      if (!session?.user || !canAccessAdmin((session.user as any).role)) {
+        return NextResponse.json({ success: false, error: 'Unauthorized: admin access required' }, { status: 403 });
       }
     } catch (e) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Admin access required' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: admin access required' }, { status: 403 });
     }
 
     const res = await deleteInvoice(Number(id));

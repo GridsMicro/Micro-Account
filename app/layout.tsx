@@ -64,7 +64,6 @@ export default async function RootLayout({
           </ToastProvider>
         </Providers>
         <GlobalAiChat />
-        <GlobalAiChat />
       </body>
     </html>
   );

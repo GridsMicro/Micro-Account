@@ -214,7 +214,7 @@ export default function ExpensesPage() {
               ค่าใช้จ่ายองค์กร (Expenses)
             </h1>
             <p className="ml-1 mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-              Module 12 - Professional Expense Manager
+              Module 12 - Professional Expense Tracking
             </p>
           </div>
           <button

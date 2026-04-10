@@ -1,50 +1,68 @@
 "use client";
 
-import { ShieldCheck, Lock, Users, Eye, Edit, Trash2, CheckCircle2, ArrowRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ShieldCheck, Lock, Users, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { useToast } from "@/components/ToastProvider";
+
+type Group = {
+  id: number;
+  name: string;
+  color: string;
+  is_system: boolean;
+  member_count: number;
+  permission_count: number;
+};
 
 export default function PermissionsPage() {
-  const { showToast } = useToast();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const roles = [
+  const coreRoles = [
     { 
       name: "superadmin", 
-      label: "เจ้าของระบบ / Super Admin",
-      desc: "เข้าถึงได้ทุกส่วนของระบบ รวมถึงการตั้งค่าความปลอดภัยระดับสูงสุด", 
-      permissions: ["Full Context", "Root Auth", "Infra Control"] 
+      label: "เจ้าของระบบ / superadmin",
+      desc: "สิทธิ์สูงสุดของระบบ สามารถดูแลกลุ่มระบบและสิทธิ์ทั้งหมดได้",
+      permissions: ["Manage System Groups", "Manage Members", "Manage Permissions"]
     },
     { 
-      name: "Admin", 
-      label: "ผู้ดูแลระบบ / Administrator",
-      desc: "จัดการผู้ใช้งาน สิทธิ์ และข้อมูลบริษัททั้งหมด", 
-      permissions: ["Manage Users", "Company Settings", "All Modules"] 
+      name: "admin", 
+      label: "ผู้ดูแลระบบ / admin",
+      desc: "ดูแลสมาชิก กลุ่ม และการตั้งค่าธุรกิจภายใต้นโยบาย RBAC",
+      permissions: ["Manage Members", "Manage Custom Groups", "Module Administration"]
     },
     { 
-      name: "Manager", 
-      label: "ผู้จัดการ / Manager",
-      desc: "จัดการใบแจ้งหนี้ ใบเสนอราคา และคลังสินค้าทั้งหมด", 
-      permissions: ["Quotations", "Invoices", "Inventory", "Contacts"] 
-    },
-    { 
-      name: "Staff", 
-      label: "พนักงาน / Staff",
-      desc: "ดูข้อมูลคลังสินค้าและออกเอกสารเบื้องต้น", 
-      permissions: ["View Inventory", "Create Simple Docs"] 
-    },
-    { 
-      name: "Tester", 
-      label: "ผู้ทดสอบ / Tester",
-      desc: "เข้าดูระบบตัวอย่างเพื่อทดสอบก่อนการอนุมัติจริง", 
-      permissions: ["Demo Access Only"] 
-    },
-    { 
-      name: "User", 
-      label: "ผู้ใช้ทั่วไป / General User",
-      desc: "ระดับพื้นหลัง รอการกำหนดสิทธิ์เพิ่มเติม", 
-      permissions: ["Limited Access"] 
+      name: "user", 
+      label: "ผู้ใช้ทั่วไป / user",
+      desc: "ใช้งานตามสิทธิ์ที่ได้รับจากกลุ่มที่ถูกมอบหมายเท่านั้น",
+      permissions: ["Group-Based Access", "Least Privilege"]
     },
   ];
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        setError(null);
+        const response = await fetch("/api/groups");
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || "โหลดข้อมูลกลุ่มไม่สำเร็จ");
+        }
+        setGroups(data.groups || []);
+      } catch (e: any) {
+        setError(e?.message || "เกิดข้อผิดพลาด");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGroups();
+  }, []);
+
+  const stats = useMemo(() => {
+    const totalMembers = groups.reduce((sum, g) => sum + Number(g.member_count || 0), 0);
+    const totalPermissionRows = groups.reduce((sum, g) => sum + Number(g.permission_count || 0), 0);
+    return { totalMembers, totalPermissionRows };
+  }, [groups]);
 
   return (
     <main className="p-6 md:p-10 min-h-screen bg-[#fcfaff]">
@@ -62,17 +80,22 @@ export default function PermissionsPage() {
                  จัดการสิทธิ์การเข้าถึง
               </h1>
               <p className="text-slate-400 font-bold text-sm mt-2 uppercase tracking-widest flex items-center gap-2">
-                 <Lock size={14} className="text-indigo-500" /> RBAC Security Module v2.1
+                 <Lock size={14} className="text-indigo-500" /> Canonical RBAC + Core Roles
               </p>
             </div>
           </div>
-          <Link href="/admin/members" className="h-14 px-8 bg-slate-900 text-white rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 group">
-             จัดการสมาชิกรายคน <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/admin/groups" className="h-14 px-8 bg-slate-900 text-white rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 group">
+              จัดการกลุ่ม <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link href="/admin/members" className="h-14 px-8 bg-white text-slate-800 border border-slate-200 rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all">
+              จัดการสมาชิก
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-           {roles.map((role, idx) => (
+           {coreRoles.map((role, idx) => (
               <div key={idx} className="bg-white rounded-[2rem] shadow-lg shadow-slate-100 border border-slate-100 flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all group">
                  <div className="p-8 flex-1 text-left">
                     <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-indigo-600 mb-6 border border-slate-50 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
@@ -92,42 +115,53 @@ export default function PermissionsPage() {
                        </div>
                     </div>
                  </div>
-                 
-                 <div className="bg-slate-50/50 px-8 py-5 border-t border-slate-50 flex justify-between items-center">
-                    <button 
-                      onClick={() => showToast("ฟังก์ชันแก้ไขกฎสิทธิ์ส่วนกลางกำลังพัฒนาเพิ่มเติม...", "info")}
-                      className="text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:text-slate-950 transition-colors flex items-center gap-2"
-                    >
-                       <Edit size={14} /> ปรับจูนสิทธิ์
-                    </button>
-                    <Link 
-                      href={`/admin/members?role=${role.name}`}
-                      className="text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-2"
-                    >
-                       <Users size={16} /> 
-                       <span className="text-[10px] font-black uppercase tracking-widest">ผู้ใช้ในกลุ่ม</span>
-                    </Link>
-                 </div>
               </div>
            ))}
         </div>
 
-        {/* Informational Panel */}
-        <div className="bg-indigo-950 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl flex flex-col md:flex-row items-center gap-10">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full translate-x-32 -translate-y-32 blur-3xl opacity-50"></div>
-           <div className="bg-indigo-600 w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl shrink-0 translate-y-0 hover:-translate-y-2 transition-transform duration-500">
-              <Eye size={40} className="text-white opacity-80" />
-           </div>
-           <div className="text-left space-y-4 flex-1">
-              <h4 className="text-xl font-black uppercase tracking-tight">Granular Access Architecture</h4>
-              <p className="text-sm opacity-60 font-bold leading-relaxed max-w-2xl">
-                 ระบบจัดการสิทธิ์ของเราออกแบบมาบนหลักการ Least Privilege ของ Neon RBAC เพื่อความปลอดภัยสูงสุด 
-                 ในเวอร์ชันนี้ สิทธิ์จะถูกผูกเข้ากับบทบาทผู้ใช้งาน (Roles) โดยตรง คุณสามารถจัดการสิทธิ์ที่ละคนได้ที่หน้า "จัดการสมาชิก"
-              </p>
-           </div>
-           <Link href="/admin/members" className="h-14 px-8 bg-white text-indigo-950 rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all shrink-0">
-              ไปหน้าจัดการสมาชิก <ArrowRight size={18} />
-           </Link>
+        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">RBAC Groups Snapshot</h3>
+            <div className="text-xs font-black uppercase tracking-widest text-slate-400">
+              Groups: {groups.length} | Members: {stats.totalMembers} | Permission Rows: {stats.totalPermissionRows}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="p-10 text-center text-slate-500 font-bold">กำลังโหลดข้อมูลกลุ่ม...</div>
+          ) : error ? (
+            <div className="p-8 text-red-700 flex items-center gap-3 font-bold">
+              <AlertCircle size={18} /> {error}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left bg-slate-50 border-b border-slate-100 text-[11px] uppercase tracking-widest text-slate-500">
+                    <th className="px-8 py-4">Group</th>
+                    <th className="px-8 py-4">Type</th>
+                    <th className="px-8 py-4">Members</th>
+                    <th className="px-8 py-4">Permission Rows</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map((group) => (
+                    <tr key={group.id} className="border-b border-slate-50">
+                      <td className="px-8 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: group.color }} />
+                          <span className="font-bold text-slate-800">{group.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-4 text-sm font-bold text-slate-600">{group.is_system ? "system" : "custom"}</td>
+                      <td className="px-8 py-4 text-sm font-bold text-slate-600">{group.member_count}</td>
+                      <td className="px-8 py-4 text-sm font-bold text-slate-600">{group.permission_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="py-10 text-center opacity-30">

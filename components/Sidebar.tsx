@@ -25,49 +25,40 @@ import {
   Truck,
   Banknote,
   Library,
-  Palette,
   X,
   User,
   Zap,
   FileBadge,
   PieChart,
-  Database
+  Database,
+  Users2,
+  Briefcase
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { canAccessAdmin, normalizeRole } from "@/lib/core-standards";
+import { getEnabledModules, MODULE_CATEGORIES, type AppModule } from "@/lib/module-registry";
 
-const menuItems = [
-  { icon: Home, label: "หน้าแรก Dashboard", href: "/" },
-  { icon: Users, label: "ผู้ติดต่อ / คู่ค้า", href: "/contacts" },
-  { icon: FileText, label: "ใบเสนอราคา (QT)", href: "/quotations" },
-  { icon: Receipt, label: "ใบแจ้งหนี้ (INV)", href: "/invoices" },
-  { icon: Repeat, label: "รอบบิลอัตโนมัติ", href: "/recurring" },
-  { icon: CreditCard, label: "ใบเสร็จรับเงิน", href: "/receipts" },
-  
-  { separator: "Purchase/Inventory" },
-  { icon: Package, label: "คลังสินค้า", href: "/inventory" },
-  { icon: Wallet, label: "ค่าใช้จ่าย", href: "/expenses" },
-  
-  { separator: "Financial Journals" },
-  { icon: ShoppingCart, label: "สมุดรายวันขาย (Sales)", href: "/journals?type=sales" },
-  { icon: CreditCard, label: "สมุดรายวันรับเงิน (Receipt)", href: "/journals?type=receipt" },
-  { icon: Truck, label: "สมุดรายวันซื้อ (Purchase)", href: "/journals?type=purchase" },
-  { icon: Banknote, label: "สมุดรายวันจ่ายเงิน (Payment)", href: "/journals?type=payment" },
-  { icon: Library, label: "สมุดรายวันทั่วไป (General)", href: "/journals" },
-  { icon: PieChart, label: "ผังบัญชี (COA)", href: "/admin/coa" },
-  
-  { separator: "Reports & Tax" },
-  { icon: BarChart3, label: "รายงานภาษี", href: "/tax-reports" },
-  { icon: BarChart3, label: "งบกำไรขาดทุน (P&L)", href: "/reports/profit-loss" },
-  { icon: Settings, label: "ตั้งค่าระบบ", href: "/settings" },
-];
-
-const adminItems = [
-  { icon: UserCog, label: "จัดการสมาชิก", href: "/admin/members" },
-  { icon: ShieldCheck, label: "จัดการกลุ่ม", href: "/admin/groups" },
-  { icon: ShieldCheck, label: "จัดการสิทธิ์", href: "/admin/permissions" },
-  { icon: Database, label: "Database Backup", href: "/admin/backup" },
-];
+const iconMap = {
+  home: Home,
+  users: Users,
+  fileText: FileText,
+  receipt: Receipt,
+  creditCard: CreditCard,
+  package: Package,
+  wallet: Wallet,
+  shoppingCart: ShoppingCart,
+  truck: Truck,
+  banknote: Banknote,
+  library: Library,
+  pieChart: PieChart,
+  barChart: BarChart3,
+  settings: Settings,
+  userCog: UserCog,
+  shieldCheck: ShieldCheck,
+  database: Database,
+  briefcase: Briefcase,
+} as const;
 
 type SidebarProps = {
   isLoggedIn?: boolean;
@@ -83,11 +74,30 @@ export default function Sidebar({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const normalizedRole = normalizeRole(userRole);
+  const canAccessAdminModule = canAccessAdmin(normalizedRole);
+  const [enabledModules, setEnabledModules] = useState<AppModule[]>(getEnabledModules());
 
   // Close mobile sidebar on route change
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const loadModules = async () => {
+      try {
+        const res = await fetch("/api/modules");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data?.modules)) {
+          setEnabledModules(data.modules);
+        }
+      } catch {
+        // Keep local fallback registry if API is unavailable
+      }
+    };
+    loadModules();
+  }, []);
 
   return (
     <>
@@ -172,83 +182,50 @@ export default function Sidebar({
         {/* Navigation Content */}
         <nav className="flex-1 py-4 overflow-y-auto px-4 space-y-8 scrollbar-hide">
           
-          <div className="space-y-1">
-            {menuItems.map((item, idx) => {
-              // 🛡️ Logic to restrict "Reports & Settings" segment
-              const isReportsTaxSegment = idx >= menuItems.findIndex(m => 'separator' in m && m.separator === "Reports & Tax");
-              const hasAccessToSettings = userRole === "superadmin" || userRole === "Admin" || userRole === "Manager";
+          {MODULE_CATEGORIES.map((section) => {
+            const sectionModules = enabledModules.filter((mod) => mod.category === section.id);
+            const visibleModules = sectionModules.filter((mod) => !mod.requiresAdmin || canAccessAdminModule);
+            if (visibleModules.length === 0) return null;
 
-              if (isReportsTaxSegment && !hasAccessToSettings) return null;
-
-              if ('separator' in item) {
-                return (
-                  <div key={`sep-${idx}`} className="mt-8 mb-3 px-4">
+            return (
+              <div key={section.id} className="space-y-1">
+                {(!isCollapsed || isMobileOpen) && (
+                  <div className="mt-8 mb-3 px-4">
                     <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">
-                      {item.separator}
+                      {section.label}
                     </span>
                   </div>
-                );
-              }
+                )}
+                {visibleModules.map((item) => {
+                  const href = item.route || "#";
+                  const isActive = pathname === href || (href !== "/" && pathname?.startsWith(href));
+                  const Icon = iconMap[item.icon as keyof typeof iconMap] || BookOpen;
 
-              const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href || '#'));
-              const Icon = item.icon!;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href || '#'}
-                  className={cn(
-                    "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all relative group overflow-hidden",
-                    isActive 
-                      ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40" 
-                      : "hover:bg-white/5 text-slate-400 hover:text-white"
-                  )}
-                >
-                  <Icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
-                  {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
-                  
-                  {/* Active Indicator Bar */}
-                  {isActive && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full"></div>}
-                  
-                  {/* Tooltip for collapsed view */}
-                  {(isCollapsed && !isMobileOpen) && (
-                    <div className="fixed left-24 px-4 py-2 bg-slate-800 text-white text-xs font-black rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100] shadow-2xl border border-white/5 uppercase tracking-widest">
-                      {item.label}
-                    </div>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Admin Tools Segment - Restricted to superadmin and Admin */}
-          {(userRole === "superadmin" || userRole === "Admin") && (
-            <div className="space-y-1 pb-10">
-               {(!isCollapsed || isMobileOpen) && (
-                 <div className="px-4 mb-3">
-                   <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 opacity-40">Security Module</span>
-                 </div>
-               )}
-               {adminItems.map((item) => {
-                  const isActive = pathname === item.href;
                   return (
                     <Link
-                      key={item.href}
-                      href={item.href}
+                      key={item.id}
+                      href={href}
                       className={cn(
-                        "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all group overflow-hidden",
-                        isActive 
-                          ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40" 
+                        "flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all relative group overflow-hidden",
+                        isActive
+                          ? "bg-violet-600 text-white shadow-xl shadow-violet-900/40"
                           : "hover:bg-white/5 text-slate-400 hover:text-white"
                       )}
                     >
-                      <item.icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
+                      <Icon size={20} className={cn(isActive ? "text-white" : "text-slate-500 group-hover:text-violet-400")} />
                       {(!isCollapsed || isMobileOpen) && <span className="text-sm font-black tracking-tight">{item.label}</span>}
+                      {isActive && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full"></div>}
+                      {(isCollapsed && !isMobileOpen) && (
+                        <div className="fixed left-24 px-4 py-2 bg-slate-800 text-white text-xs font-black rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[100] shadow-2xl border border-white/5 uppercase tracking-widest">
+                          {item.label}
+                        </div>
+                      )}
                     </Link>
                   );
-               })}
-            </div>
-          )}
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Unified Bottom Actions */}

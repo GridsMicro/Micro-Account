@@ -67,7 +67,7 @@ export default async function RecurringInvoicesPage({
               <Repeat className="text-blue-600" /> ระบบแจ้งหนี้รายเดือนอัตโนมัติ
             </h1>
             <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-              <span>Manager billing console for recurring invoice generation and follow-up.</span>
+              <span>Admin billing console for recurring invoice generation and follow-up.</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export default async function RecurringInvoicesPage({
         <div className="mb-8 rounded border border-blue-200 bg-blue-50 p-6 shadow-sm">
           <h3 className="mb-2 font-bold tracking-tight text-blue-800">Billing Day Status</h3>
           <p className="max-w-4xl text-sm leading-relaxed text-blue-700">
-            The recurring batch now reads the live subscription schema, supports Manager-triggered runs, and calculates VAT 7%
+            The recurring batch now reads the live subscription schema, supports admin-triggered runs, and calculates VAT 7%
             plus WHT receivable 3% through the invoice journal pipeline.
           </p>
         </div>
@@ -174,7 +174,7 @@ export default async function RecurringInvoicesPage({
                 ) : (
                   <tr>
                     <td colSpan={7} className="py-20 text-center font-bold italic text-gray-400">
-                      ยังไม่มีรายการ recurring billing ที่มองเห็นได้สำหรับ Manager คนนี้
+                      ยังไม่มีรายการ recurring billing ที่มองเห็นได้สำหรับผู้ดูแลระบบคนนี้
                     </td>
                   </tr>
                 )}

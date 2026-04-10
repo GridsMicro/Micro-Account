@@ -12,11 +12,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // TEMPORARY: Bypass admin check for testing
-    // const userIsAdmin = await isAdmin(session.user.id);
-    // if (!userIsAdmin) {
-    //   return NextResponse.json({ error: "Permission denied" }, { status: 403 });
-    // }
+    const userIsAdmin = await isAdmin(session.user.id);
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+    }
 
     // Get all users with their group info
     const result = await query(

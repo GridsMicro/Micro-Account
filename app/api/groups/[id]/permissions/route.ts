@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isAdmin, isSuperAdmin, logActivity, clearPermissionCache } from "@/lib/permissions";
+import pool from "@/lib/db";
 
 // GET /api/groups/[id]/permissions - Get permissions for a group
 export async function GET(
@@ -88,10 +89,10 @@ export async function PUT(
     const existingGroup = groupResult.rows[0];
     const userIsSuperAdmin = await isSuperAdmin(session.user.id);
 
-    // Only Super Admin can modify system group permissions
+    // Only superadmin can modify system group permissions
     if (existingGroup.is_system && !userIsSuperAdmin) {
       return NextResponse.json(
-        { error: "Only Super Admin can modify system group permissions" },
+        { error: "Only superadmin can modify system group permissions" },
         { status: 403 }
       );
     }
@@ -113,17 +114,17 @@ export async function PUT(
     );
     const oldPermissions = oldPermissionsResult.rows;
 
-    // Delete existing permissions and insert new ones
-    // Using transaction pattern
-    await query("BEGIN");
-    
+    // Delete existing permissions and insert new ones in one transaction
+    const client = await pool.connect();
     try {
+      await client.query("BEGIN");
+
       // Delete existing permissions
-      await query("DELETE FROM group_permissions WHERE group_id = $1", [groupId]);
+      await client.query("DELETE FROM group_permissions WHERE group_id = $1", [groupId]);
 
       // Insert new permissions
       for (const perm of permissions) {
-        await query(
+        await client.query(
           `
             INSERT INTO group_permissions 
             (group_id, module, can_create, can_read, can_update, can_delete, can_export, can_manage)
@@ -142,10 +143,12 @@ export async function PUT(
         );
       }
 
-      await query("COMMIT");
+      await client.query("COMMIT");
     } catch (error) {
-      await query("ROLLBACK");
+      await client.query("ROLLBACK");
       throw error;
+    } finally {
+      client.release();
     }
 
     // Log the activity

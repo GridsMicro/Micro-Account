@@ -12,11 +12,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // TEMPORARY: Bypass admin check for testing - RE-ENABLE AFTER TESTING
-    // const userIsAdmin = await isAdmin(session.user.id);
-    // if (!userIsAdmin) {
-    //   return NextResponse.json({ error: "Permission denied" }, { status: 403 });
-    // }
+    const userIsAdmin = await isAdmin(session.user.id);
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+    }
 
     // Get all groups with member counts
     const result = await query(
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only Admin and Super Admin can create groups
+    // Only admin/superadmin can create groups
     const userIsAdmin = await isAdmin(session.user.id);
     if (!userIsAdmin) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });

@@ -24,8 +24,8 @@ export async function checkAndInitUsersTable() {
           email VARCHAR(255) UNIQUE NOT NULL,
           password VARCHAR(255) NOT NULL,
           name VARCHAR(255),
-          role VARCHAR(50) DEFAULT 'Tester', -- Changed default to Tester
-          status VARCHAR(20) DEFAULT 'Pending', -- Changed default to Pending
+          role VARCHAR(50) DEFAULT 'user',
+          status VARCHAR(20) DEFAULT 'Pending',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
@@ -45,30 +45,15 @@ export async function checkAndInitUsersTable() {
       if (!columns.includes('email')) missing.push("email VARCHAR(255) UNIQUE NOT NULL");
       if (!columns.includes('password')) missing.push("password VARCHAR(255) NOT NULL");
       if (!columns.includes('name')) missing.push("name VARCHAR(255)");
-      if (!columns.includes('role')) missing.push("role VARCHAR(50) DEFAULT 'Tester'");
+      if (!columns.includes('role')) missing.push("role VARCHAR(50) DEFAULT 'user'");
       if (!columns.includes('status')) missing.push("status VARCHAR(20) DEFAULT 'Pending'");
 
       if (missing.length > 0) {
-        console.log("⚠️ Schema mismatch detected. Performing HARD RESET...");
-        
-        // 1. Rename old table to backup
-        const timestamp = Date.now();
-        await query(`ALTER TABLE users RENAME TO users_backup_${timestamp};`);
-        
-        // 2. Create fresh table
-        await query(`
-          CREATE TABLE users (
-            id SERIAL PRIMARY KEY,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            name VARCHAR(255),
-            role VARCHAR(50) DEFAULT 'Tester',
-            status VARCHAR(20) DEFAULT 'Pending',
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-          );
-        `);
-        
-        return { success: true, message: "ล้างและสร้างตาราง users ใหม่เรียบร้อยแล้ว" };
+        console.log("⚠️ Schema mismatch detected. Applying safe additive migration...");
+        for (const columnDef of missing) {
+          await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${columnDef}`);
+        }
+        return { success: true, message: "อัปเดตโครงสร้างตาราง users แบบปลอดภัยเรียบร้อยแล้ว" };
       }
       
       return { success: true, message: "โครงสร้างตารางสมบูรณ์แล้ว" };
@@ -87,7 +72,7 @@ export async function promoteUserAction(email: string) {
     );
 
     if (res.rows.length > 0) {
-      return { success: true, message: `เปลี่ยนชื่อเป็น Admin และใช้บทบาท Super Admin เรียบร้อยแล้ว!` };
+      return { success: true, message: `เปลี่ยนชื่อเป็น Admin และใช้บทบาท superadmin เรียบร้อยแล้ว!` };
     } else {
       return { success: false, error: `ไม่พบอีเมล ${email} ในระบบ` };
     }

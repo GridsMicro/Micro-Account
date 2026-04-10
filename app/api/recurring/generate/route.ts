@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { createInvoiceRecord, createReminder, getCompanySettings, getNextInvoiceNumber } from "@/app/actions";
 import { roundThaiTaxAmount } from "@/lib/tax";
+import { canAccessAdmin } from "@/lib/core-standards";
 
 async function ensureRecurringBillingSchema() {
   await query(`
@@ -59,16 +60,11 @@ export async function POST(req: Request) {
   try {
     const { auth } = await import("@/lib/auth");
     const session = await auth();
-    if (
-      !session?.user ||
-      !["admin", "manager", "super admin", "super_admin"].includes(
-        String((session.user as any).role || "").toLowerCase()
-      )
-    ) {
-      return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
+    if (!session?.user || !canAccessAdmin((session.user as any).role)) {
+      return NextResponse.json({ error: "Unauthorized: admin access required" }, { status: 403 });
     }
   } catch {
-    return NextResponse.json({ error: "Unauthorized: Admin access required" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized: admin access required" }, { status: 403 });
   }
 
   try {

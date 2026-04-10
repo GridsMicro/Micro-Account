@@ -22,21 +22,14 @@ export default function NewMemberPage() {
     name: "",
     email: "",
     password: "",
-    role: "Pending",
-    status: "Inactive",
+    role: "user",
+    status: "Pending",
   });
 
   const roles = [
-    "Super Admin",
-    "Manager",
-    "Sales (ฝ่ายขาย)",
-    "Service (ฝ่ายบริการ)",
-    "Stock (ฝ่ายคลังสินค้า)",
-    "Finance (ฝ่ายการเงิน)",
-    "Production (ฝ่ายผลิต)",
-    "Dev / Debugger",
-    "Staff",
-    "Pending",
+    "superadmin",
+    "admin",
+    "user",
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -169,7 +162,8 @@ export default function NewMemberPage() {
                           className="w-full h-11 px-4 bg-gray-50 border border-gray-300 rounded focus:border-blue-500 focus:bg-white text-sm font-bold text-gray-700"
                         >
                           <option value="Active">Active (เปิดใช้งานทันที)</option>
-                          <option value="Inactive">Inactive (รออนุมัติ / ระงับชั่วคราว)</option>
+                          <option value="Pending">Pending (รออนุมัติ)</option>
+                          <option value="Inactive">Inactive (ระงับชั่วคราว)</option>
                         </select>
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Play } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { canAccessAdmin } from "@/lib/core-standards";
 
 export default function RecurringRunButton() {
   const [loading, setLoading] = useState(false);
@@ -12,8 +13,7 @@ export default function RecurringRunButton() {
   const [runDate, setRunDate] = useState(new Date().toISOString().split("T")[0]);
   const router = useRouter();
   const { data: session } = useSession();
-  const normalizedRole = String((session?.user as any)?.role || "").trim().toLowerCase();
-  const canRunBilling = ["admin", "manager", "super admin", "super_admin"].includes(normalizedRole);
+  const canRunBilling = canAccessAdmin((session?.user as any)?.role);
 
   const handleRun = async () => {
     setLoading(true);
@@ -62,7 +62,7 @@ export default function RecurringRunButton() {
               onChange={(e) => setRunDate(e.target.value)}
               className="w-full mt-2 mb-4 p-3 border rounded-lg"
             />
-            <p className="text-xs text-slate-500 mb-4">Managers can run the live billing batch for the selected date when `RECURRING_SECRET` is provided.</p>
+            <p className="text-xs text-slate-500 mb-4">Admins can run the live billing batch for the selected date when `RECURRING_SECRET` is provided.</p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setOpen(false)} className="px-4 py-2 rounded border">Cancel</button>
               <button onClick={handleRun} disabled={loading || !secret} className="px-4 py-2 bg-emerald-600 text-white rounded">{loading ? 'Running...' : 'Run'}</button>

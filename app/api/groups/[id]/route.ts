@@ -93,7 +93,7 @@ export async function PUT(
       return NextResponse.json({ error: "Invalid group ID" }, { status: 400 });
     }
 
-    // Check if group exists and is not a system group (only Super Admin can modify system groups)
+    // Check if group exists and is not a system group (only superadmin can modify system groups)
     const groupResult = await query(
       "SELECT * FROM groups WHERE id = $1",
       [groupId]
@@ -108,7 +108,7 @@ export async function PUT(
 
     if (existingGroup.is_system && !userIsSuperAdmin) {
       return NextResponse.json(
-        { error: "Only Super Admin can modify system groups" },
+        { error: "Only superadmin can modify system groups" },
         { status: 403 }
       );
     }
@@ -221,10 +221,12 @@ export async function DELETE(
       );
     }
 
-    // Only Super Admin or the creator can delete non-system groups
-    if (!userIsSuperAdmin && existingGroup.created_by !== session.user.id) {
+    const currentUserId = parseInt(session.user.id, 10);
+
+    // Only superadmin or the creator can delete non-system groups
+    if (!userIsSuperAdmin && Number(existingGroup.created_by) !== currentUserId) {
       return NextResponse.json(
-        { error: "Only Super Admin or the creator can delete this group" },
+        { error: "Only superadmin or the creator can delete this group" },
         { status: 403 }
       );
     }

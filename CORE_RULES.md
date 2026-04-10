@@ -6,6 +6,15 @@
 
 ## 🚨 CRITICAL GUARDRAILS
 
+### ✅ SINGLE STANDARD POLICY (CANONICAL)
+- **Roles in code and database must use lowercase only:** `superadmin`, `admin`, `user`
+- **Route/module access must be permission-driven (RBAC groups), not hardcoded legacy role labels**
+- **No duplicate UI modules or duplicate global components**
+- **No dead navigation links to routes that do not exist**
+- **When modern and legacy logic coexist, keep one canonical flow and treat legacy only as compatibility**
+- **Canonical RBAC reference document:** `docs/RBAC_STANDARD.md`
+- **Persistent project memory pack:** `docs/KNOWLEDGE_PACK.md`
+
 ### ❌ FORBIDDEN OPERATIONS
 - **NEVER use `DROP TABLE` in production code
 - **NEVER use `WIPE DATA` or `TRUNCATE TABLE` in production code
@@ -146,6 +155,22 @@ CREATE TABLE contacts (
 );
 ```
 
+### items Table
+**Purpose:** Standard pricing catalog (Rate Card) for services, licenses, and products. Used as a reference for smart quotations.
+```sql
+CREATE TABLE items (
+    id SERIAL PRIMARY KEY,                    -- Primary key
+    item_code VARCHAR(50) UNIQUE NOT NULL,    -- Standard item code (e.g., SRV-AGENT)
+    name VARCHAR(255) NOT NULL,               -- Descriptive item name
+    description TEXT,                         -- Full description for invoices/quotes
+    item_type VARCHAR(50) DEFAULT 'service',  -- Type: 'service', 'license', 'product'
+    unit_price DECIMAL(15,2) DEFAULT 0,       -- Default standard unit price (0 = variable)
+    is_active BOOLEAN DEFAULT TRUE,           -- Active status
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ## 🔧 CRITICAL COLUMN REFERENCES
 
 ### Dashboard Queries
@@ -176,7 +201,7 @@ superadmin > admin > user
 
 ### Role Validation Rules
 - All role checks MUST use exact lowercase strings: `'superadmin'`, `'admin'`, `'user'`
-- NO underscore roles: `SUPER_ADMIN`, `USER_ADMIN`, etc.
+- NO underscore role aliases or uppercase variants.
 - Role-based UI rendering in Sidebar.tsx is mandatory
 - Database role field must match code logic exactly
 
@@ -190,11 +215,11 @@ Dynamic Role-Based Access Control system with granular group permissions. Replac
 ### System Groups (Pre-defined)
 | Group ID | Group Name | Description |
 |----------|------------|-------------|
-| 1 | Super Administrators | Full access + system management |
+| 1 | Superadministrators | Full access + system management |
 | 2 | Administrators | Full access except system groups |
 | 3 | Accountants | Invoices, Journals, Vouchers, Reports |
-| 4 | Sales Staff | Quotations, Invoices, Contacts |
-| 5 | Warehouse Staff | Inventory, Expenses (read) |
+| 4 | Sales Team | Quotations, Invoices, Contacts |
+| 5 | Warehouse Team | Inventory, Expenses (read) |
 | 6 | Viewers | Read-only all modules |
 
 ### Permission Actions
@@ -283,10 +308,10 @@ CREATE TABLE activity_log (
 - Sidebar updated with Groups management link
 
 ### Access Control
-- **Super Admin**: Full control including system groups (ID: 1)
+- **superadmin**: Full control including system groups (ID: 1)
 - **Admin**: Can create/manage custom groups (ID: 2)
 - **Users**: Inherit permissions from assigned groups
-- **System Groups**: Protected from deletion (only Super Admin can modify)
+- **System Groups**: Protected from deletion (only superadmin can modify)
 
 ### Migration
 **File:** `scripts/migrate_rbac_groups.sql`
@@ -354,7 +379,7 @@ ON CONFLICT (company_name) DO UPDATE SET
 - [ ] Verify all 3 users have correct roles: `superadmin`/`admin`
 - [ ] Confirm `grids@microtronic.biz` shows role `superadmin`
 - [ ] Confirm `neon13@microtronic.biz` shows role `admin`
-- [ ] Confirm no `SUPER_ADMIN` roles exist in database
+- [ ] Confirm no legacy role aliases exist in database
 - [ ] Verify dashboard shows real data (not ฿0 if expenses exist)
 - [ ] Test all admin functionality with both roles
 - [ ] Confirm company settings display correctly on dashboard
@@ -477,10 +502,10 @@ CREATE TABLE activity_log (
 - Sidebar updated with Groups management link
 
 ### Access Control
-- **Super Admin**: Full control including system groups (ID: 1)
+- **superadmin**: Full control including system groups (ID: 1)
 - **Admin**: Can create/manage custom groups (ID: 2)
 - **Users**: Inherit permissions from assigned groups
-- **System Groups**: Protected from deletion (only Super Admin can modify)
+- **System Groups**: Protected from deletion (only superadmin can modify)
 
 ### Migration
 **File:** `scripts/migrate_rbac_groups.sql`
@@ -548,7 +573,7 @@ ON CONFLICT (company_name) DO UPDATE SET
 - [ ] Verify all 3 users have correct roles: `superadmin`/`admin`
 - [ ] Confirm `grids@microtronic.biz` shows role `superadmin`
 - [ ] Confirm `neon13@microtronic.biz` shows role `admin`
-- [ ] Confirm no `SUPER_ADMIN` roles exist in database
+- [ ] Confirm no legacy role aliases exist in database
 - [ ] Verify dashboard shows real data (not ฿0 if expenses exist)
 - [ ] Test all admin functionality with both roles
 - [ ] Confirm company settings display correctly on dashboard

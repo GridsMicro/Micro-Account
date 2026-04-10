@@ -1,0 +1,27 @@
+name: Knowledge Guard
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  verify-knowledge-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify knowledge docs are updated
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          HEAD_REF: ${{ github.sha }}
+        run: node scripts/verify-knowledge-sync.mjs
+

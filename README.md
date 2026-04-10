@@ -39,5 +39,10 @@
 - **Styling:** Tailwind CSS 4 + Vanilla CSS Custom Utilities
 - **Database:** Neon PostgreSQL (Serverless)
 
+### 📐 มาตรฐานระบบ (Single Standard)
+- RBAC และบทบาทผู้ใช้มาตรฐานเดียว: `docs/RBAC_STANDARD.md`
+- Guardrails และกฎระบบหลัก: `CORE_RULES.md`
+- ชุดความรู้ถาวรของโปรเจกต์: `docs/KNOWLEDGE_PACK.md`
+
 > **"Software เฉพาะทาง เพื่อขับเคลื่อนธุรกิจให้ก้าวล้ำ นำภาษีสู่ระบบอัตโนมัติ"**
 > *© 2026 Micro-Account*
