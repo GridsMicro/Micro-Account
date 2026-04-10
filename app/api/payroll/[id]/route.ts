@@ -52,7 +52,10 @@ export async function PUT(
     if (!validated.ok) {
       return NextResponse.json({ error: validated.error }, { status: 400 });
     }
-    const { data } = validated;
+    const data = validated.data;
+    if (!data) {
+      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+    }
 
     const result = await query(
       `

@@ -118,7 +118,7 @@ export default function EditMemberClient({ user }: { user: any }) {
                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">สิทธิ์การเข้าถึง (Role)</label>
                                <select 
                                  value={formData.role}
-                                 onChange={e => setFormData({...formData, role: e.target.value})}
+                                 onChange={e => setFormData({...formData, role: e.target.value as "user" | "superadmin" | "admin"})}
                                  className="w-full h-12 px-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl focus:border-indigo-500 focus:bg-white text-sm font-bold text-indigo-700 shadow-sm outline-none cursor-pointer"
                                >
                                   {roles.map(r => (

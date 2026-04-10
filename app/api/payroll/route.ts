@@ -81,7 +81,10 @@ export async function POST(request: NextRequest) {
 
     await ensurePayrollSchema();
     const companyId = await getUserCompanyId(session.user.id);
-    const { data } = validated;
+    const data = validated.data;
+    if (!data) {
+      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+    }
 
     const result = await query(
       `
