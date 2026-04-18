@@ -1111,26 +1111,24 @@ export async function createPayment(data: any) {
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
+    // Auto-migration: ensure all required columns exist in payments table
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_no VARCHAR(50)`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS invoice_id INTEGER`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS amount DECIMAL(15,2)`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_date DATE`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(100)`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed'`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS notes TEXT`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS wht_amount DECIMAL(15,2) DEFAULT 0`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS vat_amount DECIMAL(15,2) DEFAULT 0`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+    
+    // Auto-migration: ensure invoices table has is_service column
+    await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE`);
+    
     await client.query("BEGIN");
     
-    const res = await client.query(
-      `INSERT INTO payments (
-        payment_no, contact_id, invoice_id, amount, payment_date, 
-        payment_method, status, notes
-      ) 
-       VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7) RETURNING id`,
-      [
-        data.reference, 
-        data.contactId, 
-        data.invoiceId || null, 
-        data.amount, 
-        data.date, 
-        data.paymentMethod, 
-        data.description || null
-      ]
-    );
-    const paymentId = res.rows[0].id;
-    
+    // Calculate VAT from invoice if linked
     let vatAmount = 0;
     let isService = false;
     
@@ -1142,6 +1140,25 @@ export async function createPayment(data: any) {
       }
       await client.query("UPDATE invoices SET status = 'paid' WHERE id = $1", [data.invoiceId]);
     }
+    
+    const res = await client.query(
+      `INSERT INTO payments (
+        payment_no, invoice_id, amount, payment_date, 
+        payment_method, status, notes, vat_amount, wht_amount
+      ) 
+       VALUES ($1, $2, $3, $4, $5, 'completed', $6, $7, $8) RETURNING id`,
+      [
+        data.reference, 
+        data.invoiceId || null, 
+        data.amount, 
+        data.date, 
+        data.paymentMethod, 
+        data.description || null,
+        vatAmount,
+        Number(data.withholdingAmount || 0)
+      ]
+    );
+    const paymentId = res.rows[0].id;
     
     const journalResult = await createReceiptJournalEntry(
       paymentId,

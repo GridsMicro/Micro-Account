@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { useSession } from "next-auth/react";
 import { FileText, Edit, Trash2, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,7 +11,8 @@ export default function InvoiceRowActions({  id,
   netAmount, 
   vatAmount, 
   contactId,
-  status 
+  status,
+  userRole
 }: { 
   id: number | string; 
   invoiceNumber?: string;
@@ -20,11 +20,10 @@ export default function InvoiceRowActions({  id,
   vatAmount?: number;
   contactId?: number;
   status?: string;
+  userRole?: string;
 }) {
   const router = useRouter();
-  const { data: session } = useSession();
-  const role = (session?.user as any)?.role;
-  const isAuthorized = canAccessAdmin(role);
+  const isAuthorized = canAccessAdmin(userRole);
 
   const [isDeleting, setIsDeleting] = React.useState(false);
 

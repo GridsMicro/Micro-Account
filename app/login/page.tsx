@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn, Lock, Mail, ShieldCheck, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,21 +18,25 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      console.log("[LOGIN] Calling custom API...");
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+      
+      const data = await res.json();
+      console.log("[LOGIN] API response:", data);
 
-      if (result?.error) {
-        setError(result.error || "เข้าสู่ระบบไม่สำเร็จ");
-      } else if (result?.ok) {
-        router.push("/");
-        router.refresh();
+      if (!res.ok) {
+        setError(data.error || "เข้าสู่ระบบไม่สำเร็จ");
+      } else {
+        console.log("[LOGIN] Redirecting to /");
+        window.location.href = "/";
       }
-    } catch (err) {
-      setError("เกิดข้อผิดพลาด กรุณาลองใหม่");
-      console.error(err);
+    } catch (err: unknown) {
+      console.error("[LOGIN] Exception:", err);
+      setError("เกิดข้อผิดพลาด: " + (err.message || "กรุณาลองใหม่"));
     } finally {
       setIsLoading(false);
     }

@@ -1,31 +1,75 @@
-import { query } from "@/lib/db";
-import { CreditCard, Plus, Search, ArrowRight, CheckCircle, Clock } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Plus, Search, Printer, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export const dynamic = 'force-dynamic';
+interface Payment {
+  id: string;
+  payment_date: string;
+  customer_name: string | null;
+  payment_no: string | null;
+  amount: number;
+  payment_method: string | null;
+  invoice_id: string | null;
+}
 
-export default async function PaymentsPage({ searchParams }: { searchParams: { search?: string } }) {
-  const search = (await searchParams)?.search || "";
-  let payments = [];
-  try {
-    let q = `
-      SELECT p.*, c.name as customer_name 
-      FROM payments p 
-      LEFT JOIN contacts c ON p.contact_id = c.id 
-      WHERE 1=1
-    `;
-    const params: any[] = [];
-    if (search) {
-      params.push(`%${search}%`);
-      q += ` AND (p.reference_number ILIKE $1 OR c.name ILIKE $1)`;
+const MANAGER_ROLES = ['MANAGER', 'ADMIN', 'SUPERADMIN'];
+
+export default function PaymentsPage() {
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') || "";
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const canDelete = userRole ? MANAGER_ROLES.includes(userRole.toUpperCase()) : false;
+
+  useEffect(() => {
+    fetchPayments();
+    fetchUserRole();
+  }, [search]);
+
+  const fetchUserRole = async () => {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUserRole(data.user?.role || null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch user role');
     }
-    q += ` ORDER BY p.payment_date DESC `;
+  };
+
+  const fetchPayments = async () => {
+    try {
+      const res = await fetch(`/api/payments?search=${encodeURIComponent(search)}`);
+      const data = await res.json();
+      setPayments(data.payments || []);
+    } catch (e) {
+      console.error('Fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('ยืนยันลบรายการนี้? ข้อมูลจะถูกลบถาวร')) return;
     
-    const res = await query(q, params);
-    payments = res.rows;
-  } catch (e) {
-    payments = [];
-  }
+    try {
+      const res = await fetch(`/api/payments/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setPayments(payments.filter(p => p.id !== id));
+      }
+    } catch (e) {
+      alert('ลบไม่สำเร็จ');
+    }
+  };
+
+  const handlePrint = (payment: Payment) => {
+    window.open(`/payments/print/${payment.id}`, '_blank');
+  };
 
   return (
     <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
@@ -68,33 +112,56 @@ export default async function PaymentsPage({ searchParams }: { searchParams: { s
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">วันทึ่รับชำระ</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">วันที่รับชำระ</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">ลูกค้า</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">หมายเลขอ้างอิง</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">เลขที่</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">จำนวนเงิน</th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">ช่องทาง</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">จัดการ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 italic">
-                   {payments.length > 0 ? (
-                      payments.map((p: any) => (
+                <tbody className="divide-y divide-gray-100">
+                   {loading ? (
+                      <tr><td colSpan={6} className="py-24 text-center text-gray-400">กำลังโหลด...</td></tr>
+                   ) : payments.length > 0 ? (
+                      payments.map((p) => (
                          <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 text-sm font-bold text-gray-600 italic">
+                            <td className="px-6 py-4 text-sm font-bold text-gray-600">
                                {new Date(p.payment_date).toLocaleDateString('th-TH')}
                             </td>
                             <td className="px-6 py-4 text-sm font-bold text-gray-800">{p.customer_name || 'ไม่ระบุ'}</td>
-                            <td className="px-6 py-4 text-sm text-blue-600 font-bold uppercase">{p.reference_number || '-'}</td>
+                            <td className="px-6 py-4 text-sm text-blue-600 font-bold uppercase">{p.payment_no || '-'}</td>
                             <td className="px-6 py-4 text-right font-bold text-green-600">฿{Number(p.amount).toLocaleString()}</td>
                             <td className="px-6 py-4 text-center">
                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">
-                                  {p.method || 'Bank Transfer'}
+                                  {p.payment_method || 'Bank Transfer'}
                                </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                               <div className="flex items-center justify-center gap-2">
+                                  <button 
+                                    onClick={() => window.open(`/payments/print/${p.id}`, '_blank')}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="พิมพ์ใบเสร็จ"
+                                  >
+                                    <Printer size={16} />
+                                  </button>
+                                  {canDelete && (
+                                    <button 
+                                      onClick={() => handleDelete(p.id)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="ลบ (Manager+)"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                               </div>
                             </td>
                          </tr>
                       ))
                    ) : (
                       <tr>
-                         <td colSpan={5} className="py-24 text-center text-gray-400 font-bold italic">
+                         <td colSpan={6} className="py-24 text-center text-gray-400 font-bold">
                             ไม่พบประวัติการรับชำระเงิน
                          </td>
                       </tr>

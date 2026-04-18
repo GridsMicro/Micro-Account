@@ -341,6 +341,12 @@ export default async function JournalsPage({ searchParams }: { searchParams: { t
                            <div className="flex flex-col">
                               <span className="text-sm font-black text-slate-900 tracking-tight">{voucher.ref || 'UN-NUMBERED'}</span>
                               <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Voucher No.</span>
+                              {/* Description: ใบแจ้งหนี้ค่าอะไร */}
+                              {voucher.items[0]?.description && (
+                                <span className="mt-1 text-xs font-medium text-slate-600 line-clamp-2">
+                                  {voucher.items[0].description}
+                                </span>
+                              )}
                            </div>
                         </div>
 

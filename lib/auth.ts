@@ -1,8 +1,17 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import { query } from "./db";
-import bcrypt from "bcryptjs";
-import { authConfig } from "./auth.config";
+import { jwtVerify, SignJWT } from "jose";
+import { cookies } from "next/headers";
+
+const SECRET = new TextEncoder().encode(
+  process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "secret-key"
+);
+
+export type UserSession = {
+  id: string;
+  email: string;
+  name?: string;
+  role?: string;
+};
 
 type LicenseCheckResult = {
   allowed: boolean;
@@ -28,10 +37,14 @@ async function ensureCompanyLicensingSchema() {
     )
   `);
 
-  await query(`
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS company_id INTEGER
-  `);
+  try {
+    await query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS company_id INTEGER
+    `);
+  } catch (e) {
+    // users table may not exist yet, ignore
+  }
 
   const companyCountRes = await query(`SELECT COUNT(*)::int AS count FROM companies`);
   if (Number(companyCountRes.rows[0]?.count || 0) === 0) {
@@ -117,81 +130,41 @@ export async function checkUserLimit(company_id?: string | number | null): Promi
   };
 }
 
-// Validate required environment variables (only at runtime, not during build)
-function validateAuthEnv() {
-  const dbExists = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL);
-  const authSecretExists = !!(process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || process.env.NEXT_AUTH_SECRET);
-  const missing: string[] = [];
-
-  if (!dbExists) missing.push("DATABASE_URL (or POSTGRES_URL)");
-  if (!authSecretExists) missing.push("AUTH_SECRET (or NEXTAUTH_SECRET)");
-
-  if (missing.length > 0) {
-    const message = `\n❌ Missing required environment variables for authentication:\n${missing.map((v) => `   - ${v}`).join("\n")}\n\nPlease set these in your .env.local file. See .env.example for reference.\n`;
-    throw new Error(message);
+// Verify JWT token and return session
+export async function verifyToken(token: string): Promise<UserSession | null> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return {
+      id: payload.id as string,
+      email: payload.email as string,
+      name: payload.name as string,
+      role: payload.role as string,
+    };
+  } catch {
+    return null;
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  providers: [
-    Credentials({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // Validate environment variables at runtime
-        validateAuthEnv();
+// Get session from cookie (returns { user: ... } format like next-auth)
+export async function auth(): Promise<{ user: UserSession } | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("session-token")?.value;
+  if (!token) return null;
+  const session = await verifyToken(token);
+  if (!session) return null;
+  return { user: session };
+}
 
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
-        }
-
-        try {
-          await ensureCompanyLicensingSchema();
-
-          // Query user from database
-          const res = await query(
-            "SELECT id, email, password, name, role, status, company_id FROM users WHERE email = $1",
-            [credentials.email]
-          );
-
-          if (res.rows.length === 0) {
-            throw new Error("User not found");
-          }
-
-          const user = res.rows[0];
-
-          // Check if user is active (allow Pending for waiting room)
-          if (user.status === "Inactive") {
-            throw new Error("บัญชีของคุณถูกระงับการใช้งาน");
-          }
-
-          // Verify password
-          const passwordMatch = await bcrypt.compare(
-            credentials.password as string,
-            user.password
-          );
-
-          if (!passwordMatch) {
-            throw new Error("Invalid password");
-          }
-
-          // Return user object
-          return {
-            id: user.id.toString(),
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            companyId: user.company_id?.toString(),
-          };
-        } catch (error) {
-          console.error("Auth error:", error);
-          throw error;
-        }
-      },
-    }),
-  ],
-});
+// Create JWT token
+export async function createToken(user: UserSession): Promise<string> {
+  return new SignJWT({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1d")
+    .sign(SECRET);
+}

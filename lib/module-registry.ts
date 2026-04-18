@@ -3,13 +3,11 @@ export type AppModule = {
   label: string;
   icon: string;
   category:
-    | "admin"
-    | "sales_co"
-    | "stock"
-    | "service"
-    | "hr"
-    | "finance_accounting"
-    | "finance_tax";
+    | "sales"
+    | "operations"
+    | "master_data"
+    | "reports"
+    | "admin";
   route?: string;
   requiresAdmin?: boolean;
   enabledByDefault?: boolean;
@@ -17,48 +15,41 @@ export type AppModule = {
 };
 
 export const MODULE_REGISTRY: AppModule[] = [
+  // ==================== SALES ====================
+  { id: "quotations", label: "ใบเสนอราคา (QT)", icon: "fileText", category: "sales", route: "/quotations", enabledByDefault: true },
+  { id: "invoices", label: "ใบแจ้งหนี้ (INV)", icon: "receipt", category: "sales", route: "/invoices", enabledByDefault: true },
+  { id: "recurring", label: "รอบบิลอัตโนมัติ", icon: "repeat", category: "sales", route: "/recurring", enabledByDefault: true },
+  { id: "receipts", label: "ใบเสร็จรับเงิน", icon: "creditCard", category: "sales", route: "/receipts", enabledByDefault: true },
+
+  // ==================== OPERATIONS ====================
+  { id: "expenses", label: "ค่าใช้จ่าย/ซัพพลายเออร์", icon: "wallet", category: "operations", route: "/expenses", enabledByDefault: true },
+  { id: "payroll", label: "ค่าแรงพนง", icon: "banknote", category: "operations", route: "/payroll", enabledByDefault: true },
+  { id: "vouchers", label: "ใบสำคัญจ่าย", icon: "banknote", category: "operations", route: "/vouchers", enabledByDefault: true },
+  { id: "journals", label: "สมุดรายวัน (Journals)", icon: "library", category: "operations", route: "/journals", enabledByDefault: true },
+
+  // ==================== MASTER DATA ====================
+  { id: "inventory", label: "คลังสินค้า (Stock)", icon: "package", category: "master_data", route: "/inventory", enabledByDefault: true },
+  { id: "services", label: "ราคากลางบริการ (Services)", icon: "briefcase", category: "master_data", route: "/services", enabledByDefault: true },
+  { id: "coa", label: "ผังบัญชี (COA)", icon: "pieChart", category: "master_data", route: "/admin/coa", enabledByDefault: true },
+  { id: "contacts", label: "ผู้ติดต่อ / คู่ค้า (Contacts)", icon: "users", category: "master_data", route: "/contacts", enabledByDefault: true },
+
+  // ==================== REPORTS ====================
+  { id: "tax_reports", label: "รายงานภาษี", icon: "fileText", category: "reports", route: "/tax-reports", enabledByDefault: true },
+  { id: "reports", label: "งบกำไรขาดทุน (P&L)", icon: "barChart", category: "reports", route: "/reports/profit-loss", enabledByDefault: true },
+
+  // ==================== ADMIN ====================
   { id: "member_management", label: "จัดการสมาชิก", icon: "userCog", category: "admin", route: "/admin/members", requiresAdmin: true, enabledByDefault: true },
-  { id: "groups", label: "จัดการกลุ่ม", icon: "shieldCheck", category: "admin", route: "/admin/groups", requiresAdmin: true, enabledByDefault: true },
-  { id: "permissions", label: "จัดการสิทธิ์", icon: "shieldCheck", category: "admin", route: "/admin/permissions", requiresAdmin: true, enabledByDefault: true },
-  { id: "modules_control", label: "จัดการโมดูล", icon: "settings", category: "admin", route: "/admin/modules", requiresAdmin: true, enabledByDefault: true },
+  { id: "groups", label: "จัดการกลุ่ม/สิทธิ์", icon: "shieldCheck", category: "admin", route: "/admin/groups", requiresAdmin: true, enabledByDefault: true },
+  { id: "modules_control", label: "โมดูล/ตั้งค่า", icon: "settings", category: "admin", route: "/admin/modules", requiresAdmin: true, enabledByDefault: true },
   { id: "backup", label: "Database Backup", icon: "database", category: "admin", route: "/admin/backup", requiresAdmin: true, enabledByDefault: true },
-  { id: "settings", label: "ตั้งค่าระบบ", icon: "settings", category: "admin", route: "/settings", requiresAdmin: true, enabledByDefault: true },
-
-  { id: "dashboard", label: "หน้าแรก Dashboard", icon: "home", category: "sales_co", route: "/", enabledByDefault: true },
-  { id: "contacts", label: "ผู้ติดต่อ / คู่ค้า", icon: "users", category: "sales_co", route: "/contacts", enabledByDefault: true },
-  { id: "quotations", label: "ใบเสนอราคา (QT)", icon: "fileText", category: "sales_co", route: "/quotations", enabledByDefault: true },
-  { id: "invoices", label: "ใบแจ้งหนี้ (INV)", icon: "receipt", category: "sales_co", route: "/invoices", enabledByDefault: true },
-  { id: "recurring", label: "รอบบิลอัตโนมัติ", icon: "repeat", category: "sales_co", route: "/recurring", enabledByDefault: true },
-  { id: "receipts", label: "ใบเสร็จรับเงิน", icon: "creditCard", category: "sales_co", route: "/receipts", enabledByDefault: true },
-  { id: "payments", label: "รับ/จ่ายเงิน", icon: "creditCard", category: "sales_co", route: "/payments", enabledByDefault: true },
-
-  { id: "inventory", label: "คลังสินค้า (Stock)", icon: "package", category: "stock", route: "/inventory", enabledByDefault: true },
-
-  { id: "services", label: "ราคากลางบริการ", icon: "briefcase", category: "service", route: "/services", enabledByDefault: true },
-  { id: "expenses", label: "ค่าแรง/ค่าอะไหล่", icon: "wallet", category: "service", route: "/expenses", enabledByDefault: true },
-  { id: "vouchers", label: "ใบสำคัญจ่าย", icon: "banknote", category: "service", route: "/vouchers", enabledByDefault: true },
-
-  { id: "payroll", label: "รายการค่าแรง (HR)", icon: "banknote", category: "hr", route: "/payroll", enabledByDefault: true },
-
-  { id: "journals_sales", label: "สมุดรายวันขาย (Sales)", icon: "shoppingCart", category: "finance_accounting", route: "/journals?type=sales", enabledByDefault: true },
-  { id: "journals_receipt", label: "สมุดรายวันรับเงิน (Receipt)", icon: "creditCard", category: "finance_accounting", route: "/journals?type=receipt", enabledByDefault: true },
-  { id: "journals_purchase", label: "สมุดรายวันซื้อ (Purchase)", icon: "truck", category: "finance_accounting", route: "/journals?type=purchase", enabledByDefault: true },
-  { id: "journals_payment", label: "สมุดรายวันจ่ายเงิน (Payment)", icon: "banknote", category: "finance_accounting", route: "/journals?type=payment", enabledByDefault: true },
-  { id: "journals", label: "สมุดรายวันทั่วไป (General)", icon: "library", category: "finance_accounting", route: "/journals", enabledByDefault: true },
-  { id: "coa", label: "ผังบัญชี (COA)", icon: "pieChart", category: "finance_accounting", route: "/admin/coa", requiresAdmin: true, enabledByDefault: true },
-  { id: "reports", label: "งบกำไรขาดทุน (P&L)", icon: "barChart", category: "finance_accounting", route: "/reports/profit-loss", requiresAdmin: true, enabledByDefault: true },
-
-  { id: "tax_reports", label: "รายงานภาษี", icon: "barChart", category: "finance_tax", route: "/tax-reports", requiresAdmin: true, enabledByDefault: true },
 ];
 
 export const MODULE_CATEGORIES: Array<{ id: AppModule["category"]; label: string }> = [
-  { id: "admin", label: "Administration" },
-  { id: "finance_accounting", label: "Finance - Accounting" },
-  { id: "finance_tax", label: "Finance - Tax" },
-  { id: "stock", label: "Stock" },
-  { id: "hr", label: "Human Resources" },
-  { id: "sales_co", label: "Sales-Co" },
-  { id: "service", label: "Service" },
+  { id: "sales", label: "SALES" },
+  { id: "operations", label: "OPERATIONS" },
+  { id: "master_data", label: "MASTER DATA" },
+  { id: "reports", label: "REPORTS" },
+  { id: "admin", label: "ADMIN" },
 ];
 
 function isEnabledByEnv(moduleId: string, fallback: boolean): boolean {

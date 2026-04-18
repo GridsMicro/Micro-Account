@@ -36,7 +36,7 @@ export default function GlobalAiChat() {
       {!open && (
         <button
           onClick={() => { setOpen(true); setMinimized(false); }}
-          className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl transition-all duration-500 active:scale-95 group bg-slate-900 border border-white/10 text-white overflow-hidden hover:shadow-[0_0_40px_rgba(124,58,237,0.4)] hover:-translate-y-2"
+          className="no-print fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl transition-all duration-500 active:scale-95 group bg-slate-900 border border-white/10 text-white overflow-hidden hover:shadow-[0_0_40px_rgba(124,58,237,0.4)] hover:-translate-y-2"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-transparent to-blue-600/20 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative z-10 flex items-center gap-3">
@@ -56,7 +56,7 @@ export default function GlobalAiChat() {
       {open && (
         <div 
           className={cn(
-            "fixed z-[60] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col shadow-[0_30px_100px_rgba(0,0,0,0.6)] border border-white/10 overflow-hidden",
+            "no-print fixed z-[60] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col shadow-[0_30px_100px_rgba(0,0,0,0.6)] border border-white/10 overflow-hidden",
             minimized 
               ? "bottom-8 right-8 w-80 h-20 rounded-xl bg-slate-900/95 backdrop-blur-xl" 
               : "top-4 right-4 bottom-4 w-[450px] rounded-xl bg-slate-900 animate-in slide-in-from-right duration-500"

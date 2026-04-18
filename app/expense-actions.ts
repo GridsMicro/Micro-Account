@@ -32,6 +32,7 @@ async function ensureExpensesTable() {
 
   await query(`
     ALTER TABLE expenses
+    ADD COLUMN IF NOT EXISTS reference_no VARCHAR(100),
     ADD COLUMN IF NOT EXISTS tax_invoice_no VARCHAR(100),
     ADD COLUMN IF NOT EXISTS tax_invoice_date DATE,
     ADD COLUMN IF NOT EXISTS vat_amount DECIMAL(15, 2) DEFAULT 0,
@@ -40,7 +41,11 @@ async function ensureExpensesTable() {
     ADD COLUMN IF NOT EXISTS receipt_url TEXT,
     ADD COLUMN IF NOT EXISTS receipt_file_name VARCHAR(255),
     ADD COLUMN IF NOT EXISTS receipt_mime_type VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS wht_rate DECIMAL(5, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS wht_amount DECIMAL(15, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS net_amount DECIMAL(15, 2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE
   `);
 }
 
@@ -129,6 +134,10 @@ export async function createExpense(data: {
   tax_invoice_no?: string;
   tax_invoice_date?: string;
   vat_amount?: number;
+  wht_rate?: number;
+  wht_amount?: number;
+  net_amount?: number;
+  is_service?: boolean;
   notes?: string;
   receipt_url?: string;
   receipt_file_name?: string;
@@ -136,9 +145,19 @@ export async function createExpense(data: {
 }) {
   try {
     await ensureExpensesTable();
+    
+    // Fetch vendor name from contacts if contact_id provided
+    let vendorName = null;
+    if (data.contact_id) {
+      const contactRes = await query(`SELECT name FROM contacts WHERE id = $1`, [data.contact_id]);
+      if (contactRes.rows.length > 0) {
+        vendorName = contactRes.rows[0].name;
+      }
+    }
+    
     const { rows } = await query(
       `INSERT INTO expenses (
-         title,
+         description,
          category,
          amount,
          expense_date,
@@ -146,7 +165,12 @@ export async function createExpense(data: {
          tax_invoice_no,
          tax_invoice_date,
          vat_amount,
+         wht_rate,
+         wht_amount,
+         net_amount,
+         is_service,
          contact_id,
+         vendor,
          classification,
          notes,
          receipt_url,
@@ -154,7 +178,7 @@ export async function createExpense(data: {
          receipt_mime_type,
          status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'paid')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'paid')
        RETURNING id`,
       [
         data.title,
@@ -165,7 +189,12 @@ export async function createExpense(data: {
         data.tax_invoice_no || null,
         data.tax_invoice_date || null,
         data.vat_amount || 0,
+        data.wht_rate || 0,
+        data.wht_amount || 0,
+        data.net_amount || data.amount || 0,
+        data.is_service || false,
         data.contact_id || null,
+        vendorName,
         (data.classification || "OPEX").toUpperCase(),
         data.notes || null,
         data.receipt_url || null,
@@ -181,7 +210,8 @@ export async function createExpense(data: {
       data.amount,
       data.vat_amount || 0,
       data.category,
-      data.expense_date
+      data.expense_date,
+      data.wht_amount || 0
     );
 
     if (!journalResult.success) {

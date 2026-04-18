@@ -20,6 +20,7 @@ import {
   User,
   Wallet,
   Banknote,
+  FileBadge,
 } from "lucide-react";
 import GoogleDrivePicker from "@/components/GoogleDrivePicker";
 import {
@@ -86,6 +87,10 @@ export default function ExpensesPage() {
     tax_invoice_no: "",
     tax_invoice_date: "",
     vat_amount: "",
+    wht_rate: "3",
+    wht_amount: "",
+    net_amount: "",
+    is_service: false,
     notes: "",
     receipt_url: "",
     receipt_file_name: "",
@@ -147,6 +152,10 @@ export default function ExpensesPage() {
       tax_invoice_no: "",
       tax_invoice_date: "",
       vat_amount: "",
+      wht_rate: "3",
+      wht_amount: "",
+      net_amount: "",
+      is_service: false,
       notes: "",
       receipt_url: "",
       receipt_file_name: "",
@@ -160,17 +169,28 @@ export default function ExpensesPage() {
     }
 
     startTransition(async () => {
+      // Calculate WHT
+      const amount = parseFloat(form.amount) || 0;
+      const vatAmount = parseFloat(form.vat_amount) || 0;
+      const netAmount = amount - vatAmount; // Amount before VAT
+      const whtRate = parseFloat(form.wht_rate) || 0;
+      const whtAmount = form.is_service ? (netAmount * whtRate / 100) : 0;
+      
       const res = await createExpense({
         contact_id: form.contact_id ? parseInt(form.contact_id, 10) : undefined,
         title: form.title,
         category: form.category,
         classification: form.classification,
-        amount: parseFloat(form.amount),
+        amount: amount,
         expense_date: form.expense_date,
         reference_no: form.reference_no || undefined,
         tax_invoice_no: form.tax_invoice_no || undefined,
         tax_invoice_date: form.tax_invoice_date || undefined,
-        vat_amount: form.vat_amount ? parseFloat(form.vat_amount) : undefined,
+        vat_amount: vatAmount,
+        wht_rate: whtRate,
+        wht_amount: whtAmount,
+        net_amount: netAmount,
+        is_service: form.is_service,
         notes: form.notes || undefined,
         receipt_url: form.receipt_url || undefined,
         receipt_file_name: form.receipt_file_name || undefined,
@@ -314,19 +334,24 @@ export default function ExpensesPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-                  จำนวนเงิน (บาท) *
+                <label className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400 text-rose-500">
+                  <Wallet size={10} /> จำนวนเงินรวม VAT (บาท) *
                 </label>
                 <input
                   type="number"
-                  required
                   min="0"
                   step="0.01"
+                  required
                   value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  onChange={(e) => {
+                    const amount = parseFloat(e.target.value) || 0;
+                    const vatAmount = (amount * 7 / 107).toFixed(2); // VAT 7% included
+                    setForm({ ...form, amount: e.target.value, vat_amount: vatAmount });
+                  }}
                   placeholder="0.00"
-                  className="h-11 w-full rounded-xl border border-rose-100 bg-rose-50/30 px-4 text-right text-sm font-bold outline-none focus:border-rose-400"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-right text-sm font-semibold outline-none focus:border-rose-400"
                 />
+                <p className="text-[10px] text-slate-400">ระบบคำนวณ VAT 7% ให้อัตโนมัติ</p>
               </div>
 
               <div className="space-y-1">
@@ -391,6 +416,55 @@ export default function ExpensesPage() {
                   placeholder="0.00"
                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-right text-sm font-semibold outline-none focus:border-rose-400"
                 />
+              </div>
+
+              {/* WHT Section */}
+              <div className="space-y-3 md:col-span-2 p-4 bg-violet-50 rounded-xl border border-violet-100">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.is_service}
+                    onChange={(e) => setForm({ ...form, is_service: e.target.checked })}
+                    className="w-5 h-5 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                  />
+                  <span className="text-sm font-bold text-violet-700">
+                    เป็นงานบริการ (ต้องหัก ณ ที่จ่าย 3%)
+                  </span>
+                </label>
+                
+                {form.is_service && (
+                  <div className="grid grid-cols-3 gap-4 pt-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-violet-500">
+                        WHT Rate (%)
+                      </label>
+                      <select
+                        value={form.wht_rate}
+                        onChange={(e) => setForm({ ...form, wht_rate: e.target.value })}
+                        className="h-11 w-full rounded-xl border border-violet-200 bg-white px-4 text-sm font-semibold outline-none focus:border-violet-400"
+                      >
+                        <option value="3">3%</option>
+                        <option value="5">5%</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-violet-500">
+                        ยอดก่อน VAT (Base)
+                      </label>
+                      <div className="h-11 w-full rounded-xl border border-violet-200 bg-white px-4 text-right text-sm font-semibold flex items-center justify-end text-violet-700">
+                        ฿{(parseFloat(form.amount || '0') - parseFloat(form.vat_amount || '0')).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-violet-500">
+                        WHT หัก (3%)
+                      </label>
+                      <div className="h-11 w-full rounded-xl border border-violet-200 bg-violet-100 px-4 text-right text-sm font-bold flex items-center justify-end text-violet-700">
+                        ฿{((parseFloat(form.amount || '0') - parseFloat(form.vat_amount || '0')) * parseFloat(form.wht_rate || '3') / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1 md:col-span-2">
@@ -603,6 +677,15 @@ export default function ExpensesPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                          {Number(expense.wht_amount || 0) > 0 && (
+                            <Link
+                              href={`/expenses/${expense.id}/wht53`}
+                              className="rounded-lg p-2 text-violet-600 hover:bg-violet-50"
+                              title="ใบหัก ณ ที่จ่าย (ภ.ง.ด. 53)"
+                            >
+                              <FileBadge size={14} />
+                            </Link>
+                          )}
                           <Link
                             href={`/vouchers/new?expenseId=${expense.id}&amount=${expense.amount}&payee=${encodeURIComponent(expense.vendor_name || '')}&contactId=${expense.contact_id || ''}`}
                             className="rounded-lg p-2 text-slate-300 opacity-0 transition-all hover:bg-emerald-50 hover:text-emerald-600 group-hover:opacity-100"

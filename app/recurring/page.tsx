@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { CalendarClock, Mail, Plus, Repeat, Search, StopCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,8 @@ export default async function RecurringInvoicesPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
+  const session = await auth();
+  const userRole = session?.user?.role;
   const search = (await searchParams)?.search || "";
   let records: any[] = [];
 
@@ -75,7 +78,7 @@ export default async function RecurringInvoicesPage({
               <Plus size={18} />
               สร้างรอบบิลใหม่
             </button>
-            <RecurringRunButton />
+            <RecurringRunButton userRole={userRole} />
           </div>
         </div>
 

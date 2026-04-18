@@ -1,5 +1,6 @@
 
 import { query } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { Receipt, Plus, Search, FileText, ArrowLeft, ArrowRight, Edit, Filter, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import InvoiceRowActions from "./InvoiceRowActions";
@@ -8,6 +9,8 @@ import { cn } from "@/lib/utils";
 export const dynamic = 'force-dynamic';
 
 export default async function InvoicesPage({ searchParams }: { searchParams: { search?: string } }) {
+  const session = await auth();
+  const userRole = session?.user?.role;
   const search = (await searchParams)?.search || "";
   let invoices = [];
   try {
@@ -137,6 +140,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
                               vatAmount={inv.vat_amount}
                               contactId={inv.contact_id}
                               status={inv.status}
+                              userRole={userRole}
                             />
                          </div>
                       </td>

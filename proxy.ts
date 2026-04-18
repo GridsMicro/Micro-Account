@@ -1,14 +1,24 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import NextAuth from "next-auth";
-import { authConfig } from "./lib/auth.config";
+import { jwtVerify } from "jose";
 
-const { auth } = NextAuth(authConfig);
+const SECRET = new TextEncoder().encode(
+  process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "secret-key"
+);
 
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/login", "/register", "/api/login", "/api/logout"];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
-export const proxy = auth((req) => {
+async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
@@ -20,7 +30,10 @@ export const proxy = auth((req) => {
     return NextResponse.next();
   }
 
-  const session = (req as NextRequest & { auth?: unknown }).auth;
+  // Check session token from cookie
+  const token = req.cookies.get("session-token")?.value;
+  const session = token ? await verifyToken(token) : null;
+
   if (session) {
     return NextResponse.next();
   }
@@ -28,7 +41,7 @@ export const proxy = auth((req) => {
   const loginUrl = new URL("/login", req.url);
   loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname + req.nextUrl.search);
   return NextResponse.redirect(loginUrl);
-});
+}
 
 export const config = {
   matcher: [

@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS services (
 -- 9. PAYROLL ENTRIES (HR/Payroll Integration Contract)
 CREATE TABLE IF NOT EXISTS payroll_entries (
     id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    company_id INTEGER NOT NULL,
     employee_code VARCHAR(100),
     employee_name VARCHAR(255) NOT NULL,
     payroll_month DATE NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS payroll_entries (
     external_ref VARCHAR(150),
     notes TEXT,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_by INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

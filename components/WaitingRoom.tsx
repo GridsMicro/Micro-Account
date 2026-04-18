@@ -1,7 +1,6 @@
 "use client";
 
 import { Clock, ShieldAlert, LogOut, Mail, User } from "lucide-react";
-import { signOut } from "next-auth/react";
 
 export default function WaitingRoomPage({ userName, userEmail }: { userName?: string, userEmail?: string }) {
   return (
@@ -72,7 +71,10 @@ export default function WaitingRoomPage({ userName, userEmail }: { userName?: st
                     ไม่ต้องห่วงครับ! ข้อมูลของคุณปลอดภัยและอยู่ในลำดับคิวเรียบร้อยแล้ว ในระหว่างนี้คุณสามารถปิดหน้านี้ไปก่อนได้
                  </p>
                  <button 
-                  onClick={() => signOut()}
+                  onClick={async () => {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.href = '/login';
+                  }}
                   className="px-6 h-12 bg-gray-800 hover:bg-black text-white text-xs font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2 shadow-lg"
                  >
                     <LogOut size={16} /> ออกจากระบบ

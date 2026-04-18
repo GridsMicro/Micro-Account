@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { 
   Home, 
   FileText, 
@@ -239,7 +238,10 @@ export default function Sidebar({
           
           {isLoggedIn && (
             <button 
-              onClick={() => signOut({ redirect: true })}
+              onClick={async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+              }}
               className="w-full h-12 flex items-center justify-center gap-3 bg-white/5 hover:bg-rose-600 hover:text-white text-slate-400 rounded-lg transition-all group border border-white/5"
             >
               <LogOut size={20} className="group-hover:scale-110 transition-transform" />

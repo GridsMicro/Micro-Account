@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { canAccessAdmin } from "@/lib/core-standards";
 
-export default function RecurringRunButton() {
+export default function RecurringRunButton({ userRole }: { userRole?: string }) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [secret, setSecret] = useState("");
   const [runDate, setRunDate] = useState(new Date().toISOString().split("T")[0]);
   const router = useRouter();
-  const { data: session } = useSession();
-  const canRunBilling = canAccessAdmin((session?.user as any)?.role);
+  const canRunBilling = canAccessAdmin(userRole);
 
   const handleRun = async () => {
     setLoading(true);
