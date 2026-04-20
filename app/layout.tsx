@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Outfit, Inter } from "next/font/google";
 import "./globals.css";
 import { auth } from "@/lib/auth";
 import { query } from "@/lib/db";
@@ -7,18 +6,6 @@ import { ToastProvider } from "@/components/ToastProvider";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import { Providers } from "@/components/Providers";
 import GlobalAiChat from "@/components/GlobalAiChat";
-
-const fontOutfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
-});
-
-const fontInter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
-});
 
 export const metadata: Metadata = {
   title: "Micro-Account Excellence | ระบบจัดการบัญชีอัจฉริยะ",
@@ -47,9 +34,9 @@ export default async function RootLayout({
   const userRole = (session?.user as any)?.role || "Active Edge";
 
   return (
-    <html lang="th" className={`${fontOutfit.variable} ${fontInter.variable}`}>
+    <html lang="th">
       <body
-        className="antialiased font-inter bg-[#fdfaff] text-slate-900 scroll-smooth"
+        className="antialiased font-sans bg-[#fdfaff] text-slate-900 scroll-smooth"
       >
         <Providers>
           <ToastProvider>

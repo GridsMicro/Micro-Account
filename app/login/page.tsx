@@ -36,7 +36,7 @@ export default function LoginPage() {
       }
     } catch (err: unknown) {
       console.error("[LOGIN] Exception:", err);
-      setError("เกิดข้อผิดพลาด: " + (err.message || "กรุณาลองใหม่"));
+      setError("เกิดข้อผิดพลาด: " + ((err as Error).message || "กรุณาลองใหม่"));
     } finally {
       setIsLoading(false);
     }

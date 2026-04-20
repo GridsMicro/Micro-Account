@@ -14,11 +14,13 @@ export async function GET(req: NextRequest) {
       WHERE 1=1
     `;
     const params: string[] = [];
+    let paramIndex = 1;
     
     if (search) {
       params.push(`%${search}%`);
       params.push(`%${search}%`);
-      q += ` AND (p.payment_no ILIKE $1 OR c.name ILIKE $2)`;
+      q += ` AND (p.payment_no ILIKE $${paramIndex} OR c.name ILIKE $${paramIndex + 1})`;
+      paramIndex += 2;
     }
     
     q += ` ORDER BY p.payment_date DESC`;

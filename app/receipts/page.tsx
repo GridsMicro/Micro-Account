@@ -19,9 +19,22 @@ export default function ReceiptsPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    // TODO: Implement receipts data fetching
-    setLoading(false);
+    fetchReceipts();
   }, []);
+
+  const fetchReceipts = async () => {
+    try {
+      const res = await fetch("/api/payments");
+      if (res.ok) {
+        const data = await res.json();
+        setReceipts(data.payments || []);
+      }
+    } catch (e) {
+      console.error("Fetch receipts error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#f8f5ff] p-6 md:p-10">
@@ -104,11 +117,11 @@ export default function ReceiptsPage() {
                     <tr key={receipt.id} className="group transition-all hover:bg-emerald-50/10">
                       <td className="px-6 py-4">
                         <span className="font-mono text-sm font-semibold text-slate-800">
-                          {receipt.receipt_number}
+                          {receipt.payment_no}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-500">
-                        {new Date(receipt.receipt_date).toLocaleDateString("th-TH")}
+                        {new Date(receipt.payment_date).toLocaleDateString("th-TH")}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -142,9 +155,13 @@ export default function ReceiptsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="rounded-lg p-2 text-slate-300 hover:bg-emerald-50 hover:text-emerald-500">
+                        <Link
+                          href={`/payments/print/${receipt.id}`}
+                          className="rounded-lg p-2 text-slate-300 hover:bg-emerald-50 hover:text-emerald-500 inline-block"
+                          title="พิมพ์ใบเสร็จ"
+                        >
                           <FileText size={14} />
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   ))}

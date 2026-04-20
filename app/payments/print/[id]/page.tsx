@@ -127,8 +127,8 @@ export default function PrintReceiptPage() {
               <p className="text-sm text-gray-600">Tax ID: {company.tax_id}</p>
               <p className="text-sm text-gray-600">Tel: {company.phone || "-"}</p>
             </div>
-            <div className="text-center bg-gradient-to-br from-indigo-600 to-violet-600 text-white px-8 py-4 rounded-xl">
-              <div className="text-xl font-black">ใบเสร็จรับเงิน</div>
+            <div className="text-center bg-gradient-to-br from-indigo-600 to-violet-600 text-white px-6 py-3 rounded-xl">
+              <div className="text-sm font-black">ใบเสร็จรับเงิน/ใบกำกับภาษี</div>
               <div className="text-xs opacity-80">RECEIPT / TAX INVOICE</div>
             </div>
           </div>
