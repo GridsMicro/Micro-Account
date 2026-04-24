@@ -711,9 +711,9 @@ export default function GroupsPage() {
                   </tbody>
                 </table>
               </div>
-              
-              {/* Footer Actions */}
-              <div className="flex gap-3 p-6 border-t border-slate-100">
+
+              {/* Footer - Save Button */}
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-white">
                 <button
                   onClick={() => setIsPermissionModalOpen(false)}
                   className="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors"
@@ -722,7 +722,7 @@ export default function GroupsPage() {
                 </button>
                 <button
                   onClick={handleSavePermissions}
-                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                  className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-200"
                 >
                   <Save size={18} /> บันทึกสิทธิ์
                 </button>
@@ -731,9 +731,6 @@ export default function GroupsPage() {
           </div>
         </ModalPortal>
 
-        <div className="py-10 text-center opacity-30">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Microtronic Security Shield • RBAC Groups v1.0</p>
-        </div>
       </div>
     </main>
   );

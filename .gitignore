@@ -1,3 +1,7 @@
+# Database Backups (may contain credentials)
+backup_*.sql
+*.sql.bak
+
 # Sensitive Keys and Secrets
 microtronic-finance-bot-*.json
 service_account.json

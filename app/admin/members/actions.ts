@@ -32,12 +32,16 @@ export async function createUserAction(data: {
     }
 
     const companyId = await getUserCompanyId((session.user as any).id);
-    const seatCheck = await checkUserLimit(companyId);
-    if (!seatCheck.allowed) {
-      return {
-        success: false,
-        error: "License Limit Reached: Please upgrade to add more users (300 THB/user/month).",
-      };
+    // superadmin bypasses user seat limit
+    const isSuperAdmin = normalizeRole((session.user as any).role) === "superadmin";
+    if (!isSuperAdmin) {
+      const seatCheck = await checkUserLimit(companyId);
+      if (!seatCheck.allowed) {
+        return {
+          success: false,
+          error: "License Limit Reached: Please upgrade to add more users (300 THB/user/month).",
+        };
+      }
     }
 
     const existingUser = await query(`SELECT id FROM users WHERE email = $1 LIMIT 1`, [data.email]);
