@@ -11,9 +11,9 @@ export default async function QuotationsPage({ searchParams }: { searchParams: {
   let quotations = [];
   try {
     let q = `
-      SELECT q.*, c.name as customer_name 
-      FROM quotations q 
-      LEFT JOIN contacts c ON q.contact_id = c.id 
+      SELECT q.*, c.name as customer_name
+        FROM quotations q 
+        LEFT JOIN contacts c ON q.contact_id = c.id 
     `;
     
     // Try the query with contact_id first, fallback if it fails
@@ -135,7 +135,15 @@ export default async function QuotationsPage({ searchParams }: { searchParams: {
                       </td>
                       <td className="px-10 py-6 text-center">
                          <span className="text-xs font-bold text-slate-500">
-                            {new Date(q.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {q.created_at ? (() => {
+                              try {
+                                const date = new Date(q.created_at);
+                                if (isNaN(date.getTime())) return '-';
+                                return date.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+                              } catch {
+                                return '-';
+                              }
+                            })() : '-'}
                          </span>
                       </td>
                       <td className="px-10 py-6 text-right">

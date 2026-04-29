@@ -1,16 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 import { Bot, Sparkles, X, BrainCircuit, Zap, Send, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function GlobalAiChat() {
+  const pathname = usePathname();
+  const [isVisible, setIsVisible] = useState(true);
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Hide AI chatbox on quotations pages
+    if (pathname?.startsWith('/quotations')) {
+      setIsVisible(false);
+    } else {
+      setIsVisible(true);
+    }
+  }, [pathname]);
+
+  if (!isVisible) return null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

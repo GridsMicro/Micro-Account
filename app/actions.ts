@@ -689,13 +689,33 @@ export async function getNextQuotationNumber() {
   const yearShort = new Date().getFullYear().toString().slice(-2);
   const prefix = `QT${yearShort}-`;
   try {
+    // Get the highest quotation number by ordering by quotation_number DESC
     const { rows } = await query(
-      `SELECT quotation_number FROM quotations WHERE quotation_number LIKE $1 ORDER BY id DESC LIMIT 1`,
-      [`${prefix}%`]
+      `SELECT quotation_number FROM quotations ORDER BY quotation_number DESC LIMIT 1`
     );
     if (rows.length === 0) return { success: true, data: `${prefix}001` };
-    const lastNum = parseInt(rows[0].quotation_number.replace(prefix, ""), 10);
-    return { success: true, data: `${prefix}${String(isNaN(lastNum) ? 1 : lastNum + 1).padStart(3, "0")}` };
+    
+    const lastQuotation = rows[0].quotation_number;
+    
+    // Try to parse as new format first (QT26-XXX)
+    if (lastQuotation.startsWith(prefix)) {
+      const lastNum = parseInt(lastQuotation.replace(prefix, ""), 10);
+      if (!isNaN(lastNum)) {
+        return { success: true, data: `${prefix}${String(lastNum + 1).padStart(3, "0")}` };
+      }
+    }
+    
+    // If not new format, try old format (QT-2026-03-0005)
+    const oldFormatMatch = lastQuotation.match(/-(\d+)$/);
+    if (oldFormatMatch) {
+      const lastNum = parseInt(oldFormatMatch[1], 10);
+      if (!isNaN(lastNum)) {
+        return { success: true, data: `${prefix}${String(lastNum + 1).padStart(3, "0")}` };
+      }
+    }
+    
+    // Fallback: start with 001
+    return { success: true, data: `${prefix}001` };
   } catch (error: any) {
     return { success: true, data: `${prefix}001` };
   }

@@ -6,13 +6,29 @@ export const dynamic = 'force-dynamic';
 
 async function getQuotation(id: string) {
   try {
-    const res = await query(`
+    // Fetch quotation with customer
+    const qRes = await query(`
       SELECT q.*, c.name as customer_name 
       FROM quotations q 
       LEFT JOIN contacts c ON q.contact_id = c.id 
       WHERE q.id = $1
     `, [id]);
-    return res.rows[0];
+    
+    if (qRes.rows.length === 0) return null;
+    
+    const quotation = qRes.rows[0];
+    
+    // Fetch quotation items
+    const itemsRes = await query(`
+      SELECT * FROM quotation_items 
+      WHERE quotation_id = $1 
+      ORDER BY id ASC
+    `, [id]);
+    
+    // Add items to quotation object
+    quotation.items = itemsRes.rows;
+    
+    return quotation;
   } catch (e) {
     return null;
   }
