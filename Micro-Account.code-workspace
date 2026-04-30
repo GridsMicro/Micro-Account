@@ -5,8 +5,10 @@
 		},
 		{
 			"path": "../Micro-Account-Page"
+		},
+		{
+			"path": "../Micro-Account-Stanalone"
 		}
 	],
-	"settings": {
-	}
+	"settings": {}
 }
