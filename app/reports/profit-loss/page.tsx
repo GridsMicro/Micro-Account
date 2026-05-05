@@ -167,6 +167,7 @@ async function getPLData() {
       expensesByCategory,
       averageSixMonthProfit,
       projectedAnnualProfit,
+      monthlyTrend: monthlyProfitTrend,
     };
   } catch (error) {
     console.error("PL Error:", error);
@@ -182,6 +183,7 @@ async function getPLData() {
       expensesByCategory: [],
       averageSixMonthProfit: 0,
       projectedAnnualProfit: 0,
+      monthlyTrend: [],
     };
   }
 }
@@ -353,6 +355,63 @@ export default async function ProfitLossPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Monthly Breakdown Table */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+          <h2 className="mb-6 flex items-center gap-3 text-xl font-black text-slate-900 tracking-tight">
+            <div className="p-3 bg-violet-50 rounded-2xl">
+              <Calculator className="h-5 w-5 text-violet-600" />
+            </div>
+            สรุปรายได้-รายจ่าย-กำไร รายเดือน
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">เดือน</th>
+                  <th className="text-right py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">รายได้</th>
+                  <th className="text-right py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">ต้นทุนขาย</th>
+                  <th className="text-right py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">ค่าใช้จ่าย</th>
+                  <th className="text-right py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">กำไรสุทธิ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {data.monthlyTrend.length > 0 ? (
+                  data.monthlyTrend.map((row, index) => (
+                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 px-4">
+                        <span className="text-sm font-bold text-slate-700">{row.month}</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="text-sm font-black text-emerald-600">{formatCurrency(Number(row.income_amount))}</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="text-sm font-bold text-amber-600">{formatCurrency(Number(row.cogs_amount))}</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="text-sm font-bold text-rose-600">{formatCurrency(Number(row.expense_amount))}</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className={cn(
+                          "text-sm font-black",
+                          row.net_profit >= 0 ? "text-indigo-600" : "text-rose-600"
+                        )}>
+                          {formatCurrency(row.net_profit)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400 text-sm font-bold">
+                      ไม่มีข้อมูล
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 

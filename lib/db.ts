@@ -12,7 +12,7 @@ const pool = new Pool({
   max: 3,
   min: 0,
   idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 15000,
 });
 
 export const query = async (text: string, params?: any[]) => {
