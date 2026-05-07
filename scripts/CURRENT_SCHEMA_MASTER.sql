@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     net_amount DECIMAL(15,2) NOT NULL,
     vat_amount DECIMAL(15,2) DEFAULT 0,
     status VARCHAR(20) DEFAULT 'sent', -- sent, paid, overdue
+    quotation_id INTEGER REFERENCES quotations(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

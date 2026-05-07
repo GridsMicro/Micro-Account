@@ -255,7 +255,8 @@ CREATE TABLE "invoices" (
 	"rd_status" varchar(50),
 	"rd_submitted_at" timestamp with time zone,
 	"rd_error_message" text,
-	"issue_date" date
+	"issue_date" date,
+	"quotation_id" integer
 );
 CREATE TABLE "journal_entries" (
 	"id" serial PRIMARY KEY,

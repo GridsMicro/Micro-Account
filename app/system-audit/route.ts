@@ -103,7 +103,7 @@ async function testInvoiceJournal() {
         test: 'Invoice Journal Entry Creation',
         status: '✅ PASSED',
         details: `Created ${rows.length} journal entries successfully`,
-        entries: rows.map(row => ({
+        entries: rows.map((row: any) => ({
           id: row.id,
           description: row.description,
           debit_account_id: row.debit_account_id,
@@ -202,7 +202,7 @@ async function testExpenseJournal() {
         test: 'Expense Journal Entry Creation',
         status: '✅ PASSED',
         details: `Created ${rows.length} journal entries successfully`,
-        entries: rows.map(row => ({
+        entries: rows.map((row: any) => ({
           id: row.id,
           description: row.description,
           debit_account_id: row.debit_account_id,
@@ -265,8 +265,8 @@ async function testDatabaseSchema() {
        ORDER BY column_name`
     );
     
-    const hasSupplierCost = productColumns.some(col => col.column_name === 'supplier_cost');
-    const hasMarkupRate = productColumns.some(col => col.column_name === 'markup_rate');
+    const hasSupplierCost = productColumns.some((col: any) => col.column_name === 'supplier_cost');
+    const hasMarkupRate = productColumns.some((col: any) => col.column_name === 'markup_rate');
     
     results.push({
       test: 'Products Table Schema',
@@ -283,13 +283,13 @@ async function testDatabaseSchema() {
     );
     
     const requiredColumns = ['id', 'journal_type', 'reference_type', 'reference_id', 'debit_account_id', 'credit_account_id', 'amount'];
-    const hasAllColumns = requiredColumns.every(col => journalColumns.some(jc => jc.column_name === col));
+    const hasAllColumns = requiredColumns.every(col => journalColumns.some((jc: any) => jc.column_name === col));
     
     results.push({
       test: 'Journal Entries Schema',
       status: hasAllColumns ? '✅ PASSED' : '❌ FAILED',
       details: `Required columns: ${requiredColumns.length}/${requiredColumns.length} present`,
-      columns: journalColumns.map(col => col.column_name)
+      columns: journalColumns.map((col: any) => col.column_name)
     });
     
   } catch (error: any) {

@@ -38,7 +38,7 @@ export async function checkAndInitUsersTable() {
         WHERE table_name = 'users';
       `);
       
-      const columns = colRes.rows.map(r => r.column_name.toLowerCase());
+      const columns = colRes.rows.map((r: any) => r.column_name.toLowerCase());
       console.log("📊 Existing columns:", columns);
       
       const missing = [];

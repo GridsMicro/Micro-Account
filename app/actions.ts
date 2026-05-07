@@ -1309,7 +1309,7 @@ export async function exportVouchersToSheets() {
     const spreadsheetId = spreadsheet.data.spreadsheetId;
     const values = [
       ["Voucher No", "Payee", "Date", "Amount", "Method", "Status"],
-      ...vouchers.map(v => [v.voucher_no, v.payee_name, new Date(v.issue_date).toLocaleDateString('th-TH'), v.amount, v.payment_method, v.status])
+      ...vouchers.map((v: any) => [v.voucher_no, v.payee_name, new Date(v.issue_date).toLocaleDateString('th-TH'), v.amount, v.payment_method, v.status])
     ];
     await googleSheets.spreadsheets.values.update({
       spreadsheetId: spreadsheetId!, range: 'Sheet1!A1', valueInputOption: 'RAW', requestBody: { values }

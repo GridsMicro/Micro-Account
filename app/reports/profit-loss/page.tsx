@@ -136,7 +136,7 @@ async function getPLData() {
     const netProfit = grossProfit - totalOperatingExpense;
     const netMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
 
-    const monthlyProfitTrend = monthlyPLRes.rows.map((row) => {
+    const monthlyProfitTrend = monthlyPLRes.rows.map((row: any) => {
       const monthlyNetProfit =
         Number(row.income_amount || 0) -
         Number(row.cogs_amount || 0) -
@@ -150,7 +150,7 @@ async function getPLData() {
 
     const averageSixMonthProfit =
       monthlyProfitTrend.length > 0
-        ? monthlyProfitTrend.reduce((sum, row) => sum + Number(row.net_profit || 0), 0) /
+        ? monthlyProfitTrend.reduce((sum: number, row: any) => sum + Number(row.net_profit || 0), 0) /
           monthlyProfitTrend.length
         : 0;
     const projectedAnnualProfit = averageSixMonthProfit * 12;
@@ -379,7 +379,7 @@ export default async function ProfitLossPage() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {data.monthlyTrend.length > 0 ? (
-                  data.monthlyTrend.map((row, index) => (
+                  data.monthlyTrend.map((row: any, index: number) => (
                     <tr key={index} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-4">
                         <span className="text-sm font-bold text-slate-700">{row.month}</span>
