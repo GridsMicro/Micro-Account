@@ -2,6 +2,7 @@ import { query } from "@/lib/db";
 import { ArrowLeft, FileSignature } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import PrintButton from "../../preview/[id]/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ export default async function Wht50Page({ params }: { params: Promise<{ id: stri
                 <p>{invoice.customer_address || "-"}</p>
                 <p>เลขประจำตัวผู้เสียภาษี: {invoice.customer_tax_id || "-"}</p>
               </div>
-              
+
               <div className="border-t pt-6">
                 <span className="font-bold">ผู้ถูกหักภาษี ณ ที่จ่าย:</span>
                 <p className="mt-1">{company.name || "MICROTRONIC (THAILAND) CO., LTD."}</p>
@@ -89,7 +90,7 @@ export default async function Wht50Page({ params }: { params: Promise<{ id: stri
                     ค่าบริการ / ค่าวิชาชีพ (อ้างอิง ${invoice.invoice_number})
                   </td>
                   <td className="border border-slate-800 p-4 text-center align-top">
-                    {issueDate.toLocaleDateString("th-TH")}
+                    {formatDateDisplay(issueDate)}
                   </td>
                   <td className="border border-slate-800 p-4 text-right align-top tabular-nums">
                     {netAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}

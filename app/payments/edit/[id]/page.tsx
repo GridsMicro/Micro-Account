@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 
 interface Payment {
   id: string;
@@ -112,7 +113,7 @@ export default function EditPaymentPage() {
               </div>
               <div>
                 <span className="text-gray-500">วันที่:</span>
-                <span className="font-bold ml-2">{new Date(payment.payment_date).toLocaleDateString("th-TH")}</span>
+                <span className="font-bold ml-2">{formatDateDisplay(payment.payment_date)}</span>
               </div>
               <div>
                 <span className="text-gray-500">ลูกค้า:</span>

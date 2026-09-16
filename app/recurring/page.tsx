@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import { CalendarClock, Mail, Plus, Repeat, Search, StopCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -150,7 +151,7 @@ export default async function RecurringInvoicesPage({
                         ฿{Number(record.net_amount || record.total_amount || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-600">
-                        {record.next_billing_date ? new Date(record.next_billing_date).toLocaleDateString("th-TH") : "-"}
+                        {record.next_billing_date ? formatDateDisplay(record.next_billing_date) : "-"}
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-gray-600">{record.billing_day || "-"}</td>
                       <td className="px-6 py-4">

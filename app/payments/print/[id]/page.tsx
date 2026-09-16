@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 
 interface Payment {
   id: string;
@@ -18,6 +19,7 @@ interface Payment {
   customer_tax_id: string;
   invoice_number: string;
   vat_amount: number;
+  wht_amount: number;
   withholding_amount: number;
   invoice_net_amount: number;
   invoice_vat_amount: number;
@@ -73,12 +75,15 @@ export default function PrintReceiptPage() {
     return num?.toLocaleString("th-TH", { minimumFractionDigits: 2 }) || "0.00";
   };
 
-  // ใช้ค่าจาก Invoice โดยตรง ไม่คำนวณเอง
-  const subtotal = payment?.invoice_net_amount || 0;
-  const vatAmount = payment?.invoice_vat_amount || 0;
-  const whtAmount = payment?.invoice_wht_amount || 0;
-  // บัญชีแสดง WHT แต่ยอดสุทธิไม่หัก (รับผิดชอบเอง)
-  const total = payment?.invoice_net_after_wht || payment?.invoice_total_amount || 0;
+  // ตรวจสอบข้อมูลจากทั้ง Payment และ Invoice ที่ Link กัน
+  const subtotal = payment?.invoice_net_amount || payment?.amount || 0;
+  const vatAmount = payment?.invoice_vat_amount || payment?.vat_amount || 0;
+
+  // WHT อาจเก็บใน wht_amount (ใหม่), invoice_wht_amount (จาก invoice), หรือ withholding_amount (legacy)
+  const whtAmount = payment?.wht_amount || payment?.invoice_wht_amount || payment?.withholding_amount || 0;
+
+  // ยอดรวมสุทธิ = ยอดเงิน + VAT - WHT
+  const total = payment?.invoice_net_after_wht || (subtotal + vatAmount - whtAmount);
 
   if (loading) {
     return (
@@ -145,7 +150,7 @@ export default function PrintReceiptPage() {
               <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">รายละเอียด</div>
               <div className="font-bold text-gray-800">เลขที่: {payment.payment_no || "-"}</div>
               <div className="text-sm text-gray-600">
-                วันที่: {new Date(payment.payment_date).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
+                วันที่: {formatDateDisplay(payment.payment_date, { formatLong: true })}
               </div>
               <div className="text-sm text-gray-600">วิธีชำระ: {payment.payment_method || "Bank Transfer"}</div>
               {payment.invoice_number && (
@@ -256,35 +261,35 @@ export default function PrintReceiptPage() {
 // Helper function to convert number to Thai words
 function amountToThaiWords(amount: number): string {
   if (!amount) return "ศูนย์บาทถ้วน";
-  
+
   const baht = Math.floor(amount);
   const satang = Math.round((amount - baht) * 100);
-  
+
   let result = numberToThai(baht) + "บาท";
   if (satang > 0) {
     result += numberToThai(satang) + "สตางค์";
   } else {
     result += "ถ้วน";
   }
-  
+
   return result;
 }
 
 function numberToThai(num: number): string {
   const thaiNums = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
   const thaiPlaces = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
-  
+
   if (num === 0) return "";
   if (num < 10) return thaiNums[num];
-  
+
   let result = "";
   const str = num.toString();
   const len = str.length;
-  
+
   for (let i = 0; i < len; i++) {
     const digit = parseInt(str[i]);
     const place = len - i - 1;
-    
+
     if (digit !== 0) {
       if (place === 1 && digit === 1) {
         result += "สิบ";
@@ -296,11 +301,11 @@ function numberToThai(num: number): string {
         result += thaiNums[digit] + thaiPlaces[place % 6];
       }
     }
-    
+
     if (place === 6 && i !== len - 1) {
       result += "ล้าน";
     }
   }
-  
+
   return result;
 }

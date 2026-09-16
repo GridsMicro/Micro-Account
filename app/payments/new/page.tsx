@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Save, 
-  CreditCard, 
-  User, 
-  Calendar, 
+import { formatDateDisplay } from "@/lib/dateFormatter";
+import {
+  ArrowLeft,
+  Save,
+  CreditCard,
+  User,
+  Calendar,
   DollarSign,
   Zap,
   Printer,
@@ -26,15 +27,15 @@ export default function NewPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>(null);
-  const [status, setStatus] = useState<{type: 'success' | 'error' | null, message: string}>({type: null, message: ''});
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  
+
   // Load from localStorage after mount (avoid hydration mismatch)
   useEffect(() => {
     const saved = localStorage.getItem('lastPaymentId');
     if (saved) setPaymentId(saved);
   }, []);
-  
+
   // URL Params for Linking
   const invoiceId = searchParams.get('invoiceId');
   const preFilledAmount = searchParams.get('amount');
@@ -50,7 +51,7 @@ export default function NewPaymentPage() {
     paymentMethod: 'Bank Transfer (โอนเงินผ่านธนาคาร)',
     description: preFilledRef ? `รับชำระตามใบแจ้งหนี้ #${preFilledRef}` : 'ชำระค่า License Software',
     vatRate: 7,
-    whtRate: 0, 
+    whtRate: 0,
     isVatRegistered: true,
     isService: true
   });
@@ -84,7 +85,7 @@ export default function NewPaymentPage() {
 
   const handleSave = async () => {
     if (!formData.amount || !formData.contactId) {
-      setStatus({type: 'error', message: 'กรุณากรอกข้อมูลให้ครบถ้วนครับ'});
+      setStatus({ type: 'error', message: 'กรุณากรอกข้อมูลให้ครบถ้วนครับ' });
       return;
     }
 
@@ -95,9 +96,9 @@ export default function NewPaymentPage() {
         invoiceId: invoiceId || null,
         withholdingAmount: whtAmount
       };
-      
+
       const paymentRes = await createPayment(paymentData);
-      
+
       if (!paymentRes.success) {
         throw new Error(paymentRes.error);
       }
@@ -107,9 +108,9 @@ export default function NewPaymentPage() {
       if (newPaymentId) {
         localStorage.setItem('lastPaymentId', newPaymentId);
       }
-      setStatus({type: 'success', message: 'บันทึกสำเร็จแล้วครับพี่! ระบบจัดการภาษีและสมุดรายวันให้เรียบร้อยแล้ว'});
+      setStatus({ type: 'success', message: 'บันทึกสำเร็จแล้วครับพี่! ระบบจัดการภาษีและสมุดรายวันให้เรียบร้อยแล้ว' });
     } catch (err: any) {
-      setStatus({type: 'error', message: err.message});
+      setStatus({ type: 'error', message: err.message });
     } finally {
       setLoading(false);
     }
@@ -352,7 +353,7 @@ export default function NewPaymentPage() {
               <div class="info-box">
                 <div class="info-label">รายละเอียดเอกสาร</div>
                 <div class="info-value">เลขที่: ${formData.reference}</div>
-                <div class="info-value secondary">วันที่: ${new Date(formData.date).toLocaleDateString('th-TH', {year: 'numeric', month: 'long', day: 'numeric'})}</div>
+                <div class="info-value secondary">วันที่: ${formatDateDisplay(formData.date, { formatLong: true })}</div>
                 <div class="info-value secondary">วิธีชำระ: ${formData.paymentMethod}</div>
               </div>
             </div>
@@ -369,7 +370,7 @@ export default function NewPaymentPage() {
                 <tr>
                   <td>1</td>
                   <td>${formData.description}</td>
-                  <td>${amountNum.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                  <td>${amountNum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                 </tr>
               </tbody>
             </table>
@@ -377,20 +378,20 @@ export default function NewPaymentPage() {
             <div class="summary-box">
               <div class="summary-row">
                 <span>รวมเงิน (Subtotal)</span>
-                <span>${amountNum.toLocaleString('th-TH', {minimumFractionDigits: 2})}</span>
+                <span>${amountNum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
               </div>
               <div class="summary-row">
                 <span>ภาษีมูลค่าเพิ่ม 7% (VAT)</span>
-                <span>${vatAmount.toLocaleString('th-TH', {minimumFractionDigits: 2})}</span>
+                <span>${vatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
               </div>
               ${whtAmount > 0 ? `
               <div class="summary-row" style="color: #dc2626;">
                 <span>หัก ณ ที่จ่าย ${formData.whtRate}% (WHT)</span>
-                <span>- ${whtAmount.toLocaleString('th-TH', {minimumFractionDigits: 2})}</span>
+                <span>- ${whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
               </div>` : ''}
               <div class="total-row">
                 <span>รวมยอดรับสุทธิ (Total Received)</span>
-                <span>฿${totalReceived.toLocaleString('th-TH', {minimumFractionDigits: 2})}</span>
+                <span>฿${totalReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
@@ -435,8 +436,8 @@ export default function NewPaymentPage() {
           </div>
           <div className="flex gap-2">
             {paymentId && (
-              <button 
-                onClick={() => { localStorage.removeItem('lastPaymentId'); handlePrintReceipt(); }} 
+              <button
+                onClick={() => { localStorage.removeItem('lastPaymentId'); handlePrintReceipt(); }}
                 className="h-11 px-4 bg-blue-600 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-colors"
               >
                 <Printer size={18} /> พิมพ์ใบเสร็จ
@@ -460,39 +461,39 @@ export default function NewPaymentPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ลูกค้า</label>
-                  <select value={formData.contactId} onChange={e => setFormData({...formData, contactId: e.target.value})} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold">
+                  <select value={formData.contactId} onChange={e => setFormData({ ...formData, contactId: e.target.value })} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold">
                     <option value="">เลือกรายชื่อลูกค้า</option>
                     {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">เลขที่อ้างอิง</label>
-                  <input type="text" value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold font-mono" />
+                  <input type="text" value={formData.reference} onChange={e => setFormData({ ...formData, reference: e.target.value })} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold font-mono" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-green-600">ยอดเงิน (ก่อนภาษี)</label>
-                  <input type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full h-11 px-4 bg-green-50 border border-green-100 rounded-xl font-black text-green-700 text-lg" />
+                  <input type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} className="w-full h-11 px-4 bg-green-50 border border-green-100 rounded-xl font-black text-green-700 text-lg" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">วันที่รับชำระ</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold" />
+                  <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold" />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">คำอธิบาย</label>
-                <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold" />
+                <input type="text" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-blue-600">ช่องทางการเงิน</label>
-                  <select value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value})} className="w-full h-11 px-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 font-bold">
+                  <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full h-11 px-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 font-bold">
                     <option>Bank Transfer (โอนเงินผ่านธนาคาร)</option>
                     <option>Cash (เงินสด)</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-red-500">หัก ณ ที่จ่าย (WHT)</label>
-                  <select value={formData.whtRate} onChange={e => setFormData({...formData, whtRate: parseInt(e.target.value)})} className="w-full h-11 px-4 bg-red-50 border border-red-100 rounded-xl text-red-700 font-bold">
+                  <select value={formData.whtRate} onChange={e => setFormData({ ...formData, whtRate: parseInt(e.target.value) })} className="w-full h-11 px-4 bg-red-50 border border-red-100 rounded-xl text-red-700 font-bold">
                     <option value="0">ไม่มีการหัก</option>
                     <option value="3">หัก 3% (บริการ)</option>
                     <option value="5">หัก 5% (ค่าสิทธิ)</option>
@@ -501,8 +502,8 @@ export default function NewPaymentPage() {
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-purple-600">ประเภทรายการ</label>
                   <div className="flex gap-2 p-1 bg-purple-50 rounded-xl border border-purple-100">
-                    <button type="button" onClick={() => setFormData({...formData, isService: true})} className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase", formData.isService ? "bg-purple-600 text-white shadow-md" : "text-purple-400 hover:bg-purple-100")}>งานบริการ</button>
-                    <button type="button" onClick={() => setFormData({...formData, isService: false})} className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase", !formData.isService ? "bg-purple-600 text-white shadow-md" : "text-purple-400 hover:bg-purple-100")}>สินค้า</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, isService: true })} className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase", formData.isService ? "bg-purple-600 text-white shadow-md" : "text-purple-400 hover:bg-purple-100")}>งานบริการ</button>
+                    <button type="button" onClick={() => setFormData({ ...formData, isService: false })} className={cn("flex-1 py-2 rounded-lg text-xs font-black uppercase", !formData.isService ? "bg-purple-600 text-white shadow-md" : "text-purple-400 hover:bg-purple-100")}>สินค้า</button>
                   </div>
                 </div>
               </div>
@@ -515,14 +516,14 @@ export default function NewPaymentPage() {
               <div className="space-y-4 pb-6 border-b border-dashed border-gray-100">
                 <div className="flex justify-between items-center text-sm"><span className="text-gray-500">ยอดเงิน</span><span className="font-bold">฿{amountNum.toLocaleString()}</span></div>
                 <div className="flex justify-between items-center text-sm">
-                  <label className="flex items-center gap-2 cursor-pointer"><span className="text-gray-500">VAT (7%)</span><input type="checkbox" checked={formData.isVatRegistered} onChange={e => setFormData({...formData, isVatRegistered: e.target.checked})} /></label>
+                  <label className="flex items-center gap-2 cursor-pointer"><span className="text-gray-500">VAT (7%)</span><input type="checkbox" checked={formData.isVatRegistered} onChange={e => setFormData({ ...formData, isVatRegistered: e.target.checked })} /></label>
                   <span className="font-bold text-purple-600">+ ฿{vatAmount.toLocaleString()}</span>
                 </div>
                 {whtAmount > 0 && <div className="flex justify-between items-center text-sm"><span className="text-red-500 font-bold">หัก ณ ที่จ่าย ({formData.whtRate}%)</span><span className="font-bold text-red-600">- ฿{whtAmount.toLocaleString()}</span></div>}
               </div>
               <div className="pt-6 text-center">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">ยอดรับสุทธิ</p>
-                <p className="text-4xl font-black text-blue-600 tracking-tighter">฿{totalReceived.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                <p className="text-4xl font-black text-blue-600 tracking-tighter">฿{totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
           </div>

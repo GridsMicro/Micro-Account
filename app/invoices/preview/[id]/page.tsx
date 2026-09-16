@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import { ArrowLeft, ReceiptText } from "lucide-react"; // [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ลบ ShieldCheck ที่ไม่ได้ใช้
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -112,7 +113,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
                 <div className="space-y-1">
                   <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">วันที่ / Date</h2>
                   <p className="text-base font-black text-slate-900">
-                    {issueDate.toLocaleDateString("th-TH", { day: "2-digit", month: "long", year: "numeric" })}
+                    {formatDateDisplay(issueDate, { formatLong: true })}
                   </p>
                 </div>
               </div>
@@ -253,7 +254,7 @@ export default async function InvoicePreviewPage({ params }: { params: Promise<{
                   <div className="flex-1 border-b-2 border-dashed border-slate-300 pb-1">
                     {/* [จุดสำคัญ] - เพิ่ม Space ตรงนี้ให้สูง h-8 และมี margin ลบเท่ากับฝั่งลายเซ็น เพื่อให้เส้นประขนานกัน */}
                     <div className="h-8 -mb-1"></div>
-                    <p className="text-[9px] text-slate-400 text-center">{issueDate.toLocaleDateString("th-TH", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                    <p className="text-[9px] text-slate-400 text-center">{formatDateDisplay(issueDate, { formatLong: true })}</p>
                     {/* [CHANGE] - โดย Cascade | [DATE] - 2026-04-02 | [REASON] - ข้อความด้านล่าง */}
                   </div>
                 </div>

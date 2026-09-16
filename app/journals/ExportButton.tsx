@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { FileSpreadsheet, Download, Loader2, AlertCircle, CheckCircle2, FileText, Printer } from 'lucide-react';
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import { exportJournalsToExcel, getJournalEntries } from '@/app/actions';
 
 // ฟังก์ชันสร้าง PDF แบบใช้ "โหมดพิมพ์ผ่านหน้าต่างเบราว์เซอร์" 
@@ -24,7 +25,7 @@ const ExportButton = () => {
       const html = `
         <html>
           <head>
-            <title>Journal Report - ${new Date().toLocaleDateString('th-TH')}</title>
+            <title>Journal Report - ${formatDateDisplay(new Date())}</title>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
               body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; }
@@ -62,7 +63,7 @@ const ExportButton = () => {
               <tbody>
                 ${result.data.map((entry: any) => `
                   <tr>
-                    <td>${new Date(entry.entry_date).toLocaleDateString('th-TH')}</td>
+                    <td>${formatDateDisplay(entry.entry_date)}</td>
                     <td>${entry.reference_no || "-"}</td>
                     <td>${entry.account_name}</td>
                     <td>${entry.description}</td>
@@ -108,7 +109,7 @@ const ExportButton = () => {
         }
         const byteArray = new Uint8Array(byteNumbers);
         const excelBlob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
+
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(excelBlob);
         link.download = `Journal_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -147,9 +148,8 @@ const ExportButton = () => {
       </div>
 
       {status.type && (
-        <div className={`flex items-start gap-3 text-sm p-4 rounded-xl shadow-lg border-2 animate-in fade-in slide-in-from-top-2 w-full max-w-md ${
-          status.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'
-        }`}>
+        <div className={`flex items-start gap-3 text-sm p-4 rounded-xl shadow-lg border-2 animate-in fade-in slide-in-from-top-2 w-full max-w-md ${status.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'
+          }`}>
           {status.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />}
           <div className="flex flex-col gap-1">
             <span className="font-black uppercase text-[10px] tracking-widest opacity-70">สถานะระบบ</span>

@@ -14,6 +14,7 @@ import {
   Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import { getPNDReportDraft, getPP30Draft, getPP36Draft, getTaxSummary } from "@/app/actions";
 import TaxExportButton from "./TaxExportButton";
 
@@ -120,7 +121,7 @@ export default async function TaxReportsPage() {
                 {pp30Draft && pp30Draft.purchases.items.length > 0 ? pp30Draft.purchases.items.map((item: any) => (
                   <tr key={item.id}>
                     <td className="px-4 py-3 font-semibold text-gray-700">{item.title}</td>
-                    <td className="px-4 py-3 text-gray-500"><div>{item.tax_invoice_no}</div><div className="text-xs">{item.tax_invoice_date ? new Date(item.tax_invoice_date).toLocaleDateString("th-TH") : "-"}</div></td>
+                    <td className="px-4 py-3 text-gray-500"><div>{item.tax_invoice_no}</div><div className="text-xs">{item.tax_invoice_date ? formatDateDisplay(item.tax_invoice_date) : "-"}</div></td>
                     <td className="px-4 py-3 text-right font-bold text-sky-600">฿{Number(item.vat_amount || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-700">฿{Number(item.amount || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                   </tr>
@@ -211,7 +212,7 @@ export default async function TaxReportsPage() {
                   <tr key={item.id}>
                     <td className="px-4 py-3"><div className="font-semibold text-gray-700">{item.title}</div><div className="text-xs text-gray-500">{item.category || "Overseas service"}</div></td>
                     <td className="px-4 py-3 text-gray-500">{item.reference_no || item.tax_invoice_no || "-"}</td>
-                    <td className="px-4 py-3 text-gray-500">{item.expense_date ? new Date(item.expense_date).toLocaleDateString("th-TH") : "-"}</td>
+                    <td className="px-4 py-3 text-gray-500">{item.expense_date ? formatDateDisplay(item.expense_date) : "-"}</td>
                     <td className="px-4 py-3 text-right font-semibold text-gray-700">฿{Number(item.amount || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                     <td className="px-4 py-3 text-right font-black text-orange-600">฿{Number(item.vat_amount || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
                   </tr>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -121,7 +122,7 @@ export default function ReceiptsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-500">
-                        {new Date(receipt.payment_date).toLocaleDateString("th-TH")}
+                        {formatDateDisplay(receipt.payment_date)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

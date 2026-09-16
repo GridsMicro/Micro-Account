@@ -21,8 +21,21 @@ import {
   Wallet,
   Banknote,
   FileBadge,
+  Globe,
 } from "lucide-react";
+import { formatDateDisplay, formatDateInput } from "@/lib/dateFormatter";
+
+const SUPPORTED_CURRENCIES = [
+  { code: "THB", label: "THB — บาทไทย", symbol: "฿" },
+  { code: "USD", label: "USD — ดอลลาร์สหรัฐ", symbol: "$" },
+  { code: "EUR", label: "EUR — ยูโร", symbol: "€" },
+  { code: "SGD", label: "SGD — ดอลลาร์สิงคโปร์", symbol: "S$" },
+  { code: "JPY", label: "JPY — เยนญี่ปุ่น", symbol: "¥" },
+  { code: "GBP", label: "GBP — ปอนด์อังกฤษ", symbol: "£" },
+  { code: "CNY", label: "CNY — หยวนจีน", symbol: "¥" },
+];
 import GoogleDrivePicker from "@/components/GoogleDrivePicker";
+import ThaiDateInput from "@/components/ThaiDateInput";
 import {
   createExpense,
   deleteExpense,
@@ -94,6 +107,9 @@ export default function ExpensesPage() {
     notes: "",
     receipt_url: "",
     receipt_file_name: "",
+    original_currency: "THB",
+    original_amount: "",
+    exchange_rate: "",
   });
 
   const fetchData = async () => {
@@ -159,6 +175,9 @@ export default function ExpensesPage() {
       notes: "",
       receipt_url: "",
       receipt_file_name: "",
+      original_currency: "THB",
+      original_amount: "",
+      exchange_rate: "",
     });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,7 +194,8 @@ export default function ExpensesPage() {
       const netAmount = amount - vatAmount; // Amount before VAT
       const whtRate = parseFloat(form.wht_rate) || 0;
       const whtAmount = form.is_service ? (netAmount * whtRate / 100) : 0;
-      
+
+      const isForeignCurrency = form.original_currency !== "THB";
       const res = await createExpense({
         contact_id: form.contact_id ? parseInt(form.contact_id, 10) : undefined,
         title: form.title,
@@ -194,6 +214,9 @@ export default function ExpensesPage() {
         notes: form.notes || undefined,
         receipt_url: form.receipt_url || undefined,
         receipt_file_name: form.receipt_file_name || undefined,
+        original_currency: form.original_currency,
+        original_amount: isForeignCurrency && form.original_amount ? parseFloat(form.original_amount) : undefined,
+        exchange_rate: isForeignCurrency && form.exchange_rate ? parseFloat(form.exchange_rate) : undefined,
       });
 
       if (res.success) {
@@ -247,11 +270,10 @@ export default function ExpensesPage() {
 
         {status.type ? (
           <div
-            className={`animate-in fade-in flex items-center gap-3 rounded-xl border-2 p-4 ${
-              status.type === "success"
-                ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                : "border-red-100 bg-red-50 text-red-700"
-            }`}
+            className={`animate-in fade-in flex items-center gap-3 rounded-xl border-2 p-4 ${status.type === "success"
+              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+              : "border-red-100 bg-red-50 text-red-700"
+              }`}
           >
             {status.type === "success" ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
             <span className="text-sm font-bold">{status.message}</span>
@@ -354,17 +376,12 @@ export default function ExpensesPage() {
                 <p className="text-[10px] text-slate-400">ระบบคำนวณ VAT 7% ให้อัตโนมัติ</p>
               </div>
 
-              <div className="space-y-1">
-                <label className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  <Calendar size={10} /> วันที่
-                </label>
-                <input
-                  type="date"
-                  value={form.expense_date}
-                  onChange={(e) => setForm({ ...form, expense_date: e.target.value })}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold outline-none focus:border-rose-400"
-                />
-              </div>
+              <ThaiDateInput
+                label="วันที่"
+                value={form.expense_date}
+                onChange={(date) => setForm({ ...form, expense_date: date })}
+                required
+              />
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -391,17 +408,11 @@ export default function ExpensesPage() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  วันที่ใบภาษีซื้อ
-                </label>
-                <input
-                  type="date"
-                  value={form.tax_invoice_date}
-                  onChange={(e) => setForm({ ...form, tax_invoice_date: e.target.value })}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold outline-none focus:border-rose-400"
-                />
-              </div>
+              <ThaiDateInput
+                label="วันที่ใบภาษีซื้อ"
+                value={form.tax_invoice_date}
+                onChange={(date) => setForm({ ...form, tax_invoice_date: date })}
+              />
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -418,6 +429,96 @@ export default function ExpensesPage() {
                 />
               </div>
 
+              {/* Multi-Currency Section */}
+              <div className="space-y-3 md:col-span-2 rounded-xl border border-sky-100 bg-sky-50 p-4">
+                <div className="flex items-center gap-2">
+                  <Globe size={14} className="text-sky-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-sky-600">
+                    สกุลเงิน (Multi-Currency)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-sky-500">
+                      สกุลเงินที่จ่ายจริง
+                    </label>
+                    <select
+                      value={form.original_currency}
+                      onChange={(e) => {
+                        const currency = e.target.value;
+                        setForm({ ...form, original_currency: currency, original_amount: "", exchange_rate: "" });
+                      }}
+                      className="h-11 w-full cursor-pointer rounded-xl border border-sky-200 bg-white px-4 text-sm font-semibold outline-none focus:border-sky-400"
+                    >
+                      {SUPPORTED_CURRENCIES.map((c) => (
+                        <option key={c.code} value={c.code}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {form.original_currency !== "THB" && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-sky-500">
+                          จำนวน ({form.original_currency})
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-sky-400">
+                            {SUPPORTED_CURRENCIES.find(c => c.code === form.original_currency)?.symbol}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.0001"
+                            value={form.original_amount}
+                            onChange={(e) => {
+                              const origAmt = parseFloat(e.target.value) || 0;
+                              const rate = parseFloat(form.exchange_rate) || 0;
+                              const thbAmount = rate > 0 ? (origAmt * rate).toFixed(2) : form.amount;
+                              const vat = rate > 0 ? ((origAmt * rate) * 7 / 107).toFixed(2) : form.vat_amount;
+                              setForm({ ...form, original_amount: e.target.value, amount: thbAmount, vat_amount: vat });
+                            }}
+                            placeholder="0.00"
+                            className="h-11 w-full rounded-xl border border-sky-200 bg-white pl-8 pr-4 text-right text-sm font-semibold outline-none focus:border-sky-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-sky-500">
+                          อัตราแลกเปลี่ยน (1 {form.original_currency} = ? THB)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.000001"
+                          value={form.exchange_rate}
+                          onChange={(e) => {
+                            const rate = parseFloat(e.target.value) || 0;
+                            const origAmt = parseFloat(form.original_amount) || 0;
+                            const thbAmount = origAmt > 0 && rate > 0 ? (origAmt * rate).toFixed(2) : form.amount;
+                            const vat = origAmt > 0 && rate > 0 ? ((origAmt * rate) * 7 / 107).toFixed(2) : form.vat_amount;
+                            setForm({ ...form, exchange_rate: e.target.value, amount: thbAmount, vat_amount: vat });
+                          }}
+                          placeholder="เช่น 35.50"
+                          className="h-11 w-full rounded-xl border border-sky-200 bg-white px-4 text-sm font-semibold outline-none focus:border-sky-400"
+                        />
+                      </div>
+
+                      {parseFloat(form.original_amount) > 0 && parseFloat(form.exchange_rate) > 0 && (
+                        <div className="md:col-span-3 rounded-xl bg-sky-100 px-4 py-3 flex items-center justify-between">
+                          <span className="text-xs font-bold text-sky-600">ยอดที่จะบันทึกเป็น THB</span>
+                          <span className="text-lg font-black tabular-nums text-sky-700">
+                            ฿{(parseFloat(form.original_amount) * parseFloat(form.exchange_rate)).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* WHT Section */}
               <div className="space-y-3 md:col-span-2 p-4 bg-violet-50 rounded-xl border border-violet-100">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -431,7 +532,7 @@ export default function ExpensesPage() {
                     เป็นงานบริการ (ต้องหัก ณ ที่จ่าย 3%)
                   </span>
                 </label>
-                
+
                 {form.is_service && (
                   <div className="grid grid-cols-3 gap-4 pt-2">
                     <div className="space-y-1">
@@ -452,7 +553,7 @@ export default function ExpensesPage() {
                         ยอดก่อน VAT (Base)
                       </label>
                       <div className="h-11 w-full rounded-xl border border-violet-200 bg-white px-4 text-right text-sm font-semibold flex items-center justify-end text-violet-700">
-                        ฿{(parseFloat(form.amount || '0') - parseFloat(form.vat_amount || '0')).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ฿{(parseFloat(form.amount || '0') - parseFloat(form.vat_amount || '0')).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -460,7 +561,7 @@ export default function ExpensesPage() {
                         WHT หัก (3%)
                       </label>
                       <div className="h-11 w-full rounded-xl border border-violet-200 bg-violet-100 px-4 text-right text-sm font-bold flex items-center justify-end text-violet-700">
-                        ฿{((parseFloat(form.amount || '0') - parseFloat(form.vat_amount || '0')) * parseFloat(form.wht_rate || '3') / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ฿{((parseFloat(form.amount || '0') - parseFloat(form.vat_amount || '0')) * parseFloat(form.wht_rate || '3') / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </div>
                     </div>
                   </div>
@@ -596,7 +697,8 @@ export default function ExpensesPage() {
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">ใบภาษีซื้อ</th>
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Attachment</th>
                     <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">VAT</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">จำนวนเงิน</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">สกุลเงิน</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">จำนวนเงิน (THB)</th>
                     <th className="w-16 px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400" />
                   </tr>
                 </thead>
@@ -605,11 +707,7 @@ export default function ExpensesPage() {
                     expenses.map((expense: any) => (
                       <tr key={expense.id} className="group transition-all hover:bg-rose-50/10">
                         <td className="px-6 py-4 text-xs text-slate-500">
-                          {new Date(expense.expense_date).toLocaleDateString("th-TH", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatDateDisplay(expense.expense_date)}
                         </td>
                         <td className="px-6 py-4">
                           <div>
@@ -640,11 +738,7 @@ export default function ExpensesPage() {
                               <p className="font-mono text-slate-700">{expense.tax_invoice_no}</p>
                               <p>
                                 {expense.tax_invoice_date
-                                  ? new Date(expense.tax_invoice_date).toLocaleDateString("th-TH", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "numeric",
-                                    })
+                                  ? formatDateDisplay(expense.tax_invoice_date)
                                   : "รอระบุวันที่"}
                               </p>
                             </div>
@@ -670,6 +764,27 @@ export default function ExpensesPage() {
                           <span className="font-semibold tabular-nums text-sky-600">
                             ฿{Number(expense.vat_amount || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {expense.original_currency && expense.original_currency !== "THB" && expense.original_amount ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center justify-end gap-1">
+                                <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[9px] font-black text-sky-600">
+                                  {expense.original_currency}
+                                </span>
+                                <span className="font-bold tabular-nums text-sky-700">
+                                  {Number(expense.original_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                              {expense.exchange_rate && (
+                                <p className="text-[9px] text-slate-400">
+                                  @ {Number(expense.exchange_rate).toFixed(4)} THB
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">THB</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className="font-bold tabular-nums text-rose-600">
@@ -704,7 +819,7 @@ export default function ExpensesPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={11} className="py-20 text-center">
+                      <td colSpan={12} className="py-20 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
                             <Wallet size={24} className="text-rose-200" />
@@ -721,7 +836,7 @@ export default function ExpensesPage() {
                 {expenses.length > 0 ? (
                   <tfoot>
                     <tr className="border-t border-rose-100 bg-rose-50/30">
-                      <td colSpan={9} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-500">
+                      <td colSpan={10} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-500">
                         รวมทั้งหมด {expenses.length} รายการ
                       </td>
                       <td className="px-6 py-4 text-right">

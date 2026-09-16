@@ -2,6 +2,7 @@ import { query } from "@/lib/db";
 import { getCompanySettings } from "@/app/actions";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import PrintButton from "./PrintButton";
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export default async function QuotationPreviewPage({ params }: { params: Promise
     SELECT * FROM quotation_items WHERE quotation_id = $1 ORDER BY id ASC
   `, [id]);
 
-  const docDate = new Date(q.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+  const docDate = formatDateDisplay(q.created_at, { formatShort: true });
 
   return (
     <main className="min-h-screen bg-gray-100 py-8 print:p-0 print:bg-white text-gray-800 font-sans print:text-[10px] print:leading-tight" style={{}}>
@@ -61,11 +62,11 @@ export default async function QuotationPreviewPage({ params }: { params: Promise
           }
         `
       }} />
-      
+
       {/* Floating Toolbar (Hidden on Print) */}
       <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center print:hidden px-4">
-        <Link 
-          href="/quotations" 
+        <Link
+          href="/quotations"
           className="flex items-center gap-2 px-4 py-2 bg-white text-gray-600 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 focus:ring-2 focus:ring-violet-500 font-bold transition-all"
         >
           <ArrowLeft size={18} /> กลับไปหน้ารวม
@@ -75,7 +76,7 @@ export default async function QuotationPreviewPage({ params }: { params: Promise
 
       {/* A4 Paper Container */}
       <div className="max-w-4xl mx-auto bg-white relative p-8 md:p-10 shadow-2xl print:shadow-none print:w-full print:max-w-none print:m-0 print:p-6 print:min-h-0 min-h-[1056px]">
-        
+
         {/* Header: Company & Doc Info */}
         <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
           <div className="w-1/2">
@@ -105,9 +106,9 @@ export default async function QuotationPreviewPage({ params }: { params: Promise
           <div className="font-bold text-slate-800 text-base mb-1">{q.customer_name || "ไม่ระบุชื่อลูกค้า"}</div>
           {(q.customer_address || q.customer_tax_id) && (
             <div className="text-xs text-slate-600 font-medium leading-tight">
-              {q.customer_address && <span>{q.customer_address}<br/></span>}
+              {q.customer_address && <span>{q.customer_address}<br /></span>}
               {q.customer_tax_id && <span>Tax ID: {q.customer_tax_id}</span>}
-              {q.contact_person && <span><br/>Attn: {q.contact_person} {q.customer_phone ? `(${q.customer_phone})` : ''}</span>}
+              {q.contact_person && <span><br />Attn: {q.contact_person} {q.customer_phone ? `(${q.customer_phone})` : ''}</span>}
             </div>
           )}
         </div>
@@ -146,37 +147,37 @@ export default async function QuotationPreviewPage({ params }: { params: Promise
             </p>
           </div>
           <div className="w-[35%] bg-violet-50 p-4 rounded-xl border border-violet-100">
-             <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-               <span>Subtotal</span>
-               <span>฿{Number(q.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-             </div>
-             <div className="flex justify-between text-xs font-bold text-slate-600 mb-3 pb-3 border-b border-violet-200/50">
-               <span>VAT (7%)</span>
-               <span>฿{Number(q.vat_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-             </div>
-             <div className="flex justify-between items-center text-violet-700">
-               <span className="text-[9px] font-black uppercase tracking-widest">Grand Total</span>
-               <span className="text-xl font-black tabular-nums tracking-tighter">
-                 ฿{Number(q.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-               </span>
-             </div>
+            <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
+              <span>Subtotal</span>
+              <span>฿{Number(q.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-xs font-bold text-slate-600 mb-3 pb-3 border-b border-violet-200/50">
+              <span>VAT (7%)</span>
+              <span>฿{Number(q.vat_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between items-center text-violet-700">
+              <span className="text-[9px] font-black uppercase tracking-widest">Grand Total</span>
+              <span className="text-xl font-black tabular-nums tracking-tighter">
+                ฿{Number(q.net_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Signatures */}
         <div className="grid grid-cols-2 gap-8 mt-12 pt-6 px-6 text-center text-xs font-bold text-slate-600">
-           <div>
-              <div className="h-10 border-b-2 border-slate-300 w-4/5 mx-auto mb-3"></div>
-              <p className="text-slate-800 text-xs">ผู้เสนอราคา (Prepared By)</p>
-              <p className="text-[10px] text-slate-400 mt-1">วันที่ (Date): ____/____/____</p>
-           </div>
-           <div>
-              <div className="h-10 border-b-2 border-slate-300 w-4/5 mx-auto mb-3"></div>
-              <p className="text-slate-800 text-xs">ผู้อนุมัติ / ยืนยันสั่งซื้อ (Accepted By)</p>
-              <p className="text-[10px] text-slate-400 mt-1">วันที่ (Date): ____/____/____</p>
-           </div>
+          <div>
+            <div className="h-10 border-b-2 border-slate-300 w-4/5 mx-auto mb-3"></div>
+            <p className="text-slate-800 text-xs">ผู้เสนอราคา (Prepared By)</p>
+            <p className="text-[10px] text-slate-400 mt-1">วันที่ (Date): ____/____/____</p>
+          </div>
+          <div>
+            <div className="h-10 border-b-2 border-slate-300 w-4/5 mx-auto mb-3"></div>
+            <p className="text-slate-800 text-xs">ผู้อนุมัติ / ยืนยันสั่งซื้อ (Accepted By)</p>
+            <p className="text-[10px] text-slate-400 mt-1">วันที่ (Date): ____/____/____</p>
+          </div>
         </div>
-        
+
       </div>
 
     </main>

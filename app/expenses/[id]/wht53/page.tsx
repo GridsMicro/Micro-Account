@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { formatDateDisplay } from "@/lib/dateFormatter";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -32,19 +33,19 @@ async function getExpenseData(id: string) {
 function numberToThaiWords(num: number): string {
   const thaiNumbers = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
   const thaiPlaces = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
-  
+
   if (num === 0) return 'ศูนย์บาทถ้วน';
-  
+
   const baht = Math.floor(num);
   const satang = Math.round((num - baht) * 100);
-  
+
   let result = '';
   const bahtStr = baht.toString();
-  
+
   for (let i = 0; i < bahtStr.length; i++) {
     const digit = parseInt(bahtStr[i]);
     const place = bahtStr.length - i - 1;
-    
+
     if (digit !== 0) {
       if (place === 1 && digit === 1) {
         result += 'สิบ';
@@ -57,9 +58,9 @@ function numberToThaiWords(num: number): string {
       }
     }
   }
-  
+
   result += 'บาท';
-  
+
   if (satang > 0) {
     if (satang >= 10) {
       const ten = Math.floor(satang / 10);
@@ -76,7 +77,7 @@ function numberToThaiWords(num: number): string {
   } else {
     result += 'ถ้วน';
   }
-  
+
   return result;
 }
 
@@ -86,19 +87,15 @@ export default async function Wht53Page({ params }: { params: Promise<{ id: stri
   if (!data) return notFound();
 
   const { expense, company } = data;
-  
+
   // Calculate WHT based on stored values or calculate from amount
   const netAmount = Number(expense.net_amount || expense.amount || 0);
   const whtRate = Number(expense.wht_rate || 3);
   const whtAmount = Number(expense.wht_amount || (netAmount * whtRate / 100));
-  
+
   const issueDate = new Date(expense.expense_date || expense.created_at);
-  const thaiDate = issueDate.toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
+  const thaiDate = formatDateDisplay(expense.expense_date || expense.created_at, { formatLong: true });
+
   const bahtText = numberToThaiWords(whtAmount);
 
   return (
@@ -137,7 +134,7 @@ export default async function Wht53Page({ params }: { params: Promise<{ id: stri
                 <p>{company.address || "136/34 หมู่ที่ 4 ถนนพหลโยธิน ตำบลคูคต อำเภอลำลูกกา จังหวัดปทุมธานี 12130"}</p>
                 <p>เลขประจำตัวผู้เสียภาษี: {company.tax_id || "0105561182888"}</p>
               </div>
-              
+
               <div className="border-t pt-6">
                 <span className="font-bold">ผู้ถูกหักภาษี ณ ที่จ่าย:</span>
                 <p className="mt-1">{expense.vendor_name || expense.vendor || "-"}</p>
