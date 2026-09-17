@@ -7,8 +7,11 @@ interface EnvConfig {
   // Database
   DATABASE_URL: string;
 
+  // JWT/Auth Secret (required for JWT signing/verification)
+  NEXTAUTH_SECRET?: string;
+  AUTH_SECRET?: string;
+
   // NextAuth
-  NEXTAUTH_SECRET: string;
   NEXTAUTH_URL: string;
 
   // Session
@@ -22,7 +25,6 @@ interface EnvConfig {
 export function validateEnv(): void {
   const required: (keyof EnvConfig)[] = [
     "DATABASE_URL",
-    "NEXTAUTH_SECRET",
     "NEXTAUTH_URL",
   ];
 
@@ -34,6 +36,12 @@ export function validateEnv(): void {
     }
   });
 
+  // JWT secret is CRITICAL — must have at least one of NEXTAUTH_SECRET or AUTH_SECRET
+  const hasJWTSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+  if (!hasJWTSecret) {
+    missing.push("NEXTAUTH_SECRET or AUTH_SECRET");
+  }
+
   if (missing.length > 0) {
     const message = `
 ❌ Missing required environment variables:
@@ -41,6 +49,8 @@ ${missing.map((key) => `   - ${key}`).join("\n")}
 
 Please set these variables in your .env.local file.
 See .env.example for reference.
+
+CRITICAL: NEXTAUTH_SECRET or AUTH_SECRET must be set — this is required for JWT security.
 
 Setup instructions: https://github.com/your-repo/blob/main/AUTH_SETUP.md
     `.trim();

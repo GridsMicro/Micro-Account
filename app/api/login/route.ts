@@ -4,9 +4,19 @@ import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const SECRET = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "secret-key"
-);
+// Enforce JWT secret: MUST be set in environment, no fallback allowed
+function getJWTSecret(): Uint8Array {
+  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+  if (!secret) {
+    throw new Error(
+      "FATAL: JWT secret is not configured. Set NEXTAUTH_SECRET or AUTH_SECRET environment variable. " +
+      "This is a security-critical requirement to prevent session forgery."
+    );
+  }
+  return new TextEncoder().encode(secret);
+}
+
+const SECRET = getJWTSecret();
 
 export async function POST(req: Request) {
   try {
