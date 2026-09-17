@@ -1,40 +1,33 @@
-import { query } from "@/lib/db";
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  try {
-    const { email, password } = await req.json();
-    
-    // 1. Check database connection
-    const testRes = await query("SELECT NOW()");
-    
-    // 2. Check users table
-    const userRes = await query(
-      "SELECT id, email, password, name, role, status FROM users WHERE email = $1",
-      [email]
-    );
-    
-    if (userRes.rows.length === 0) {
-      return NextResponse.json({ error: "User not found", db: "OK" }, { status: 404 });
-    }
-    
-    const user = userRes.rows[0];
-    
-    // 3. Check password
-    const match = await bcrypt.compare(password, user.password);
-    
-    return NextResponse.json({
-      success: match,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
-      db: "OK",
-      passwordMatch: match
-    });
-    
-  } catch (err: any) {
-    return NextResponse.json({ 
-      error: err.message,
-      stack: err.stack 
-    }, { status: 500 });
-  }
+/**
+ * DEBUG AUTH ENDPOINT - DISABLED FOR SECURITY
+ * 
+ * This endpoint previously exposed sensitive information:
+ * - User existence (user enumeration)
+ * - Password match status (credential guessing)
+ * - Stack traces (system reconnaissance)
+ * 
+ * For development diagnostics, use application logs instead.
+ * For production, all auth failures return generic messages.
+ */
+
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: "Not found",
+      message: "Debug endpoints are disabled in this build"
+    },
+    { status: 404 }
+  );
+}
+
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "Not found",
+      message: "Debug endpoints are disabled in this build"
+    },
+    { status: 404 }
+  );
 }
