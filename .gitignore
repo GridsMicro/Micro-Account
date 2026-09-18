@@ -9,6 +9,9 @@ client_secret_*.json
 .env
 .env.local
 .env*.local
+secret.txt
+*.key
+*.pem
 *.db
 *.sqlite3
 **/microtronic-finance-bot-*.json
