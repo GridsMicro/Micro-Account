@@ -3,6 +3,14 @@ backup_*.sql
 *.sql.bak
 
 # Sensitive Keys and Secrets
+# NOTE: secret.txt was exposed in historical commits and has been removed.
+# Treat this repository as if the following credential classes were exposed:
+# - Base64-encoded API keys/tokens
+# - Database connection strings
+# - Service account credentials
+# 
+# IMPORTANT: If any credentials were truly live when committed, 
+# they must be ROTATED IMMEDIATELY at their respective services.
 microtronic-finance-bot-*.json
 service_account.json
 client_secret_*.json
