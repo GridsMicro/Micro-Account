@@ -45,7 +45,10 @@ async function ensureExpensesTable() {
     ADD COLUMN IF NOT EXISTS wht_rate DECIMAL(5, 2) DEFAULT 0,
     ADD COLUMN IF NOT EXISTS wht_amount DECIMAL(15, 2) DEFAULT 0,
     ADD COLUMN IF NOT EXISTS net_amount DECIMAL(15, 2) DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE
+    ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS original_currency VARCHAR(10) DEFAULT 'THB',
+    ADD COLUMN IF NOT EXISTS original_amount DECIMAL(15, 4) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(15, 6) DEFAULT NULL
   `);
 }
 
@@ -142,6 +145,9 @@ export async function createExpense(data: {
   receipt_url?: string;
   receipt_file_name?: string;
   receipt_mime_type?: string;
+  original_currency?: string;
+  original_amount?: number;
+  exchange_rate?: number;
 }) {
   try {
     await ensureExpensesTable();
@@ -154,6 +160,9 @@ export async function createExpense(data: {
         vendorName = contactRes.rows[0].name;
       }
     }
+
+    // ถ้าเป็น foreign currency ให้ original_currency ≠ THB จะต้องมี original_amount + exchange_rate
+    const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
     
     const { rows } = await query(
       `INSERT INTO expenses (
@@ -176,9 +185,12 @@ export async function createExpense(data: {
          receipt_url,
          receipt_file_name,
          receipt_mime_type,
+         original_currency,
+         original_amount,
+         exchange_rate,
          status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'paid')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'paid')
        RETURNING id`,
       [
         data.title,
@@ -200,6 +212,9 @@ export async function createExpense(data: {
         data.receipt_url || null,
         data.receipt_file_name || null,
         data.receipt_mime_type || null,
+        isForeignCurrency ? data.original_currency : "THB",
+        isForeignCurrency ? (data.original_amount ?? null) : null,
+        isForeignCurrency ? (data.exchange_rate ?? null) : null,
       ]
     );
 
@@ -247,10 +262,14 @@ export async function updateExpense(
     receipt_url?: string;
     receipt_file_name?: string;
     receipt_mime_type?: string;
+    original_currency?: string;
+    original_amount?: number;
+    exchange_rate?: number;
   }
 ) {
   try {
     await ensureExpensesTable();
+    const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
     await query(
       `UPDATE expenses
        SET title=$1,
@@ -267,8 +286,11 @@ export async function updateExpense(
            receipt_url=$12,
            receipt_file_name=$13,
            receipt_mime_type=$14,
+           original_currency=$15,
+           original_amount=$16,
+           exchange_rate=$17,
            updated_at=CURRENT_TIMESTAMP
-       WHERE id=$15`,
+       WHERE id=$18`,
       [
         data.title,
         data.category,
@@ -284,6 +306,9 @@ export async function updateExpense(
         data.receipt_url || null,
         data.receipt_file_name || null,
         data.receipt_mime_type || null,
+        isForeignCurrency ? data.original_currency : "THB",
+        isForeignCurrency ? (data.original_amount ?? null) : null,
+        isForeignCurrency ? (data.exchange_rate ?? null) : null,
         id,
       ]
     );
