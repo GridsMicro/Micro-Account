@@ -1,4 +1,11 @@
 # Database Backups (may contain credentials)
+# CLEANUP NOTE: The following files were previously committed and have been removed:
+# - db_cluster-06-01-2026@16-13-56.backup.gz (database backup with PII/financial data)
+# - kvswppixjaswjmbevrha.storage.zip (unknown storage data)
+# - bug-report.zip (bug report with potentially sensitive context)
+#
+# These remain in git history and should be purged using git filter-repo if needed.
+# For now, prevent future commits of such files:
 backup_*.sql
 *.sql.bak
 *.backup*
