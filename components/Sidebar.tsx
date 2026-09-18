@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
+import {
   Home, 
   FileText, 
   Receipt, 
@@ -31,7 +31,9 @@ import {
   PieChart,
   Database,
   Users2,
-  Briefcase
+  Briefcase,
+  Bell,
+  AlertOctagon
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -76,11 +78,27 @@ export default function Sidebar({
   const normalizedRole = normalizeRole(userRole);
   const canAccessAdminModule = canAccessAdmin(normalizedRole);
   const [enabledModules, setEnabledModules] = useState<AppModule[]>(getEnabledModules());
+  const [alertCount, setAlertCount] = useState(0);
 
   // Close mobile sidebar on route change
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
+
+  // Fetch AI auditor alert count
+  useEffect(() => {
+    const loadAlerts = async () => {
+      try {
+        const res = await fetch("/api/ai/audit");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data?.count === "number") setAlertCount(data.count);
+      } catch {
+        // ignore
+      }
+    };
+    loadAlerts();
+  }, []);
 
   useEffect(() => {
     const loadModules = async () => {
@@ -229,6 +247,27 @@ export default function Sidebar({
 
         {/* Unified Bottom Actions */}
         <div className="p-6 bg-slate-950/20 border-t border-white/5 space-y-3">
+          {isLoggedIn && (
+            <Link
+              href="/"
+              className="w-full h-12 flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-all group border border-white/5 relative overflow-hidden"
+            >
+              <div className="relative">
+                {alertCount > 0 ? <AlertOctagon size={20} className="text-rose-400 group-hover:scale-110 transition-transform" /> : <Bell size={20} className="group-hover:scale-110 transition-transform" />}
+                {alertCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {alertCount > 99 ? "99+" : alertCount}
+                  </span>
+                )}
+              </div>
+              {(!isCollapsed || isMobileOpen) && (
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  {alertCount > 0 ? `AI Auditor: ${alertCount} จุด` : "AI Auditor: ปกติ"}
+                </span>
+              )}
+            </Link>
+          )}
+
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="w-full h-12 hidden lg:flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-all group"

@@ -49,22 +49,23 @@ export async function POST(req: Request) {
   const targetDate = dateStr ? new Date(dateStr) : new Date();
   const targetDay = targetDate.getDate();
 
-  if (!process.env.RECURRING_SECRET) {
-    return NextResponse.json({ error: "Security Error: RECURRING_SECRET not configured in .env.local" }, { status: 500 });
-  }
-
-  if (!secretHeader || secretHeader !== process.env.RECURRING_SECRET) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
+  let isAdmin = false;
   try {
     const { auth } = await import("@/lib/auth");
     const session = await auth();
-    if (!session?.user || !canAccessAdmin((session.user as any).role)) {
-      return NextResponse.json({ error: "Unauthorized: admin access required" }, { status: 403 });
-    }
+    isAdmin = Boolean(session?.user && canAccessAdmin((session.user as any).role));
   } catch {
-    return NextResponse.json({ error: "Unauthorized: admin access required" }, { status: 403 });
+    isAdmin = false;
+  }
+
+  const hasValidServiceSecret = Boolean(
+    process.env.RECURRING_SECRET &&
+    secretHeader &&
+    secretHeader === process.env.RECURRING_SECRET
+  );
+
+  if (!isAdmin && !hasValidServiceSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {

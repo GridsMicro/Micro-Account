@@ -4,10 +4,14 @@ import { Pool } from 'pg';
 // - max: จำกัดสูงสุด 3 connections (Serverless ควรน้อย ไม่ต้องเยอะ)
 // - idleTimeoutMillis: ปิด connection ที่ว่างเปล่าหลัง 10 วินาที
 // - connectionTimeoutMillis: ถ้าเชื่อมไม่ได้ใน 5 วินาที ให้ Error ทันที (ไม่ค้าง)
+const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const connectionUrl = databaseUrl ? new URL(databaseUrl) : undefined;
+connectionUrl?.searchParams.delete('sslmode');
+
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+  connectionString: connectionUrl?.toString(),
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: true,
   },
   max: 3,
   min: 0,

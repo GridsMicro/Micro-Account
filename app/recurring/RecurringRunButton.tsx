@@ -8,7 +8,6 @@ import { canAccessAdmin } from "@/lib/core-standards";
 export default function RecurringRunButton({ userRole }: { userRole?: string }) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [secret, setSecret] = useState("");
   const [runDate, setRunDate] = useState(new Date().toISOString().split("T")[0]);
   const router = useRouter();
   const canRunBilling = canAccessAdmin(userRole);
@@ -18,7 +17,7 @@ export default function RecurringRunButton({ userRole }: { userRole?: string }) 
     try {
       const res = await fetch('/api/recurring/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-recurring-secret': secret },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: runDate })
       });
       const data = await res.json();
@@ -45,14 +44,6 @@ export default function RecurringRunButton({ userRole }: { userRole?: string }) 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h3 className="text-lg font-bold mb-4">Run Recurring Billing</h3>
-            <label className="text-sm font-medium">Recurring Secret</label>
-            <input
-              type="password"
-              value={secret}
-              onChange={(e) => setSecret(e.target.value)}
-              className="w-full mt-2 mb-4 p-3 border rounded-lg"
-              placeholder="Enter x-recurring-secret"
-            />
             <label className="text-sm font-medium">Run Date</label>
             <input
               type="date"
@@ -60,10 +51,10 @@ export default function RecurringRunButton({ userRole }: { userRole?: string }) 
               onChange={(e) => setRunDate(e.target.value)}
               className="w-full mt-2 mb-4 p-3 border rounded-lg"
             />
-            <p className="text-xs text-slate-500 mb-4">Admins can run the live billing batch for the selected date when `RECURRING_SECRET` is provided.</p>
+            <p className="text-xs text-slate-500 mb-4">Your admin session authorizes this billing run.</p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setOpen(false)} className="px-4 py-2 rounded border">Cancel</button>
-              <button onClick={handleRun} disabled={loading || !secret} className="px-4 py-2 bg-emerald-600 text-white rounded">{loading ? 'Running...' : 'Run'}</button>
+              <button onClick={handleRun} disabled={loading} className="px-4 py-2 bg-emerald-600 text-white rounded">{loading ? 'Running...' : 'Run'}</button>
             </div>
           </div>
         </div>
