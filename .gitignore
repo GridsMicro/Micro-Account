@@ -1,6 +1,12 @@
 # Database Backups (may contain credentials)
 backup_*.sql
 *.sql.bak
+*.backup*
+*.backup.gz
+*.gz
+db_cluster*.backup.gz
+kvswppixjaswjmbevrha.storage.zip
+bug-report.zip
 
 # Sensitive Keys and Secrets
 # NOTE: secret.txt was exposed in historical commits and has been removed.
