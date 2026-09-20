@@ -1,12 +1,13 @@
 "use server";
 
 import { query } from "@/lib/db";
-import { googleDrive, googleSheets } from "@/lib/google-server";
+import { getGoogleDrive, getGoogleSheets } from "@/lib/google-server";
 import { Readable } from "stream";
 import { getOrCreateFolder } from "@/lib/actions-helpers";
 
 export async function uploadToGoogleDrive(base64Data: string, fileName: string, mimeType: string) {
   try {
+    const googleDrive = await getGoogleDrive();
     const folderId = await getOrCreateFolder("Micro Account Documents");
     const buffer = Buffer.from(base64Data.split(",")[1] || base64Data, "base64");
     const stream = Readable.from(buffer);
@@ -43,6 +44,8 @@ export async function uploadToGoogleDrive(base64Data: string, fileName: string, 
 
 export async function exportJournalsToSheets() {
   try {
+    const googleDrive = await getGoogleDrive();
+    const googleSheets = await getGoogleSheets();
     const { getJournalEntries } = await import("./journals");
     const result = await getJournalEntries();
     if (!result.success || !result.data || result.data.length === 0) throw new Error("ไม่มีข้อมูลให้ส่งออก");
@@ -95,6 +98,7 @@ export async function exportJournalsToSheets() {
 
 export async function exportVouchersToSheets() {
   try {
+    const googleSheets = await getGoogleSheets();
     const res = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');
     const vouchers = res.rows;
     if (vouchers.length === 0) throw new Error("No data");

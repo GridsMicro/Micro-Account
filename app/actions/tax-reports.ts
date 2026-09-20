@@ -180,7 +180,8 @@ export async function exportMonthlySummaryToDrive() {
   try {
     const now = new Date();
     const { getOrCreateFolder } = await import("@/lib/actions-helpers");
-    const { googleSheets } = await import("@/lib/google-server");
+    const { getGoogleSheets } = await import("@/lib/google-server");
+    const googleSheets = await getGoogleSheets();
     const folderId = await getOrCreateFolder("Micro Account Reports");
     const spreadsheet = await googleSheets.spreadsheets.create({
       requestBody: { properties: { title: `Budget Summary ${now.getMonth() + 1}/${now.getFullYear()}` } }

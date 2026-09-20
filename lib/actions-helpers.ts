@@ -1,16 +1,17 @@
 import { query } from "@/lib/db";
-import { googleDrive } from "@/lib/google-server";
+import { getGoogleDrive } from "@/lib/google-server";
 
 export async function getOrCreateFolder(folderName: string) {
   try {
-    const response = await googleDrive.files.list({
+    const drive = await getGoogleDrive();
+    const response = await drive.files.list({
       q: `name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: "files(id, name)",
       spaces: "drive",
     });
     const folders = response.data.files;
     if (folders && folders.length > 0) return folders[0].id;
-    const folder = await googleDrive.files.create({
+    const folder = await drive.files.create({
       requestBody: { name: folderName, mimeType: "application/vnd.google-apps.folder" },
       fields: "id",
     });
