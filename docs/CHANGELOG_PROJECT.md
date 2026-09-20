@@ -2,6 +2,11 @@
 
 Tracks meaningful behavior/architecture changes (not every small code diff).
 
+## [2026-09-21]
+
+- Added FX Rate Monitor: `GET /api/fx-rate` serves latest USD/THB (BOT reference via frankfurter.dev) with 30d series + trend; invoice creation page shows a live FX widget and "Use Latest Rate" button to prefill the markup calculator's exchange rate (supports FX-based billing, see DECISIONS Dominick markup 25%)
+- Invoice markup calculator now supports FX mode: USD cost × rate × markup → THB price, and records the rate used into the line detail for evidence
+
 ## [2026-04-09]
 
 - Standardized role model to canonical `superadmin/admin/user`

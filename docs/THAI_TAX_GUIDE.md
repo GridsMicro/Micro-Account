@@ -439,6 +439,8 @@ VAT 7%: 3,500
 - **กรมสรรพากร:** 1161
 - **สอบถาม VAT:** RD Call Center
 - **ยื่นภาษีออนไลน์:** [efiling.rd.go.th](https://efiling.rd.go.th)
+  - **ภ.พ. 30 (VAT เดือน):** https://efiling.rd.go.th/rd-efiling-web/tax/vat/form-pp30
+  - **ภ.พ. 36 (VAT ต่างประเทศ):** https://efiling.rd.go.th/rd-efiling-web/tax/vat/pp36
 
 ---
 

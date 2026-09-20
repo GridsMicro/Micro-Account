@@ -55,3 +55,8 @@ yarn-error.log*
 .agent/
 .windsurf/
 # site/
+tmp/
+
+# KTC bank statements (private financial info - keep LOCAL only, commit only README summary)
+docs/statements/*.pdf
+*.tsbuildinfo

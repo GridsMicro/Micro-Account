@@ -1,6 +1,19 @@
 export const COMPANY_TAX_ID = '0105561182888';
 export const COMPANY_ADDRESS = '136/34 ถ.ประดิพัทธ์ แขวงพญาไท เขตพญาไท กรุงเทพฯ';
 
+// ระบบ e-Filing กรมสรรพากร — ลิงก์ตรงเข้าฟอร์มยื่นจริง (RD e-Filing)
+// บันทึกโดยพี่กีโร่ 2026-09-21: pnd53/pnd51 ไม่ได้ยื่นทุกเดือน แต่ควรมีลิงก์ไว้
+// เพื่อให้รู้ว่าต้องทำถ้าเดือนใดมีรายการ (WHT / เงินได้นิติบุคคลประจำปี)
+export const TAX_FILING_URLS: Record<string, string> = {
+  pnd3: '', // ยังไม่มีลิงก์ตรงจาก RD
+  pnd53: 'https://efiling.rd.go.th/rd-efiling-web/tax/wht/pnd53',
+  pp30: 'https://efiling.rd.go.th/rd-efiling-web/tax/vat/form-pp30',
+  pp36: 'https://efiling.rd.go.th/rd-efiling-web/tax/vat/pp36',
+  pnd51: 'https://efiling.rd.go.th/rd-efiling-web/tax/cit/pnd51/step-1',
+};
+
+export const RD_EFILING_HOMEPAGE = 'https://efiling.rd.go.th';
+
 export interface InvoiceDetails {
   taxId?: string;
   address?: string;
@@ -140,7 +153,7 @@ export class TaxCalendarAlerts {
 
     // ทุกวันที่ 15-20
     if (day >= 15 && day <= 20) {
-      alerts.push('แจ้งเตือน (e-Filing): ช่วงเวลาสำหรับการยื่น ภ.พ. 30, ภ.ง.ด. 3, 53 และ ภ.พ. 36 ผ่านระบบ e-Filing');
+      alerts.push(`แจ้งเตือน (e-Filing): ช่วงเวลาสำหรับการยื่น ภ.พ. 30, ภ.ง.ด. 3, 53 และ ภ.พ. 36 ผ่านระบบ e-Filing — ยื่นได้ที่ ${RD_EFILING_HOMEPAGE} (ภ.พ. 30: ${TAX_FILING_URLS.pp30} / ภ.พ. 36: ${TAX_FILING_URLS.pp36})`);
     }
 
     // สิงหาคม (เดือน 8)

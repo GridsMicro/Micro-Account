@@ -12,10 +12,12 @@ import {
   TrendingUp,
   TrendingDown,
   Calculator,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDisplay } from "@/lib/dateFormatter";
 import { getPNDReportDraft, getPP30Draft, getPP36Draft, getTaxSummary } from "@/app/actions";
+import { TAX_FILING_URLS } from "@/lib/taxAutomator";
 import TaxExportButton from "./TaxExportButton";
 
 export const dynamic = "force-dynamic";
@@ -252,9 +254,22 @@ export default async function TaxReportsPage() {
               </div>
 
               <div className="flex flex-col gap-2 border-t border-gray-100 bg-gray-50 px-6 py-4">
-                <button className="flex h-10 w-full items-center justify-center gap-2 rounded border border-green-500 bg-white text-sm font-bold text-green-600 shadow-sm transition-colors hover:bg-green-50">
-                  <ShieldCheck size={16} /> ยื่นแบบออนไลน์ (E-Filing)
-                </button>
+                {TAX_FILING_URLS[form.id] ? (
+                  <a
+                    href={TAX_FILING_URLS[form.id]}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded border border-green-500 bg-white text-sm font-bold text-green-600 shadow-sm transition-colors hover:bg-green-50"
+                  >
+                    <ShieldCheck size={16} /> ยื่นแบบออนไลน์ (E-Filing)
+                    <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <button className="flex h-10 w-full items-center justify-center gap-2 rounded border border-green-500 bg-white text-sm font-bold text-green-600 shadow-sm transition-colors hover:bg-green-50">
+                    <ShieldCheck size={16} /> ยื่นแบบออนไลน์ (E-Filing)
+                    <ExternalLink size={14} />
+                  </button>
+                )}
                 <TaxExportButton id={form.id} />
               </div>
             </div>

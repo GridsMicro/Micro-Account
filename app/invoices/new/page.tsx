@@ -29,6 +29,8 @@ type InvoiceItem = {
   discount: number;
   markupCost: string;
   markupProfit: number;
+  fxCost: string;
+  fxRate: string;
 };
 
 function createEmptyItem(): InvoiceItem {
@@ -43,6 +45,8 @@ function createEmptyItem(): InvoiceItem {
     discount: 0,
     markupCost: "",
     markupProfit: 20,
+    fxCost: "",
+    fxRate: "",
   };
 }
 
@@ -56,6 +60,12 @@ export default function NewInvoicePage() {
   const [products, setProducts] = useState<any[]>([]);
   const [status, setStatus] = useState<{ type: "success" | "error" | null; message: string }>({ type: null, message: "" });
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [fx, setFx] = useState<{ rate: number | null; date: string | null; loading: boolean; trend: { changePct: number; direction: string; low30d: number; high30d: number } | null }>({
+    rate: null,
+    date: null,
+    loading: false,
+    trend: null,
+  });
   const [quickAdd, setQuickAdd] = useState({
     name: "",
     type: "CUSTOMER",
@@ -76,6 +86,25 @@ export default function NewInvoicePage() {
     vatRate: 7,
     isVatRegistered: true,
   });
+
+  const loadFxRate = async () => {
+    setFx((prev) => ({ ...prev, loading: true }));
+    try {
+      const res = await fetch("/api/fx-rate");
+      const data = await res.json();
+      if (res.ok && data.success && data.rate) {
+        setFx({ rate: data.rate, date: data.billedOn, loading: false, trend: data.trend || null });
+      } else {
+        setFx((prev) => ({ ...prev, loading: false }));
+      }
+    } catch {
+      setFx((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
+    loadFxRate();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -200,6 +229,25 @@ export default function NewInvoicePage() {
     const sellingPrice = parseFloat((supplierCost * (1 + targetProfit / 100)).toFixed(2));
 
     updateItem(id, "price", sellingPrice);
+  };
+
+  const applyFxMarkupPrice = (id: number) => {
+    const currentItem = invoiceData.items.find((item) => item.id === id);
+    if (!currentItem) return;
+
+    const fxCostUsd = Number(currentItem.fxCost || 0);
+    const fxRate = Number(currentItem.fxRate || 0);
+    const targetProfit = Number(currentItem.markupProfit || 0);
+
+    if (!fxCostUsd || !fxRate) {
+      setStatus({ type: "error", message: "Enter both USD cost and exchange rate first." });
+      return;
+    }
+
+    const sellingPrice = parseFloat((fxCostUsd * fxRate * (1 + targetProfit / 100)).toFixed(2));
+
+    updateItem(id, "price", sellingPrice);
+    updateItem(id, "detail", `USD ${fxCostUsd} @ THB ${fxRate} + ${targetProfit}% markup`);
   };
 
   const calculateLineTotal = (item: InvoiceItem) => {
@@ -582,7 +630,7 @@ export default function NewInvoicePage() {
                                   type="number"
                                   value={item.markupCost || ""}
                                   onChange={(e) => updateItem(item.id, "markupCost", e.target.value)}
-                                  placeholder="Supplier Cost"
+                                  placeholder="Supplier Cost (THB)"
                                   className="h-9 rounded-lg border border-emerald-100 bg-white px-3 text-right text-xs font-bold outline-none focus:border-emerald-400"
                                 />
                                 <select
@@ -601,7 +649,41 @@ export default function NewInvoicePage() {
                                   onClick={() => applyMarkupPrice(item.id)}
                                   className="h-9 rounded-lg bg-emerald-600 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-emerald-700"
                                 >
-                                  Apply
+                                  Apply THB Cost
+                                </button>
+                                <div className="my-1 h-px bg-emerald-200" />
+                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">FX Mode (USD × Rate × Markup)</p>
+                                <input
+                                  type="number"
+                                  value={item.fxCost || ""}
+                                  onChange={(e) => updateItem(item.id, "fxCost", e.target.value)}
+                                  placeholder="USD Cost (foreign LC)"
+                                  className="h-9 rounded-lg border border-emerald-100 bg-white px-3 text-right text-xs font-bold outline-none focus:border-emerald-400"
+                                />
+                                <input
+                                  type="number"
+                                  step="0.000001"
+                                  value={item.fxRate || ""}
+                                  onChange={(e) => updateItem(item.id, "fxRate", e.target.value)}
+                                  placeholder="Exchange Rate (THB/USD)"
+                                  className="h-9 rounded-lg border border-emerald-100 bg-white px-3 text-right text-xs font-bold outline-none focus:border-emerald-400"
+                                />
+                                {fx.rate !== null ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => updateItem(item.id, "fxRate", String(fx.rate))}
+                                    disabled={fx.loading}
+                                    className="h-9 rounded-lg border border-blue-200 bg-blue-50 text-[10px] font-black uppercase tracking-widest text-blue-700 transition-all hover:bg-blue-100 disabled:opacity-50"
+                                  >
+                                    {fx.loading ? "Loading rate..." : `Use Latest Rate: THB ${fx.rate} (BOT ${fx.date})`}
+                                  </button>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  onClick={() => applyFxMarkupPrice(item.id)}
+                                  className="h-9 rounded-lg bg-blue-600 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-blue-700"
+                                >
+                                  Apply FX Price
                                 </button>
                               </div>
                             </div>
@@ -678,6 +760,63 @@ export default function NewInvoicePage() {
             <div className="rounded-2xl bg-gray-800 p-8 text-center text-white shadow-2xl">
               <p className="mb-1 text-sm font-black uppercase tracking-widest italic">Professional Billing</p>
               <p className="text-[10px] font-bold uppercase tracking-tighter text-gray-400">Markup, discount, VAT-ready</p>
+            </div>
+
+            <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-blue-50 p-6 shadow-lg shadow-sky-200/40">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-sky-700">FX Rate Monitor</h3>
+                <button
+                  type="button"
+                  onClick={loadFxRate}
+                  className="rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest text-sky-600 transition-all hover:bg-sky-100"
+                >
+                  {fx.loading ? "Loading..." : "Refresh"}
+                </button>
+              </div>
+
+              {fx.rate !== null ? (
+                <>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-3xl font-black tracking-tighter text-sky-800">THB {fx.rate}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-sky-500">USD/THB · {fx.date} (BOT)</p>
+                    </div>
+                    {fx.trend ? (
+                      <span
+                        className={`rounded-lg px-2 py-1 text-[10px] font-black ${
+                          fx.trend.direction === "up"
+                            ? "bg-red-100 text-red-600"
+                            : fx.trend.direction === "down"
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {fx.trend.changePct > 0 ? "+" : ""}
+                        {fx.trend.changePct}% / mo
+                      </span>
+                    ) : null}
+                  </div>
+                  {fx.trend ? (
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                      <div className="rounded-lg bg-white/60 p-2">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-sky-400">30d Low</p>
+                        <p className="text-sm font-black text-sky-700">{fx.trend.low30d}</p>
+                      </div>
+                      <div className="rounded-lg bg-white/60 p-2">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-sky-400">30d High</p>
+                        <p className="text-sm font-black text-sky-700">{fx.trend.high30d}</p>
+                      </div>
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-[8px] leading-relaxed text-sky-400">
+                    เดือน USD อ่อนลง = ราคาเกินขึ้น กำไรน้อยลง | ประเมินเรตใช้ปุ่ม Use Latest Rate ในแถวสินค้า
+                  </p>
+                </>
+              ) : (
+                <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">
+                  {fx.loading ? "Fetching rate..." : "Rate unavailable"}
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -20,6 +20,15 @@
 - WHT operational default is 3% for supported service flows
 - Any exception policy must be documented here before implementation
 
+## Expense Recording Rule (PDF Evidence First)
+
+- **Before recording any expense, always extract/read the source PDF (invoice/statement) first** using the PDF tool:
+  `~/workspace/services/python/pdf-tools` (`pdf_toolkit.py`: `extract_text_pdfplumber`, `extract_text_pypdf`, `pdf_to_images`)
+- Extract actual amounts, VAT, currency, exchange rate (e.g. TC rate on KTC statements) from the PDF — never guess numbers
+- Record `net_amount` / `vat_amount` / `original_currency` / `original_amount` / `exchange_rate` to match the PDF evidence
+- Flag `pp36_exempt = true` when the supplier already collected Thai VAT (e.g. Google Workspace)
+- Preserve source PDFs as evidence in `docs/statements/`
+
 ## Role and Access Rules
 
 - Canonical roles only: `superadmin`, `admin`, `user`

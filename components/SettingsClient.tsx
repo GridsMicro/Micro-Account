@@ -58,9 +58,12 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
       quotation_footer: initialData?.quotation_footer || "",
       receipt_footer: initialData?.receipt_footer || "",
       // RD API Settings
+      // SECURITY: Never hydrate rd_client_secret / rd_api_key into client state
       rd_client_id: initialData?.rd_client_id || "",
-      rd_client_secret: initialData?.rd_client_secret || "",
-      rd_api_key: initialData?.rd_api_key || "",
+      rd_client_secret: "", // Always start as empty, never expose existing secret
+      rd_client_secret_masked: initialData?.rd_client_secret ? "••••••••••••••••••••" : "",
+      rd_api_key: "", // Always start as empty, never expose existing secret
+      rd_api_key_masked: initialData?.rd_api_key ? "••••••••••••••••••••" : "",
       rd_base_url: initialData?.rd_base_url || "https://api-portal.rd.go.th",
       rd_enabled: initialData?.rd_enabled ?? false,
       // Google Drive OAuth2 Settings
@@ -69,7 +72,9 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
       // Only display asterisks if a secret was previously saved
       google_client_secret: "", // Always start as empty, never expose existing secret
       google_client_secret_masked: initialData?.google_client_secret ? "••••••••••••••••••••" : "",
-      google_refresh_token: initialData?.google_refresh_token || "",
+      // SECURITY: Never hydrate google_refresh_token into client state
+      google_refresh_token: "", // Always start as empty, never expose existing secret
+      google_refresh_token_masked: initialData?.google_refresh_token ? "••••••••••••••••••••" : "",
       google_redirect_uri: initialData?.google_redirect_uri || "https://developers.google.com/oauthplayground",
       google_drive_enabled: initialData?.google_drive_enabled ?? false,
    });
@@ -312,21 +317,36 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
                               </div>
                               <div className="space-y-2">
                                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">RD Client Secret</label>
+                                 {formData.rd_client_secret_masked && !formData.rd_client_secret ? (
+                                    <div className="w-full h-11 px-4 bg-gray-100 border border-gray-300 rounded flex items-center text-sm text-gray-600 font-bold">
+                                       {formData.rd_client_secret_masked}
+                                       <span className="text-xs text-gray-500 ml-2 italic">(Saved)</span>
+                                    </div>
+                                 ) : null}
                                  <input
                                     type="password"
                                     value={formData.rd_client_secret}
                                     onChange={e => setFormData({ ...formData, rd_client_secret: e.target.value })}
+                                    placeholder={formData.rd_client_secret_masked ? "Leave blank to keep existing secret. Enter new secret to replace." : "Enter RD client secret"}
                                     className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700"
                                  />
+                                 <p className="text-xs text-gray-500">⚠️ Secret is stored securely server-side only. Leave blank if no changes needed.</p>
                               </div>
                            </div>
 
                            <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">RD API Key</label>
+                              {formData.rd_api_key_masked && !formData.rd_api_key ? (
+                                 <div className="w-full h-11 px-4 bg-gray-100 border border-gray-300 rounded flex items-center text-sm text-gray-600 font-bold">
+                                    {formData.rd_api_key_masked}
+                                    <span className="text-xs text-gray-500 ml-2 italic">(Saved)</span>
+                                 </div>
+                              ) : null}
                               <input
-                                 type="text"
+                                 type="password"
                                  value={formData.rd_api_key}
                                  onChange={e => setFormData({ ...formData, rd_api_key: e.target.value })}
+                                 placeholder={formData.rd_api_key_masked ? "Leave blank to keep existing secret. Enter new secret to replace." : "Enter RD API key"}
                                  className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700"
                               />
                            </div>
@@ -412,14 +432,20 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
 
                            <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Refresh Token</label>
+                              {formData.google_refresh_token_masked && !formData.google_refresh_token ? (
+                                 <div className="w-full p-4 bg-gray-100 border border-gray-300 rounded flex items-center text-sm text-gray-600 font-bold">
+                                    {formData.google_refresh_token_masked}
+                                    <span className="text-xs text-gray-500 ml-2 italic">(Saved)</span>
+                                 </div>
+                              ) : null}
                               <textarea
                                  rows={3}
                                  value={formData.google_refresh_token}
                                  onChange={e => setFormData({ ...formData, google_refresh_token: e.target.value })}
-                                 placeholder="1//xxxxx-xxxxxx..."
+                                 placeholder={formData.google_refresh_token_masked ? "Leave blank to keep existing token. Enter new token to replace." : "1//xxxxx-xxxxxx..."}
                                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded focus:border-blue-500 focus:bg-white focus:outline-none text-sm font-bold text-gray-700 resize-none font-mono"
                               />
-                              <p className="text-xs text-gray-500">Refresh Token ใช้สำหรับเข้าถึง Google Drive โดยไม่ต้อง Login ซ้ำ</p>
+                              <p className="text-xs text-gray-500">Refresh Token ใช้สำหรับเข้าถึง Google Drive โดยไม่ต้อง Login ซ้ำ — เก็บอยู่ใน server เท่านั้น ปล่อยว่างหากไม่ต้องการเปลี่ยน</p>
                            </div>
 
                            <div className="space-y-2">

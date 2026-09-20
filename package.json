@@ -8,8 +8,8 @@
     "start": "next start",
     "test": "node --test tests/**/*.test.mjs",
     "lint": "eslint",
-    "tax:update": "ts-node jobs/scheduleTaxUpdate.ts",
-    "ai:audit": "ts-node jobs/scheduleAiAudit.ts",
+    "tax:update": "tsx jobs/scheduleTaxUpdate.ts",
+    "ai:audit": "tsx jobs/scheduleAiAudit.ts",
     "check:knowledge": "node scripts/verify-knowledge-sync.mjs",
     "check:consistency": "node scripts/weekly-consistency-audit.mjs"
   },
@@ -28,7 +28,6 @@
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.577.0",
     "next": "^16.2.1",
-    "next-auth": "^4.24.14",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "pg": "^8.20.0",
@@ -47,6 +46,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.1",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.19.4",
     "typescript": "^5"
   }
 }

@@ -5,6 +5,18 @@ import { revalidatePath } from "next/cache";
 
 export async function updateCompanySettings(data: any) {
   try {
+    // SECURITY (P1-03): never overwrite stored secrets with empty/whitespace.
+    // Client sends "" for secrets it must not re-expose; a blank value means
+    // "keep the existing value", not "clear it".
+    const keep = (next: any, prev: any) =>
+      next === undefined || next === null || String(next).trim() === "" ? prev : String(next);
+
+    const current = await query("SELECT google_client_secret, google_refresh_token FROM company_settings LIMIT 1");
+    const prev = current.rows[0] || {};
+
+    const googleClientSecret = keep(data.google_client_secret, prev.google_client_secret);
+    const googleRefreshToken = keep(data.google_refresh_token, prev.google_refresh_token);
+
     await query(
       `UPDATE company_settings SET name=$1, tax_id=$2, phone=$3, email=$4, address=$5, bank_name=$6, 
        bank_account_name=$7, bank_account_number=$8, bank_branch=$9, vat_rate=$10, withholding_tax_rate=$11, 
@@ -12,7 +24,7 @@ export async function updateCompanySettings(data: any) {
        google_client_id=$16, google_client_secret=$17, google_refresh_token=$18, google_redirect_uri=$19, google_drive_enabled=$20
        WHERE id=(SELECT id FROM company_settings LIMIT 1)`,
       [data.name, data.tax_id, data.phone, data.email, data.address, data.bank_name, data.bank_account_name, data.bank_account_number, data.bank_branch, data.vat_rate, data.withholding_tax_rate, data.is_vat_registered, data.currency, data.invoice_prefix, data.quotation_prefix,
-       data.google_client_id, data.google_client_secret, data.google_refresh_token, data.google_redirect_uri, data.google_drive_enabled]
+       data.google_client_id, googleClientSecret, googleRefreshToken, data.google_redirect_uri, data.google_drive_enabled]
     );
     revalidatePath("/settings");
     return { success: true };

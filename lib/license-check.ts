@@ -55,7 +55,15 @@ export function generateMachineFingerprint(): string {
 
 // License verification hash
 export function createVerificationHash(licenseKey: string, machineId: string): string {
-  const salt = process.env.LICENSE_SALT || 'MICRO-ACCOUNT-2026-SALT';
+  // SECURITY (P2-01): never fall back to a hardcoded salt — a known salt lets
+  // anyone forge verification hashes. Fail fast instead.
+  const salt = process.env.LICENSE_SALT;
+  if (!salt) {
+    throw new Error(
+      'FATAL: LICENSE_SALT is not configured. Set LICENSE_SALT to a long random secret ' +
+      'to secure license verification hashes.'
+    );
+  }
   const combined = `${licenseKey}:${machineId}:${salt}`;
   return crypto.createHash('sha256').update(combined).digest('hex');
 }
