@@ -70,3 +70,11 @@ Use this file to record important decisions and their rationale.
 - Impacted files/modules: ราคาบิล Dominick งวดถัดไป (ต.ค. 2026), `docs/OPERATION_RUNBOOK.md` (Monthly Billing), การหาฐานลูกค้าเพิ่ม
 - Rollback plan: ถ้าลูกค้าไม่ยอมรับยอดใหม่ ให้กลับไปเจรจา/ลด markup ตามจริง — ต้องดูสัญญาที่พี่ตกลงกับลูกค้า
 
+### [2026-09-21] นโยบาย Google-First: ใช้ประโยชน์แอพในสิทธิ์ 1,000 ก่อนเลือก provider อื่น
+- Context: สิทธิ์ Google Workspace Business Plus (1,000/เดือน, 1 seat) มาพร้อมแอพ/บริการในตัว (Gmail, Drive, Sheets, Calendar, Photos, Vault, Gamma/Cloud... ดู `docs/GWS_APPS_INVENTORY.md`) — พบว่ามีหลายส่วนที่จ่ายแล้วแต่ยังไม่ได้ใช้ เช่น คลาวด์ 5TB (ใช้ 7.8%), Vault/discovery, ขอบเขต API ต่าง ๆ
+- Decision: **เมื่อจะสร้างแอพ/โปรแกรม/ฟีเจอร์หรือเลือก service ให้ลองใช้ประโยชน์จากแอพ Google ที่มีสิทธิ์อยู่ก่อนเสมอ ก่อนไปเลือก provider/ซื้อบริการอื่น** — เช่น backup, dashboard/รายงาน, เมลประกาศ, คลังเอกสาร, วิดีโอคอล
+- Implementation notes: ใช้ API ที่ scope มีอยู่แล้วก่อน (Drive/Sheets/Calendar/Admin-read/Reseller); open scope เพิ่มต่อเมื่อพี่อนุมัติ (Gmail → สแกนบิล, Vault → retention 7-10 ปี)
+- Why this was chosen: ค่าใช้จ่ายนี้จ่ายอยู่แล้วทุกเดือน → ROI สูงสุดโดยไม่เพิ่มต้นทุน; ลด vendor sprawl; ข้อมูลอยู่ที่เดียวกับบัญชีธุรกิจ
+- Impacted files/modules: งานใหม่ทุกโปรเจกต์/ฟีเจอร์ — ตรวจ `GWS_APPS_INVENTORY.md` ก่อนตัดสินใจ vendor; AGENTS.md (กฎครอบครัว)
+- Rollback plan: ถ้า Google เปลี่ยนนโยบาย/ราคา กลับมาเปรียบเทียบ vendor อื่นได้ตามปกติ (กฎนี้เป็นการเรียงลำดับ "ลองก่อน" ไม่ใช่ห้ามเปลี่ยนชั่วนิรันดร์)
+
