@@ -237,10 +237,13 @@ export default function PrintReceiptPage() {
           .no-print,
           aside,
           nav,
+          header,
           [class*="sidebar"],
           [class*="Sidebar"],
           [class*="navigation"],
-          [class*="Navigation"] {
+          [class*="Navigation"],
+          [class*="lg:hidden"],
+          [class*="fixed"] {
             display: none !important;
           }
           body {

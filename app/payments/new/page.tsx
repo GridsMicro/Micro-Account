@@ -15,18 +15,15 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Hash,
-  FileText
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getContacts, getCompanySettings, createPayment } from "@/app/actions";
+import { getContacts, createPayment } from "@/app/actions";
 
 export default function NewPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
-  const [company, setCompany] = useState<any>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
   const [paymentId, setPaymentId] = useState<string | null>(null);
 
@@ -58,9 +55,8 @@ export default function NewPaymentPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [contactRes, companyRes] = await Promise.all([getContacts(), getCompanySettings()]);
+      const [contactRes] = await Promise.all([getContacts()]);
       if (contactRes.success) setContacts(contactRes.data!);
-      if (companyRes.success) setCompany(companyRes.data);
     };
     fetchData();
   }, []);
@@ -116,316 +112,6 @@ export default function NewPaymentPage() {
     }
   };
 
-  const handlePrintReceipt = () => {
-    const selectedContact = contacts.find(c => c.id == formData.contactId);
-    if (!selectedContact || !company) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const html = `
-      <html>
-        <head>
-          <title>ใบเสร็จรับเงิน - ${formData.reference}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { 
-              font-family: 'Sarabun', sans-serif; 
-              padding: 0; 
-              color: #1e293b; 
-              max-width: 210mm; 
-              margin: 0 auto; 
-              background: white;
-              line-height: 1.6;
-            }
-            .receipt-container {
-              padding: 30px 40px;
-              min-height: 100vh;
-            }
-            .header { 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: flex-start; 
-              padding-bottom: 25px; 
-              margin-bottom: 30px;
-              border-bottom: 3px solid #6366f1;
-            }
-            .company-section {
-              flex: 1;
-            }
-            .company-name { 
-              font-size: 28px; 
-              font-weight: 700; 
-              color: #1e1b4b;
-              margin-bottom: 8px;
-              letter-spacing: -0.5px;
-            }
-            .company-details {
-              font-size: 13px;
-              color: #64748b;
-              line-height: 1.8;
-            }
-            .doc-badge {
-              text-align: center;
-              background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-              color: white;
-              padding: 15px 30px;
-              border-radius: 12px;
-              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.25);
-            }
-            .doc-title {
-              font-size: 20px;
-              font-weight: 700;
-              margin-bottom: 4px;
-            }
-            .doc-subtitle {
-              font-size: 12px;
-              opacity: 0.9;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 30px;
-              margin-bottom: 30px;
-            }
-            .info-box {
-              background: #f8fafc;
-              padding: 20px;
-              border-radius: 10px;
-              border-left: 4px solid #6366f1;
-            }
-            .info-label {
-              font-size: 11px;
-              font-weight: 600;
-              color: #6366f1;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              margin-bottom: 8px;
-            }
-            .info-value {
-              font-size: 14px;
-              color: #1e293b;
-              font-weight: 600;
-            }
-            .info-value.secondary {
-              font-weight: 400;
-              color: #64748b;
-              margin-top: 4px;
-              font-size: 13px;
-            }
-            table { 
-              width: 100%; 
-              border-collapse: separate;
-              border-spacing: 0;
-              margin: 25px 0; 
-              border-radius: 10px;
-              overflow: hidden;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            }
-            thead { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
-            th { 
-              color: white;
-              padding: 14px 16px; 
-              text-align: left;
-              font-weight: 600;
-              font-size: 13px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            th:last-child { text-align: right; }
-            td { 
-              padding: 16px; 
-              border-bottom: 1px solid #e2e8f0;
-              background: white;
-            }
-            td:last-child { 
-              text-align: right; 
-              font-weight: 600;
-            }
-            tbody tr:hover { background: #f8fafc; }
-            .summary-box {
-              background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-              border-radius: 12px;
-              padding: 25px;
-              margin-top: 25px;
-              border: 1px solid #e2e8f0;
-            }
-            .summary-row { 
-              display: flex; 
-              justify-content: space-between; 
-              padding: 8px 0;
-              font-size: 14px;
-              color: #475569;
-            }
-            .summary-row:not(:last-child) {
-              border-bottom: 1px dashed #cbd5e1;
-            }
-            .total-row { 
-              background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-              color: white;
-              padding: 18px 25px;
-              border-radius: 10px;
-              margin-top: 15px;
-              font-weight: 700;
-              font-size: 20px;
-              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.25);
-            }
-            .signatures {
-              margin-top: 60px;
-              display: flex;
-              justify-content: space-between;
-              gap: 40px;
-            }
-            .sign-box { 
-              flex: 1;
-              text-align: center;
-            }
-            .sign-line { 
-              border-bottom: 2px solid #1e1b4b; 
-              padding-top: 50px;
-              margin-bottom: 12px;
-              width: 80%;
-              margin-left: auto;
-              margin-right: auto;
-            }
-            .sign-label {
-              font-size: 13px;
-              color: #475569;
-              font-weight: 500;
-            }
-            .sign-date {
-              font-size: 11px;
-              color: #94a3b8;
-              margin-top: 4px;
-            }
-            .footer-note {
-              margin-top: 40px;
-              text-align: center;
-              font-size: 11px;
-              color: #94a3b8;
-              padding-top: 20px;
-              border-top: 1px dashed #e2e8f0;
-            }
-            .watermark {
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%) rotate(-45deg);
-              font-size: 120px;
-              color: rgba(99, 102, 241, 0.03);
-              font-weight: 700;
-              pointer-events: none;
-              z-index: 0;
-            }
-            @media print { 
-              body { padding: 0; }
-              .receipt-container { padding: 20px 30px; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="watermark">RECEIPT</div>
-          <div class="receipt-container">
-            <div class="header">
-              <div class="company-section">
-                <div class="company-name">${company.name}</div>
-                <div class="company-details">
-                  ${company.address}<br/>
-                  เลขประจำตัวผู้เสียภาษี: ${company.tax_id || '-'}<br/>
-                  โทรศัพท์: ${company.phone || '-'}
-                </div>
-              </div>
-              <div class="doc-badge">
-                <div class="doc-title">ใบเสร็จรับเงิน</div>
-                <div class="doc-subtitle">RECEIPT / TAX INVOICE</div>
-              </div>
-            </div>
-
-            <div class="info-grid">
-              <div class="info-box">
-                <div class="info-label">ลูกค้า / Customer</div>
-                <div class="info-value">${selectedContact.name}</div>
-                <div class="info-value secondary">${selectedContact.address || 'ไม่ระบุที่อยู่'}</div>
-                <div class="info-value secondary">Tax ID: ${selectedContact.tax_id || '-'}</div>
-              </div>
-              <div class="info-box">
-                <div class="info-label">รายละเอียดเอกสาร</div>
-                <div class="info-value">เลขที่: ${formData.reference}</div>
-                <div class="info-value secondary">วันที่: ${formatDateDisplay(formData.date, { formatLong: true })}</div>
-                <div class="info-value secondary">วิธีชำระ: ${formData.paymentMethod}</div>
-              </div>
-            </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 60px;">ลำดับ</th>
-                  <th>รายการ / Description</th>
-                  <th style="text-align: right; width: 150px;">จำนวนเงิน / Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>${formData.description}</td>
-                  <td>${amountNum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div class="summary-box">
-              <div class="summary-row">
-                <span>รวมเงิน (Subtotal)</span>
-                <span>${amountNum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div class="summary-row">
-                <span>ภาษีมูลค่าเพิ่ม 7% (VAT)</span>
-                <span>${vatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>
-              ${whtAmount > 0 ? `
-              <div class="summary-row" style="color: #dc2626;">
-                <span>หัก ณ ที่จ่าย ${formData.whtRate}% (WHT)</span>
-                <span>- ${whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>` : ''}
-              <div class="total-row">
-                <span>รวมยอดรับสุทธิ (Total Received)</span>
-                <span>฿${totalReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            <div class="signatures">
-              <div class="sign-box">
-                <div class="sign-line"></div>
-                <div class="sign-label">ผู้รับเงิน / Receiver</div>
-                <div class="sign-date">วันที่ _____________</div>
-              </div>
-              <div class="sign-box">
-                <div class="sign-line"></div>
-                <div class="sign-label">ผู้มีอำนาจลงนาม / Authorized</div>
-                <div class="sign-date">วันที่ _____________</div>
-              </div>
-              <div class="sign-box">
-                <div class="sign-line"></div>
-                <div class="sign-label">ลูกค้า / Customer</div>
-                <div class="sign-date">วันที่ _____________</div>
-              </div>
-            </div>
-
-            <div class="footer-note">
-              เอกสารนี้เป็นหลักฐานการรับชำระเงิน กรุณาเก็บรักษาไว้เพื่อการอ้างอิง<br/>
-              This document serves as proof of payment. Please retain for your records.
-            </div>
-          </div>
-          <script>window.onload = function() { setTimeout(() => window.print(), 300); }</script>
-        </body>
-      </html>
-    `;
-    printWindow.document.write(html);
-    printWindow.document.close();
-  };
-
   return (
     <main className="p-6 md:p-8 min-h-screen bg-[#f4f6f9]">
       <div className="max-w-4xl mx-auto">
@@ -437,7 +123,7 @@ export default function NewPaymentPage() {
           <div className="flex gap-2">
             {paymentId && (
               <button
-                onClick={() => { localStorage.removeItem('lastPaymentId'); handlePrintReceipt(); }}
+                onClick={() => { localStorage.removeItem('lastPaymentId'); window.open(`/payments/print/${paymentId}`, '_blank'); }}
                 className="h-11 px-4 bg-blue-600 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-colors"
               >
                 <Printer size={18} /> พิมพ์ใบเสร็จ
