@@ -1,15 +1,39 @@
 import { getReminders } from "@/app/actions";
 import CalendarClient from "./CalendarClient";
 import { formatDateDisplay } from "@/lib/dateFormatter";
-import { Calendar as CalendarIcon, Bell, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Bell, FileText } from "lucide-react";
+import { TaxCalendarAlerts } from "@/lib/taxAutomator";
 import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+type ReminderLike = {
+  id: string | number;
+  title?: string;
+  due_date?: string;
+  status?: string;
+  type?: string;
+};
+
+function getMonthlyTaxAlerts(now: Date): string[] {
+   const alerts: string[] = [];
+   const year = now.getFullYear();
+   const month = now.getMonth();
+   const lastDay = new Date(year, month + 1, 0).getDate();
+
+   for (let d = now.getDate(); d <= lastDay; d++) {
+      for (const alert of TaxCalendarAlerts.getAlertsForDate(new Date(year, month, d))) {
+         if (!alerts.includes(alert)) alerts.push(alert);
+      }
+   }
+   return alerts;
+}
 
 export default async function CalendarPage() {
    const res = await getReminders();
    const reminders = res.success ? (res.data ?? []) : [];
-   const pendingReminders = reminders.filter((r: any) => r.status === "pending");
+   const pendingReminders = reminders.filter((r: ReminderLike) => r.status === "pending");
+   const taxAlerts = getMonthlyTaxAlerts(new Date());
 
    return (
       <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
@@ -42,13 +66,30 @@ export default async function CalendarPage() {
 
                {/* Sidebar: Upcoming & Filters */}
                <div className="space-y-6">
+                  <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-amber-100 text-left">
+                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <FileText size={16} className="text-amber-600" /> แจ้งเตือนภาษีประจำเดือน
+                     </h3>
+                     {taxAlerts.length > 0 ? (
+                        <div className="space-y-4">
+                           {taxAlerts.map((alert, index) => (
+                              <div key={index} className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                 <p className="text-xs font-bold text-amber-900 leading-relaxed break-words">{alert}</p>
+                              </div>
+                           ))}
+                        </div>
+                     ) : (
+                        <p className="text-xs font-bold text-slate-300 italic">เดือนนี้ยังไม่มีกำหนดยื่นภาษี</p>
+                     )}
+                  </div>
+
                   <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 text-left">
                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                         <Bell size={16} className="text-amber-500" /> แจ้งเตือนด่วน
                      </h3>
                      <div className="space-y-4">
                         {pendingReminders.length > 0 ? (
-                           pendingReminders.slice(0, 5).map((r: any) => (
+                           pendingReminders.slice(0, 5).map((r: ReminderLike) => (
                               <div key={r.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-amber-200 transition-all">
                                  <p className="text-xs font-black text-slate-800 line-clamp-1">{r.title}</p>
                                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
@@ -66,7 +107,7 @@ export default async function CalendarPage() {
                      <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300 mb-4 opacity-70">Pro Tip</h3>
                      <p className="text-sm font-bold leading-relaxed">
-                        ระบบจะแจ้งเตือนการ "ต่ออายุใบเสนอราคา" อัตโนมัติสำหรับรายการที่เป็น Recurring รายเดือนและรายปี
+                        ระบบจะแจ้งเตือนการ &ldquo;ต่ออายุใบเสนอราคา&rdquo; อัตโนมัติสำหรับรายการที่เป็น Recurring รายเดือนและรายปี
                      </p>
                   </div>
                </div>

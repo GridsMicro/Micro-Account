@@ -3,4 +3,8 @@
 export async function register() {
   const { validateEnv } = await import("@/lib/env");
   validateEnv();
+  if (process.env.CRON_ENABLED === "true") {
+    const { registerMaintenance } = await import("@/jobs/scheduleMaintenance");
+    registerMaintenance();
+  }
 }

@@ -10,13 +10,40 @@ import {
   Loader2, 
   ArrowLeft,
   FileJson,
-  FileCode
+  FileCode,
+  Cloud,
+  FileSpreadsheet,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 
 export default function BackupPage() {
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [syncTask, setSyncTask] = useState<'backup' | 'dashboard' | null>(null);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleGoogleSync = async (task: 'backup' | 'dashboard') => {
+    setSyncTask(task);
+    setSyncMessage(null);
+    try {
+      const response = await fetch("/api/admin/google-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Sync failed");
+      setSyncMessage(task === 'backup'
+        ? 'Backup ไป Google Drive สำเร็จแล้วครับพี่!'
+        : 'อัปเดต Google Sheets Dashboard สำเร็จแล้วครับพี่!');
+    } catch (error) {
+      setSyncMessage(`เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : 'Sync failed'}`);
+    } finally {
+      setSyncTask(null);
+      setTimeout(() => setSyncMessage(null), 6000);
+    }
+  };
 
   const handleBackup = async (format: 'sql' | 'json') => {
     setLoading(true);
@@ -35,7 +62,7 @@ export default function BackupPage() {
       
       setComplete(true);
       setTimeout(() => setComplete(false), 5000);
-    } catch (error) {
+    } catch {
       alert("เกิดข้อผิดพลาดในการ Backup ครับพี่!");
     } finally {
       setLoading(false);
@@ -111,9 +138,51 @@ export default function BackupPage() {
                    </div>
                    {loading ? <Loader2 className="animate-spin" /> : <Download size={20} className="text-slate-300" />}
                 </button>
-             </div>
+</div>
 
-             {complete && (
+              <div className="border-t border-slate-100 pt-8">
+                 <h3 className="text-lg font-black text-slate-800 mb-1">Google Drive Sync</h3>
+                 <p className="text-xs text-slate-500 font-medium leading-relaxed mb-4">
+                    อัปเดต Dashboard ภาษี + Backup ไปยัง Google Drive (เดียวกับ cron 02:00 อัตโนมัติ — กดได้เมื่อต้องการทันที)
+                 </p>
+                 <div className="space-y-3">
+                    <button 
+                      onClick={() => handleGoogleSync('dashboard')}
+                      disabled={!!syncTask}
+                      className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-between px-6 transition-all group shadow-lg shadow-emerald-200 disabled:opacity-50"
+                    >
+                       <div className="flex items-center gap-3 text-left">
+                          <div className="bg-white/20 p-2 rounded-xl group-hover:scale-110 transition-transform">
+                             <FileSpreadsheet size={20} />
+                          </div>
+                          <p className="font-bold text-sm">อัปเดต Google Sheets Dashboard</p>
+                       </div>
+                       {syncTask === 'dashboard' ? <Loader2 className="animate-spin" /> : <RefreshCw size={18} />}
+                    </button>
+
+                    <button 
+                      onClick={() => handleGoogleSync('backup')}
+                      disabled={!!syncTask}
+                      className="w-full h-14 bg-slate-700 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-between px-6 transition-all group shadow-lg disabled:opacity-50"
+                    >
+                       <div className="flex items-center gap-3 text-left">
+                          <div className="bg-white/20 p-2 rounded-xl group-hover:scale-110 transition-transform">
+                             <Cloud size={20} />
+                          </div>
+                          <p className="font-bold text-sm">Backup ไป Google Drive</p>
+                       </div>
+                       {syncTask === 'backup' ? <Loader2 className="animate-spin" /> : <RefreshCw size={18} />}
+                    </button>
+                 </div>
+                 {syncMessage && (
+                    <div className="mt-4 flex items-center gap-2 bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-700">
+                       <CheckCircle2 size={18} />
+                       <span className="text-sm font-bold">{syncMessage}</span>
+                    </div>
+                 )}
+              </div>
+
+              {complete && (
                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-700 animate-in fade-in slide-in-from-bottom-4">
                   <CheckCircle2 size={20} />
                   <span className="text-sm font-bold uppercase tracking-tight">Backup Downloaded Successfully!</span>
