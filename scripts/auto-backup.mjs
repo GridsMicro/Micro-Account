@@ -30,9 +30,9 @@ async function dumpDatabase(pool) {
   };
 }
 
-async function ensureFolder(service, name, parents = "root") {
+async function ensureFolder(service, name) {
   const find = await service.files.list({
-    q: `name='${name.replaceAll("'", "\\'")}' and '${parents}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    q: `name='${name.replaceAll("'", "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
     fields: "files(id)",
     pageSize: 1,
   });
@@ -41,7 +41,7 @@ async function ensureFolder(service, name, parents = "root") {
     requestBody: {
       name,
       mimeType: "application/vnd.google-apps.folder",
-      parents: parents === "root" ? [] : [parents],
+      parents: [],
     },
     fields: "id",
   });
@@ -54,17 +54,21 @@ async function upload(service, folderId, name, data, mimeType, parents) {
     fields: "files(id)",
     pageSize: 1,
   });
-  const meta = {
-    name,
-    mimeType,
-    parents: parents || [folderId],
-  };
   const media = { mimeType, body: Buffer.isBuffer(data) ? Readable.from(data) : data };
   if (find.data.files?.length) {
-    const updated = await service.files.update({ fileId: find.data.files[0].id, requestBody: meta, media, fields: "id,modifiedTime" });
+    const updated = await service.files.update({
+      fileId: find.data.files[0].id,
+      requestBody: { name, mimeType },
+      media,
+      fields: "id,modifiedTime",
+    });
     return { id: updated.data.id, replaced: true };
   }
-  const created = await service.files.create({ requestBody: meta, media, fields: "id,createdTime" });
+  const created = await service.files.create({
+    requestBody: { name, mimeType, parents: parents || [folderId] },
+    media,
+    fields: "id,createdTime",
+  });
   return { id: created.data.id, replaced: false };
 }
 
