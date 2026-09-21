@@ -44,7 +44,8 @@
 
 - Scope ที่มีอยู่: `drive`, `spreadsheets`, `drive.file`, `calendar`, `admin.directory.*.readonly`, `apps.licensing`, `apps.order`
 - หมวดที่ใช้ได้ **ตอนนี้**: Drive, Sheets, Calendar, Admin (อ่าน), Reseller/Licensing
-- หมวดที่พร้อมเปิดเพิ่มเมื่อพี่อนุมัติ scope: Gmail, Vault admin, Photos, Calendar (เต็มอยู่แล้ว)
+- หมวดที่พร้อมเปิดเพิ่มเมื่อพี่อนุมัติ scope: Photos, Calendar (เต็มอยู่แล้ว)
+- **ยกเลิก (พี่สั่ง 2026-09-21 — ไม่ทำ):** Gmail / Vault / Contacts-Groups
 
 ## สถานะงานที่ทำแล้วตามสิทธิ์ (2026-09-21)
 
@@ -58,14 +59,11 @@
 > อนาคต ถ้าทำแอพใหม่/โปรแกรมใหม่/เลือก provider → **ใช้ของในสิทธิ์นี้ก่อนเสมอ** (กฎ Google-First, DECISIONS.md)
 
 **🟢 เล่นได้เลย (scope มีแล้ว):**
-- [ ] Contacts/Groups: ลูกค้าจากระบบ → ผู้ติดต่อ + กลุ่มแจ้งข่าว (dhrlt, กลุ่มเรียน AI)
 - [ ] PDF อัตโนมัติ: ใบเสนอราคา/สัญญา/ใบแจ้งหนี้จาก DB (jspdf) → เก็บ Drive/แชร์ลิงก์
 - [ ] Sheets: ทะเบียนเอกสารส่งลูกค้า + ติดตามสถานะ
 - [ ] Calendar: เตือน due ใบแจ้งหนี้/สัญญา + แชร์ปฏิทินบริษัท
 
 **🟡 เปิดกล่องเมื่อพี่อนุมัติ scope/API เพิ่ม:**
-- [ ] Gmail (`gmail.readonly`): สแกนบิลอัตโนมัติ → บันทึกค่าใช้จ่าย (กันคีย์มือ)
-- [ ] Vault (admin): retention เอกสาร/อีเมล 7–10 ปีตามกฎหมาย
 - [ ] Forms: แบบฟอร์มข้อมูลลูกค้า/ประเมิน → Sheets
 - [ ] Photos: ภาพหลักฐานหน้างาน/สินค้า
 - [ ] Cloud Translate API: แปลเอกสารต่างประเทศ

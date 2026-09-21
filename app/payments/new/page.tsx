@@ -1,37 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { formatDateDisplay } from "@/lib/dateFormatter";
 import {
   ArrowLeft,
   Save,
-  CreditCard,
-  User,
-  Calendar,
-  DollarSign,
   Zap,
   Printer,
   Loader2,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { getContacts, createPayment } from "@/app/actions";
 
+const LAST_PAYMENT_KEY = "lastPaymentId";
+let paymentListeners: Array<() => void> = [];
+
+function subscribeLastPayment(callback: () => void) {
+  paymentListeners = [...paymentListeners, callback];
+  return () => {
+    paymentListeners = paymentListeners.filter((listener) => listener !== callback);
+  };
+}
+
+function getLastPaymentId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(LAST_PAYMENT_KEY);
+}
+
+function setLastPaymentId(value: string) {
+  window.localStorage.setItem(LAST_PAYMENT_KEY, value);
+  for (const listener of paymentListeners) listener();
+}
+
 export default function NewPaymentPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<Array<{ id: string | number; name: string; address?: string | null; tax_id?: string | null }>>([]);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
-  const [paymentId, setPaymentId] = useState<string | null>(null);
-
-  // Load from localStorage after mount (avoid hydration mismatch)
-  useEffect(() => {
-    const saved = localStorage.getItem('lastPaymentId');
-    if (saved) setPaymentId(saved);
-  }, []);
+  const paymentId = useSyncExternalStore(subscribeLastPayment, getLastPaymentId, () => null);
 
   // URL Params for Linking
   const invoiceId = searchParams.get('invoiceId');
@@ -42,7 +50,7 @@ export default function NewPaymentPage() {
   // States สำหรับฟอร์ม
   const [formData, setFormData] = useState({
     contactId: preFilledContact || '',
-    reference: preFilledRef ? `RE-OBJ-${preFilledRef}` : `RE-${new Date().getFullYear().toString().slice(-2)}${Math.floor(Math.random() * 9000) + 1000}`,
+    reference: preFilledRef ? `RE-OBJ-${preFilledRef}` : '',
     date: new Date().toISOString().split('T')[0],
     amount: preFilledAmount || '',
     paymentMethod: 'Bank Transfer (โอนเงินผ่านธนาคาร)',
@@ -61,19 +69,6 @@ export default function NewPaymentPage() {
     fetchData();
   }, []);
 
-  // Sync formData with URL Params
-  useEffect(() => {
-    if (preFilledContact || preFilledAmount) {
-      setFormData(prev => ({
-        ...prev,
-        contactId: preFilledContact || prev.contactId,
-        amount: preFilledAmount || prev.amount,
-        reference: preFilledRef ? `RC-${preFilledRef}` : prev.reference,
-        description: preFilledRef ? `รับชำระตามใบแจ้งหนี้ #${preFilledRef}` : prev.description
-      }));
-    }
-  }, [preFilledContact, preFilledAmount, preFilledRef]);
-
   const amountNum = parseFloat(formData.amount) || 0;
   const vatAmount = formData.isVatRegistered ? (amountNum * formData.vatRate) / 100 : 0;
   const whtAmount = (amountNum * formData.whtRate) / 100;
@@ -86,9 +81,11 @@ export default function NewPaymentPage() {
     }
 
     setLoading(true);
+    const reference = formData.reference || `RE-${new Date().getFullYear().toString().slice(-2)}${Math.floor(Math.random() * 9000) + 1000}`;
     try {
       const paymentData = {
         ...formData,
+        reference,
         invoiceId: invoiceId || null,
         withholdingAmount: whtAmount
       };
@@ -100,13 +97,12 @@ export default function NewPaymentPage() {
       }
 
       const newPaymentId = paymentRes.id || null;
-      setPaymentId(newPaymentId);
       if (newPaymentId) {
-        localStorage.setItem('lastPaymentId', newPaymentId);
+        setLastPaymentId(newPaymentId);
       }
       setStatus({ type: 'success', message: 'บันทึกสำเร็จแล้วครับพี่! ระบบจัดการภาษีและสมุดรายวันให้เรียบร้อยแล้ว' });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message });
+    } catch (err) {
+      setStatus({ type: 'error', message: err instanceof Error ? err.message : String(err) });
     } finally {
       setLoading(false);
     }
@@ -219,6 +215,6 @@ export default function NewPaymentPage() {
   );
 }
 
-function cn(...classes: any[]) {
+function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
