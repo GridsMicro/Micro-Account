@@ -25,6 +25,7 @@ bug-report.zip
 # IMPORTANT: If any credentials were truly live when committed, 
 # they must be ROTATED IMMEDIATELY at their respective services.
 microtronic-finance-bot-*.json
+microtronic-account-*.json
 service_account.json
 client_secret_*.json
 .env
@@ -36,6 +37,7 @@ secret.txt
 *.db
 *.sqlite3
 **/microtronic-finance-bot-*.json
+**/microtronic-account-*.json
 **/service_account.json
 **/client_secret_*.json
 **/.env
