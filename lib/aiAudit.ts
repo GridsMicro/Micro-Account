@@ -3,6 +3,8 @@ import { askGemini } from "@/services/aiAssistant";
 import { roundThaiTaxAmount } from "@/lib/tax";
 import { getCurrentMonthPL } from "@/lib/reports";
 import { TaxCalendarAlerts } from "@/lib/taxAutomator";
+// 2026-11-18 (ฌอน): แจ้งเตือนจากข้อมูลจริง — READ-ONLY (SELECT เท่านั้น)
+import { getSmartTaxAlerts } from "@/lib/taxNotifications";
 
 export const COMPANY_TAX_ID = '0105561182888';
 
@@ -295,6 +297,34 @@ async function checkTaxDeadlines(): Promise<AuditFinding[]> {
   return findings;
 }
 
+/**
+ * 2026-11-18 (ฌอน): แจ้งเตือนจาก "ข้อมูลจริงใน DB" แทนการดูแค่ปฏิทิน
+ * - เรียก getSmartTaxAlerts (READ-ONLY) → ไม่กระทบ production DB
+ * - dedup_key ผูกกับเดือน + code → แจ้งซ้ำได้ในเดือนใหม่ แต่ไม่ทับกันภายในเดือน
+ */
+async function checkSmartTaxAlerts(): Promise<AuditFinding[]> {
+  const findings: AuditFinding[] = [];
+  try {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const alerts = await getSmartTaxAlerts(month, year);
+    for (const alert of alerts) {
+      findings.push({
+        severity: alert.severity,
+        category: `tax_smart_${alert.code.toLowerCase()}`,
+        title: alert.title,
+        detail: alert.detail,
+        recommendation: `ตรวจสอบและแก้ไขได้ที่ ${alert.actionUrl}`,
+        dedup_key: `smart-tax-${year}-${String(month).padStart(2, "0")}-${alert.code}`,
+      });
+    }
+  } catch (e) {
+    // Audit ต้องไม่ล้มจาก alert engine — ปล่อยให้ check อื่นยังทำงานต่อ
+  }
+  return findings;
+}
+
 // ---------- Orchestrator ----------
 
 export async function runAllAuditChecks(): Promise<AuditFinding[]> {
@@ -307,6 +337,8 @@ export async function runAllAuditChecks(): Promise<AuditFinding[]> {
     ...(await checkVendorsWithNoWht()),
     ...(await checkNegativeMargin()),
     ...(await checkTaxDeadlines()),
+    // 2026-11-18 (ฌอน): แจ้งเตือนอัจฉริยะจากข้อมูลจริง (ข้อ 1)
+    ...(await checkSmartTaxAlerts()),
   ];
   return all;
 }

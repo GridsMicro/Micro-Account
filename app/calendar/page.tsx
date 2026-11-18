@@ -3,6 +3,8 @@ import CalendarClient from "./CalendarClient";
 import { formatDateDisplay } from "@/lib/dateFormatter";
 import { Calendar as CalendarIcon, Bell, FileText } from "lucide-react";
 import { TaxCalendarAlerts } from "@/lib/taxAutomator";
+// 2026-11-18 (ฌอน): แจ้งเตือนจากข้อมูลจริง — READ-ONLY (SELECT เท่านั้น)
+import { getSmartTaxAlerts } from "@/lib/taxNotifications";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +32,14 @@ function getMonthlyTaxAlerts(now: Date): string[] {
 }
 
 export default async function CalendarPage() {
+   const now = new Date();
    const res = await getReminders();
    const reminders = res.success ? (res.data ?? []) : [];
    const pendingReminders = reminders.filter((r: ReminderLike) => r.status === "pending");
-   const taxAlerts = getMonthlyTaxAlerts(new Date());
+   const taxAlerts = getMonthlyTaxAlerts(now);
+   // 2026-11-18 (ฌอน): แจ้งเตือนจากข้อมูลจริง (ใบภาษีซื้อ/สิทธิหัก/PP36/กำหนดยื่น)
+   // inferred from lib/taxNotifications — ไม่เขียน DB
+   const smartAlerts = await getSmartTaxAlerts(now.getMonth() + 1, now.getFullYear());
 
    return (
       <main className="p-6 md:p-10 min-h-screen bg-[#f8fafc]">
@@ -80,6 +86,37 @@ export default async function CalendarPage() {
                         </div>
                      ) : (
                         <p className="text-xs font-bold text-slate-300 italic">เดือนนี้ยังไม่มีกำหนดยื่นภาษี</p>
+                     )}
+                  </div>
+
+                  {/* 2026-11-18 (ฌอน): แจ้งเตือนจากข้อมูลจริง — แยกสีตามความรุนแรง */}
+                  <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-rose-100 text-left">
+                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Bell size={16} className="text-rose-500" /> ต้องตรวจสอบ (ข้อมูลจริง)
+                     </h3>
+                     {smartAlerts.length > 0 ? (
+                        <div className="space-y-4">
+                           {smartAlerts.map((alert) => (
+                              <div
+                                 key={alert.code}
+                                 className={`p-4 rounded-2xl border ${
+                                    alert.severity === "critical"
+                                       ? "bg-rose-50 border-rose-200"
+                                       : alert.severity === "warning"
+                                       ? "bg-amber-50 border-amber-200"
+                                       : "bg-blue-50 border-blue-200"
+                                 }`}
+                              >
+                                 <p className="text-xs font-black text-slate-800">{alert.title}</p>
+                                 <p className="text-[11px] text-slate-600 font-semibold leading-relaxed mt-1">{alert.detail}</p>
+                                 <Link href={alert.actionUrl} className="text-[10px] font-black text-rose-600 hover:underline mt-2 inline-block">
+                                    ตรวจสอบ →
+                                 </Link>
+                              </div>
+                           ))}
+                        </div>
+                     ) : (
+                        <p className="text-xs font-bold text-slate-300 italic">ไม่พบจุดที่ต้องแก้ไข</p>
                      )}
                   </div>
 
