@@ -48,8 +48,34 @@ async function ensureExpensesTable() {
     ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS original_currency VARCHAR(10) DEFAULT 'THB',
     ADD COLUMN IF NOT EXISTS original_amount DECIMAL(15, 4) DEFAULT NULL,
-    ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(15, 6) DEFAULT NULL
+    ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(15, 6) DEFAULT NULL,
+    -- 2026-11-18 (ฌอน / ข้อ 2): คอลัมน์ที่ getPP30Draft / getPP36Draft / getPNDReportDraft
+    -- ใช้งานอยู่แล้วแต่เคยไม่ได้สร้างใน ensureExpensesTable → fresh install จะ query error
+    -- ใช้ ADD COLUMN IF NOT EXISTS → ไม่กระทบ production ที่มีคอลัมน์อยู่แล้ว (DEFAULT false = ปลอดภัย)
+    ADD COLUMN IF NOT EXISTS tax_deductible BOOLEAN DEFAULT false,
+    ADD COLUMN IF NOT EXISTS pp36_exempt BOOLEAN DEFAULT false,
+    ADD COLUMN IF NOT EXISTS withholding_tax_amount DECIMAL(15, 2) DEFAULT 0
   `);
+}
+
+/**
+ * 2026-11-18 (ฌอน / ข้อ 2): ตรวจความครบถ้วนของใบกำกับภาษีซื้อก่อนบันทึก
+ * ถ้ามี VAT > 0 แต่ไม่มีเลขที่/วันที่ใบภาษีซื้อ → ภาษีซื้อจะนำหักใน ภ.พ.30 ไม่ได้
+ * ใช้ทั้งตอนสร้างและตอนแก้ (server-side validation — ไม่เชื่อ client อย่างเดียว)
+ */
+function validateInputTaxDocument(data: {
+  vat_amount?: number;
+  tax_invoice_no?: string;
+  tax_invoice_date?: string;
+}): string | null {
+  if (Number(data.vat_amount || 0) <= 0) return null;
+  if (!data.tax_invoice_no || !data.tax_invoice_no.trim()) {
+    return "มี VAT แต่ยังไม่ระบุเลขที่ใบภาษีซื้อ — กรุณาเติมก่อนบันทึก";
+  }
+  if (!data.tax_invoice_date) {
+    return "มี VAT แต่ยังไม่ระบุวันที่ใบภาษีซื้อ — กรุณาเติมก่อนบันทึก";
+  }
+  return null;
 }
 
 export async function getExpenses(year?: string, month?: string) {
@@ -136,6 +162,8 @@ export async function createExpense(data: {
   reference_no?: string;
   tax_invoice_no?: string;
   tax_invoice_date?: string;
+  /** 2026-11-18 (ฌอน): ยืนยันสิทธิหักภาษีซื้อ — default false ต้องยืนยันเอง */
+  tax_deductible?: boolean;
   vat_amount?: number;
   wht_rate?: number;
   wht_amount?: number;
@@ -151,7 +179,15 @@ export async function createExpense(data: {
 }) {
   try {
     await ensureExpensesTable();
-    
+
+    // 2026-11-18 (ฌอน / ข้อ 2): บังคับเลขที่/วันที่ใบภาษีซื้อเมื่อมี VAT
+    const docError = validateInputTaxDocument({
+      vat_amount: data.vat_amount,
+      tax_invoice_no: data.tax_invoice_no,
+      tax_invoice_date: data.tax_invoice_date,
+    });
+    if (docError) return { success: false, error: docError };
+
     // Fetch vendor name from contacts if contact_id provided
     let vendorName = null;
     if (data.contact_id) {
@@ -173,6 +209,7 @@ export async function createExpense(data: {
          reference_no,
          tax_invoice_no,
          tax_invoice_date,
+         tax_deductible,
          vat_amount,
          wht_rate,
          wht_amount,
@@ -190,7 +227,7 @@ export async function createExpense(data: {
          exchange_rate,
          status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'paid')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, 'paid')
        RETURNING id`,
       [
         data.title,
@@ -200,6 +237,8 @@ export async function createExpense(data: {
         data.reference_no || null,
         data.tax_invoice_no || null,
         data.tax_invoice_date || null,
+        // 2026-11-18 (ฌอน): ค่าเริ่มต้น false — ต้องยืนยันสิทธิหักเอง (ไม่ให้ระบบหักให้โดยอัตโนมัติ)
+        data.tax_deductible || false,
         data.vat_amount || 0,
         data.wht_rate || 0,
         data.wht_amount || 0,
@@ -257,6 +296,8 @@ export async function updateExpense(
     reference_no?: string;
     tax_invoice_no?: string;
     tax_invoice_date?: string;
+    /** 2026-11-18 (ฌอน): ยืนยันสิทธิหักภาษีซื้อ */
+    tax_deductible?: boolean;
     vat_amount?: number;
     notes?: string;
     receipt_url?: string;
@@ -269,6 +310,13 @@ export async function updateExpense(
 ) {
   try {
     await ensureExpensesTable();
+    // 2026-11-18 (ฌอน / ข้อ 2): บังคับเลขที่/วันที่ใบภาษีซื้อเมื่อมี VAT (server-side)
+    const docError = validateInputTaxDocument({
+      vat_amount: data.vat_amount,
+      tax_invoice_no: data.tax_invoice_no,
+      tax_invoice_date: data.tax_invoice_date,
+    });
+    if (docError) return { success: false, error: docError };
     const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
     await query(
       `UPDATE expenses
@@ -289,8 +337,9 @@ export async function updateExpense(
            original_currency=$15,
            original_amount=$16,
            exchange_rate=$17,
+           tax_deductible=$18,
            updated_at=CURRENT_TIMESTAMP
-       WHERE id=$18`,
+       WHERE id=$19`,
       [
         data.title,
         data.category,
@@ -309,6 +358,7 @@ export async function updateExpense(
         isForeignCurrency ? data.original_currency : "THB",
         isForeignCurrency ? (data.original_amount ?? null) : null,
         isForeignCurrency ? (data.exchange_rate ?? null) : null,
+        data.tax_deductible || false,
         id,
       ]
     );
@@ -331,6 +381,66 @@ export async function updateExpense(
     revalidatePath("/reports/profit-loss");
     revalidatePath("/tax-reports");
     revalidatePath("/journals");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 2026-11-18 (ฌอน / ข้อ 2): แก้เฉพาะข้อมูลภาษีซื้อของรายการที่มีอยู่แล้ว
+ * — ทำไมต้องมี: หน้า /expenses เดิมมีแค่ "เพิ่ม/ลบ" ไม่มีแก้ไข ทำให้รายการเก่า
+ *   (เช่น Microsoft 365 VAT 241.99 ใบ MRSTHMCI2700383704 ที่วันที่เป็น "รอระบุวันที่")
+ *   แก้ไม่ได้เว้นแต่จะลบแล้วสร้างใหม่ ซึ่งจะกระทบ journal
+ * — ปลอดภัย: อัปเดตเฉพาะ 3 คอลัมน์ภาษี, ไม่แตะ amount/vat/journal
+ * — เรียกได้เฉพาะเมื่อผู้ใช้กดปุ่มใน UI (user-initiated) — ระบบไม่รันเอง
+ */
+export async function updateExpenseTaxInfo(
+  id: number,
+  data: {
+    tax_invoice_no: string | null;
+    tax_invoice_date: string | null;
+    tax_deductible: boolean;
+  }
+) {
+  try {
+    await ensureExpensesTable();
+
+    // กันกรณีส่งวันที่/เลขที่มาโดยไม่มี VAT → ยังอนุญาต (ไม่บังคับ)
+    // แต่ถ้ารายการนี้มี VAT > 0 ต้องมีเลขที่ + วันที่ก่อนยืนยันสิทธิหัก
+    const current = await query(
+      `SELECT COALESCE(vat_amount,0) AS vat FROM expenses WHERE id = $1`,
+      [id]
+    );
+    if (current.rows.length === 0) {
+      return { success: false, error: "ไม่พบรายการค่าใช้จ่าย" };
+    }
+    if (data.tax_deductible) {
+      const docError = validateInputTaxDocument({
+        vat_amount: Number(current.rows[0].vat),
+        tax_invoice_no: data.tax_invoice_no || undefined,
+        tax_invoice_date: data.tax_invoice_date || undefined,
+      });
+      if (docError) return { success: false, error: docError };
+    }
+
+    await query(
+      `UPDATE expenses
+       SET tax_invoice_no = $1,
+           tax_invoice_date = $2,
+           tax_deductible = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [
+        data.tax_invoice_no || null,
+        data.tax_invoice_date || null,
+        data.tax_deductible,
+        id,
+      ]
+    );
+
+    revalidatePath("/expenses");
+    revalidatePath("/tax-reports");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

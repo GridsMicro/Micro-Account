@@ -16,7 +16,17 @@ export async function getTaxSummary() {
     const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
     const sRes = await query(`SELECT SUM(vat_amount) as v FROM invoices WHERE status != 'cancelled' AND issue_date BETWEEN $1 AND $2`, [start, end]);
-    const pRes = await query(`SELECT SUM(vat_amount) as v FROM payment_vouchers WHERE issue_date BETWEEN $1 AND $2`, [start, end]);
+    // 2026-11-18 (ฌอน / ข้อ 2): ภาษีซื้อต้องมาจาก expenses ที่ "ยืนยันสิทธิหัก + เอกสารครบ"
+    // ของเดิมใช้ payment_vouchers (ไม่มี vat_amount / amount บางรายการเป็นยอดรวม VAT) → นับผิด
+    const pRes = await query(
+      `SELECT COALESCE(SUM(vat_amount),0) as v FROM expenses
+       WHERE expense_date BETWEEN $1 AND $2
+         AND COALESCE(tax_deductible,false) = true
+         AND COALESCE(vat_amount,0) > 0
+         AND tax_invoice_date IS NOT NULL
+         AND tax_invoice_no IS NOT NULL AND tax_invoice_no <> ''`,
+      [start, end]
+    );
     const vs = Number(sRes.rows[0]?.v || 0);
     const vp = Number(pRes.rows[0]?.v || 0);
     return { success: true, data: { vatSales: vs, vatPurchase: vp, netVat: vs - vp, wht: 0 } };
@@ -28,16 +38,21 @@ export async function getPP30Draft(month: number, year: number) {
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
     const end = new Date(year, month, 0).toISOString().split("T")[0];
     const sRes = await query(`SELECT COUNT(*)::int as c, COALESCE(SUM(net_amount),0) as s, COALESCE(SUM(vat_amount),0) as v FROM invoices WHERE status != 'cancelled' AND issue_date BETWEEN $1 AND $2`, [start, end]);
-    // ภาษีซื้อ (Input VAT) มาจาก expenses ที่ tax_deductible และมี vat_amount จริง
-    // (ไม่ใช้ payment_vouchers เพราะตารางนี้ไม่มี vat_amount และ amount บางรายการเป็นยอดรวม VAT)
+    // 2026-11-18 (ฌอน / ข้อ 2): ภาษีซื้อ (Input VAT) มาจาก expenses ที่
+    //   (1) ยืนยันสิทธิหัก tax_deductible = true
+    //   (2) มี vat_amount จริง
+    //   (3) มีเลขที่ + วันที่ใบภาษีซื้อครบ (ไม่งั้นนำหักใน ภ.พ.30 ไม่ได้ตามกฎหมาย)
+    // ไม่ใช้ payment_vouchers เพราะตารางนี้ไม่มี vat_amount และ amount บางรายการเป็นยอดรวม VAT
     const pRes = await query(
       `SELECT COUNT(*)::int as c,
               COALESCE(SUM(net_amount),0) as s,
               COALESCE(SUM(vat_amount),0) as v
        FROM expenses
        WHERE expense_date BETWEEN $1 AND $2
-         AND tax_deductible = true
-         AND COALESCE(vat_amount,0) > 0`,
+         AND COALESCE(tax_deductible,false) = true
+         AND COALESCE(vat_amount,0) > 0
+         AND tax_invoice_date IS NOT NULL
+         AND tax_invoice_no IS NOT NULL AND tax_invoice_no <> ''`,
       [start, end]
     );
     return {
@@ -46,8 +61,9 @@ export async function getPP30Draft(month: number, year: number) {
         sales: { documentCount: sRes.rows[0].c, taxableAmount: Number(sRes.rows[0].s), vatAmount: Number(sRes.rows[0].v) },
         purchases: { documentCount: pRes.rows[0].c, taxableAmount: Number(pRes.rows[0].s), vatAmount: Number(pRes.rows[0].v), items: [] },
         netVatPayable: Number(sRes.rows[0].v) - Number(pRes.rows[0].v),
-        // ข้อมูลบัญชีอาจต่างจากสรรพากร: แจ้งเตือนถ้ามีรายจ่าย VAT ที่ยังไม่ได้ flag tax_deductible
-        missingDeductibleTax: Number(pRes.rows[0].c) === 0 ? await countUndeductedVatExpenses(start, end) : 0,
+        // จำนวนรายการที่ยังต้องแก้ — ใช้แจ้งเตือนใน UI (ไม่หักอัตโนมัติ)
+        missingDeductibleTax: await countUndeductedVatExpenses(start, end),
+        incompleteTaxDocs: await countIncompleteTaxDocs(start, end),
       }
     };
   } catch (err: any) { return { success: false, error: err.message }; }
@@ -60,6 +76,23 @@ async function countUndeductedVatExpenses(start: string, end: string): Promise<n
        WHERE expense_date BETWEEN $1 AND $2
          AND COALESCE(vat_amount,0) > 0
          AND COALESCE(tax_deductible, false) = false`,
+      [start, end]
+    );
+    return r.rows[0]?.c || 0;
+  } catch { return 0; }
+}
+
+/**
+ * 2026-11-18 (ฌอน / ข้อ 2): นับใบภาษีซื้อที่ VAT > 0 แต่ยังขาดเลขที่/วันที่
+ * ใช้แจ้งเตือนเพื่อให้คนแก้ — ไม่นำไปหักอัตโนมัติ
+ */
+async function countIncompleteTaxDocs(start: string, end: string): Promise<number> {
+  try {
+    const r = await query(
+      `SELECT COUNT(*)::int as c FROM expenses
+       WHERE expense_date BETWEEN $1 AND $2
+         AND COALESCE(vat_amount,0) > 0
+         AND (tax_invoice_date IS NULL OR tax_invoice_no IS NULL OR tax_invoice_no = '')`,
       [start, end]
     );
     return r.rows[0]?.c || 0;

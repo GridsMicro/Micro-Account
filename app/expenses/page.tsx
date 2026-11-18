@@ -36,6 +36,8 @@ const SUPPORTED_CURRENCIES = [
 ];
 import GoogleDrivePicker from "@/components/GoogleDrivePicker";
 import ThaiDateInput from "@/components/ThaiDateInput";
+// 2026-11-18 (ฌอน): แก้ข้อมูลภาษีซื้อของรายการเก่าโดยไม่ลบ/สร้างใหม่
+import ExpenseTaxEditor from "./ExpenseTaxEditor";
 import {
   createExpense,
   deleteExpense,
@@ -99,6 +101,8 @@ export default function ExpensesPage() {
     reference_no: "",
     tax_invoice_no: "",
     tax_invoice_date: "",
+    // 2026-11-18 (ฌอน / ข้อ 2): ต้องยืนยันสิทธิหักภาษีซื้อเอง (ค่าเริ่มต้น false)
+    tax_deductible: false,
     vat_amount: "",
     wht_rate: "3",
     wht_amount: "",
@@ -167,6 +171,7 @@ export default function ExpensesPage() {
       reference_no: "",
       tax_invoice_no: "",
       tax_invoice_date: "",
+      tax_deductible: false,
       vat_amount: "",
       wht_rate: "3",
       wht_amount: "",
@@ -185,6 +190,19 @@ export default function ExpensesPage() {
     if (!form.title || !form.amount || parseFloat(form.amount) <= 0) {
       setStatus({ type: "error", message: "กรุณากรอกหัวข้อและจำนวนเงินให้ครบถ้วน" });
       return;
+    }
+
+    // 2026-11-18 (ฌอน / ข้อ 2): บังคับเลขที่ + วันที่ใบภาษีซื้อเมื่อมี VAT
+    // (ฝั่ง server ก็ตรวจซ้ำ — ที่นี่เพื่อให้ผู้ใช้เห็นทันที)
+    if (parseFloat(form.vat_amount || "0") > 0) {
+      if (!form.tax_invoice_no.trim()) {
+        setStatus({ type: "error", message: "มี VAT → กรุณาระบุเลขที่ใบภาษีซื้อ" });
+        return;
+      }
+      if (!form.tax_invoice_date) {
+        setStatus({ type: "error", message: "มี VAT → กรุณาระบุวันที่ใบภาษีซื้อ" });
+        return;
+      }
     }
 
     startTransition(async () => {
@@ -206,6 +224,8 @@ export default function ExpensesPage() {
         reference_no: form.reference_no || undefined,
         tax_invoice_no: form.tax_invoice_no || undefined,
         tax_invoice_date: form.tax_invoice_date || undefined,
+        // 2026-11-18 (ฌอน): ส่งสิทธิหักที่ผู้ใช้ยืนยัน (default false)
+        tax_deductible: form.tax_deductible,
         vat_amount: vatAmount,
         wht_rate: whtRate,
         wht_amount: whtAmount,
@@ -428,6 +448,22 @@ export default function ExpensesPage() {
                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-right text-sm font-semibold outline-none focus:border-rose-400"
                 />
               </div>
+
+              {/* 2026-11-18 (ฌอน / ข้อ 2): ยืนยันสิทธิหักภาษีซื้อ — ต้องติ๊กเองไม่งั้น ภ.พ.30 ไม่หักให้ */}
+              <label className="flex items-center gap-3 md:col-span-2 cursor-pointer rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                <input
+                  type="checkbox"
+                  checked={form.tax_deductible}
+                  onChange={(e) => setForm({ ...form, tax_deductible: e.target.checked })}
+                  className="h-5 w-5 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-bold text-emerald-700">
+                  ยืนยันสิทธิหักภาษีซื้อ (นำไปหักใน ภ.พ.30)
+                </span>
+                <span className="text-[10px] font-semibold text-emerald-600/70">
+                  เฉพาะใบกำกับภาษีที่ถูกต้องตามกฎหมายเท่านั้น
+                </span>
+              </label>
 
               {/* Multi-Currency Section */}
               <div className="space-y-3 md:col-span-2 rounded-xl border border-sky-100 bg-sky-50 p-4">
@@ -733,18 +769,12 @@ export default function ExpensesPage() {
                         </td>
                         <td className="px-6 py-4 text-xs font-mono text-slate-400">{expense.reference_no || "—"}</td>
                         <td className="px-6 py-4">
-                          {expense.tax_invoice_no ? (
-                            <div className="text-xs text-slate-500">
-                              <p className="font-mono text-slate-700">{expense.tax_invoice_no}</p>
-                              <p>
-                                {expense.tax_invoice_date
-                                  ? formatDateDisplay(expense.tax_invoice_date)
-                                  : "รอระบุวันที่"}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-300">—</span>
-                          )}
+                          <ExpenseTaxEditor
+                            id={expense.id}
+                            taxInvoiceNo={expense.tax_invoice_no || null}
+                            taxInvoiceDate={expense.tax_invoice_date || null}
+                            taxDeductible={Boolean(expense.tax_deductible)}
+                          />
                         </td>
                         <td className="px-6 py-4">
                           {expense.receipt_url ? (

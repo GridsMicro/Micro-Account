@@ -96,6 +96,20 @@ export default async function TaxReportsPage() {
             </div>
           </div>
 
+          {/* 2026-11-18 (ฌอน / ข้อ 2): แจ้งรายการที่ยังนำหักไม่ได้ — ให้คนแก้ ไม่หักอัตโนมัติ */}
+          {pp30Draft && (Number(pp30Draft.missingDeductibleTax || 0) > 0 || Number(pp30Draft.incompleteTaxDocs || 0) > 0) ? (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-black">⚠️ มีภาษีซื้อที่ยังไม่ถูกนำหักใน ภ.พ.30</p>
+              <p className="mt-1 font-semibold">
+                ยังไม่ยืนยันสิทธิหัก {Number(pp30Draft.missingDeductibleTax || 0)} รายการ ·
+                ใบภาษีซื้อขาดเลขที่/วันที่ {Number(pp30Draft.incompleteTaxDocs || 0)} รายการ
+              </p>
+              <a href="/expenses" className="mt-2 inline-block text-xs font-black text-amber-700 underline">
+                ไปแก้ที่หน้าค่าใช้จ่าย →
+              </a>
+            </div>
+          ) : null}
+
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-purple-100 bg-purple-50 p-5">
               <p className="mb-2 text-xs font-black uppercase tracking-widest text-purple-600">Output VAT</p>
