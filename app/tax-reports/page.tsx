@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDisplay } from "@/lib/dateFormatter";
-import { getPNDReportDraft, getPP30Draft, getPP36Draft, getTaxSummary } from "@/app/actions";
+import { getPNDReportDraft, getPP30Draft, getPP36Draft, getTaxSummary, getRDFilingHistoryAction } from "@/app/actions";
 import { TAX_FILING_URLS } from "@/lib/taxAutomator";
 import TaxExportButton from "./TaxExportButton";
 
@@ -35,12 +35,14 @@ export default async function TaxReportsPage() {
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  const [summaryRes, pp30Res, pnd3Res, pnd53Res, pp36Res] = await Promise.all([
+  const [summaryRes, pp30Res, pnd3Res, pnd53Res, pp36Res, rdHistoryRes] = await Promise.all([
     getTaxSummary(),
     getPP30Draft(currentMonth, currentYear),
     getPNDReportDraft("pnd3", currentMonth, currentYear),
     getPNDReportDraft("pnd53", currentMonth, currentYear),
     getPP36Draft(currentMonth, currentYear),
+    // 2026-11-18 (ฌอน / ข้อ 3): ประวัติสถานะที่ซิงค์จากสรรพากร (READ-ONLY)
+    getRDFilingHistoryAction(5),
   ]);
 
   const { vatSales = 0, vatPurchase = 0, wht = 0, netVat = 0 } = summaryRes.success && summaryRes.data ? summaryRes.data : {};
@@ -48,6 +50,7 @@ export default async function TaxReportsPage() {
   const pnd3Draft = pnd3Res.success ? pnd3Res.data : null;
   const pnd53Draft = pnd53Res.success ? pnd53Res.data : null;
   const pp36Draft = pp36Res.success ? pp36Res.data : null;
+  const rdHistory = rdHistoryRes.success && Array.isArray(rdHistoryRes.data) ? rdHistoryRes.data : [];
 
   return (
     <main className="min-h-screen bg-[#f8fafc] p-6 md:p-8">
@@ -84,6 +87,57 @@ export default async function TaxReportsPage() {
             <p className={cn("text-2xl font-black", netVat >= 0 ? "text-red-600" : "text-emerald-600")}>฿{Math.abs(netVat).toLocaleString()}</p>
           </div>
         </div>
+
+        {/* 2026-11-18 (ฌอน / ข้อ 3): สถานะล่าสุดที่ซิงค์จาก RD Open API — อ่านอย่างเดียว */}
+        <section className="mb-8 rounded-2xl border border-blue-100 bg-blue-50/50 p-5 text-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <ShieldCheck size={18} className="text-blue-600" />
+            <h2 className="font-black uppercase tracking-widest text-blue-800">
+              สถานะการยื่นล่าสุดจากสรรพากร
+            </h2>
+            <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+              RD Open API · ซิงค์ด้วยเลขอ้างอิง
+            </span>
+          </div>
+          {rdHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="text-[10px] uppercase tracking-wider text-blue-500">
+                  <tr>
+                    <th className="py-2 pr-3">แบบ</th>
+                    <th className="py-2 pr-3">งวด</th>
+                    <th className="py-2 pr-3">เลขอ้างอิง</th>
+                    <th className="py-2 pr-3">สถานะ</th>
+                    <th className="py-2 pr-3">ยอดชำระ</th>
+                    <th className="py-2">ซิงค์เมื่อ</th>
+                  </tr>
+                </thead>
+                <tbody className="font-semibold text-slate-700">
+                  {rdHistory.map((item: any) => (
+                    <tr key={item.id} className="border-t border-blue-100">
+                      <td className="py-2 pr-3 font-black">{item.form_type}</td>
+                      <td className="py-2 pr-3">
+                        {item.tax_month && item.tax_year ? `${item.tax_month}/${item.tax_year}` : "—"}
+                      </td>
+                      <td className="py-2 pr-3 font-mono text-[11px]">{item.ref_no || item.api_ref_no || "—"}</td>
+                      <td className="py-2 pr-3">{item.status_label || item.form_status_id || "—"}</td>
+                      <td className="py-2 pr-3">
+                        ฿{Number(item.total_amount || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 text-[11px] text-slate-500">
+                        {item.updated_at ? new Date(item.updated_at).toLocaleString("th-TH") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs font-semibold text-slate-500">
+              ยังไม่มีสถานะที่ซิงค์ — กรอกเลขอ้างอิงการยื่นแบบ (เช่น P300041469858) แล้วกด &quot;ซิงค์&quot; ในกล่องเครื่องมือด้านล่าง
+            </p>
+          )}
+        </section>
 
         <section className="mb-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

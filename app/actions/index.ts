@@ -22,6 +22,9 @@ export {
   getTaxSummary, getPP30Draft, getPNDReportDraft, getPP36Draft,
   exportPP30ToTxt, exportPND53ToTxt, batchSubmitToRDPortal,
   setupRDAPI, submitInvoiceToRDPortal, exportMonthlySummaryToDrive,
+  // 2026-11-18 (ฌอน / ข้อ 3): RD Open API — ยื่นแบบและซิงค์สถานะจริง
+  submitPP30ToRDPortal, syncRDStatusAction, getRDFilingHistoryAction,
+  getRDReceiptAction, getRDPayinAction,
 } from "./tax-reports";
 export {
   createPaymentVoucher, createPayment, markInvoiceAsPaid,

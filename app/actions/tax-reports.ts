@@ -2,13 +2,19 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+// 2026-11-18 (ฌอน / ข้อ 3): เปลี่ยนจาก mock RD API → RD Open API จริง
 import {
   initializeRDClient,
+  isRDConfigured,
   submitInvoiceToRD,
-  submitWHTToRD,
-  checkRDSubmissionStatus,
   batchSubmitToRD,
+  submitPP30ToRD,
+  syncRDFilingStatus,
+  getRDFilingHistory,
+  getRDReceipt,
+  getRDPayin,
 } from "@/lib/rd-api";
+import type { RDResult } from "@/lib/rd-api";
 
 export async function getTaxSummary() {
   try {
@@ -194,16 +200,108 @@ export async function exportPND53ToTxt(month: number, year: number): Promise<{ s
   } catch (err: any) { return { success: false, error: err.message }; }
 }
 
+/**
+ * 2026-11-18 (ฌอน / ข้อ 3)
+ * ของเดิมคืน { success: true } เสมอโดยไม่ยิง API เลย → เป็นผลลวง
+ * ตอนนี้ delegate ไปยัง shim ที่คืน error ชัดเจน (ไม่มี credential ก็ไม่สำเร็จ)
+ */
 export async function batchSubmitToRDPortal(ids: string[], type?: string): Promise<{ success: boolean; summary?: { successful: number; total: number }; results?: any[]; error?: string }> {
-  return { success: true, summary: { successful: ids.length, total: ids.length } };
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { success: false, error: "ไม่มีเอกสารที่เลือก", summary: { successful: 0, total: 0 }, results: [] };
+  }
+  const res = await batchSubmitToRD(ids, type === "wht" ? "wht" : "invoice");
+  return {
+    success: false,
+    error: res.error,
+    summary: { successful: res.summary.successful, total: res.summary.total },
+    results: res.results,
+  };
+}
+
+/**
+ * ยื่น ภ.พ.30 จริงผ่าน RD Open API (/oapi/submit-form)
+ * ความปลอดภัย:
+ *  - ต้องพิมพ์ยืนยัน "ยื่น ภ.พ.30" ตรง ๆ (ป้องกันกดปุ่มผิด)
+ *  - ต้องมี credential ใน env
+ *  - ถ้ายังมีใบภาษีซื้อที่ไม่ครบ/ยังไม่ยืนยันสิทธิหัก → ปฏิเสธการยื่น (ไม่หักอัตโนมัติ)
+ *  - ปีภาษีที่ส่งเป็น พ.ศ. (ค.ศ. + 543) ตาม spec ของ RD
+ */
+export async function submitPP30ToRDPortal(month: number, year: number, confirmText: string): Promise<RDResult> {
+  if (confirmText !== "ยื่น ภ.พ.30") {
+    return { success: false, error: "ต้องพิมพ์ยืนยัน 'ยื่น ภ.พ.30' เพื่อยื่นแบบจริง" };
+  }
+  if (!isRDConfigured()) {
+    return { success: false, error: "ยังไม่ได้ตั้งค่า RD Open API (ดู .env.example → RD_EFILING_*)" };
+  }
+
+  const draft = await getPP30Draft(month, year);
+  if (!draft.success || !draft.data) {
+    return { success: false, error: draft.error || "ไม่พบข้อมูล ภ.พ.30 สำหรับงวดนี้" };
+  }
+  const d = draft.data;
+  if (Number(d.missingDeductibleTax || 0) > 0 || Number(d.incompleteTaxDocs || 0) > 0) {
+    return {
+      success: false,
+      error: `ยังมีภาษีซื้อที่ต้องแก้ก่อนยื่น (ยังไม่ยืนยันสิทธิหัก ${d.missingDeductibleTax} รายการ / เอกสารไม่ครบ ${d.incompleteTaxDocs} รายการ)`,
+    };
+  }
+
+  const companyRes = await query("SELECT tax_id FROM company_settings ORDER BY id DESC LIMIT 1");
+  const taxId = companyRes.rows[0]?.tax_id;
+  if (!taxId || !/^\d{13}$/.test(String(taxId))) {
+    return { success: false, error: "กรุณาตั้งเลขประจำตัวผู้เสียภาษี 13 หลักในหน้าตั้งค่าบริษัทก่อนยื่น" };
+  }
+
+  const res = await submitPP30ToRD({
+    taxId: String(taxId),
+    taxMonth: month,
+    taxYear: year + 543, // spec ใช้ปี พ.ศ.
+    salesTaxable: Number(d.sales.taxableAmount),
+    salesVat: Number(d.sales.vatAmount),
+    purchaseTaxable: Number(d.purchases.taxableAmount),
+    purchaseVat: Number(d.purchases.vatAmount),
+  });
+  if (res.success) revalidatePath("/tax-reports");
+  return res;
+}
+
+/** ซิงค์สถานะแบบจาก RD (/oapi/result-form) มาบันทึกในตาราง tax_filing_submissions */
+export async function syncRDStatusAction(input: { refNo?: string; apiRefNo?: string; formType?: string }): Promise<RDResult> {
+  if (!input.refNo && !input.apiRefNo) {
+    return { success: false, error: "กรุณาระบุเลขอ้างอิงการยื่นแบบ (refNo) หรือเลขอ้างอิงการนำส่ง (apiRefNo)" };
+  }
+  const res = await syncRDFilingStatus(input);
+  if (res.success) revalidatePath("/tax-reports");
+  return res;
+}
+
+/** อ่านประวัติสถานะที่ซิงค์ไว้ (READ-ONLY) */
+export async function getRDFilingHistoryAction(limit = 10) {
+  try {
+    return { success: true, data: await getRDFilingHistory(limit) };
+  } catch (err: any) {
+    return { success: false, error: err.message, data: [] };
+  }
+}
+
+/** ขอภาพแบบ/ใบแนบ/ใบเสร็จจาก RD (READ-ONLY) */
+export async function getRDReceiptAction(refNo: string, requestType: 1 | 2 | 3 = 3): Promise<RDResult> {
+  return getRDReceipt(refNo, requestType);
+}
+
+/** ขอใบ Pay-In จาก RD */
+export async function getRDPayinAction(refNos: string[]): Promise<RDResult> {
+  return getRDPayin(refNos);
 }
 
 export async function setupRDAPI(config: any) {
+  // @deprecated ใช้ RD_EFILING_* ใน environment แทน
   initializeRDClient(config);
   return { success: true };
 }
 
 export async function submitInvoiceToRDPortal(id: string) {
+  // @deprecated เก็บไว้ให้เรียกได้ แต่จะคืน error ชัดเจน (ไม่มี success ปลอมอีกต่อไป)
   const res = await submitInvoiceToRD(id);
   revalidatePath("/invoices");
   return res;

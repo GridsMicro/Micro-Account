@@ -2,6 +2,13 @@
 
 Tracks meaningful behavior/architecture changes (not every small code diff).
 
+## [2026-11-18]
+
+- Added read-only smart tax alerts (`lib/taxNotifications.ts`) shown on `/calendar`, in AI audit, and via optional LINE Notify (`TAX_LINE_TOKEN`); cron `tax:update` no longer has an empty notification TODO
+- Corrected input-VAT data: expenses table now ensures `tax_deductible` / `pp36_exempt` / `withholding_tax_amount`; VAT > 0 requires tax invoice number + date; VAT is only claimable after explicit user confirmation; legacy records editable via `ExpenseTaxEditor` without deleting/recreating journals; `/tax-reports` warns about unclaimed/incomplete docs
+- Replaced mock RD integration with real RD Open API (`lib/rd-api.ts`): `submit-filing-auth`, `submit-form` (PP30), `result-form`, `receipt-form`, `payin-form`, `cancel-form`; removed fake-success `batchSubmitToRDPortal`; added status sync into `tax_filing_submissions` and a status table on `/tax-reports`; submission requires typed confirmation and valid config
+- Fixed missing closing brace in `jobs/scheduleTaxUpdate.ts` introduced by the smart-alert edit
+
 ## [2026-09-21]
 
 - Added FX Rate Monitor: `GET /api/fx-rate` serves latest USD/THB (BOT reference via frankfurter.dev) with 30d series + trend; invoice creation page shows a live FX widget and "Use Latest Rate" button to prefill the markup calculator's exchange rate (supports FX-based billing, see DECISIONS Dominick markup 25%)

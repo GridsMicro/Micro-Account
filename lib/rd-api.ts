@@ -1,434 +1,729 @@
-// RD API Portal Integration for Thailand Revenue Department
-// Handles automated submission of tax documents (e-Tax Invoices, Withholding Tax)
+/**
+ * RD Open API (e-Filing) integration — 2026-11-18 (ฌอน / ข้อ 3)
+ *
+ * แทนที่โค้ดเดิมที่ยิง /oauth/token + /api/v1/... (endpoint ที่ไม่มีจริง)
+ * ด้วย endpoint จาก spec ทางการของกรมสรรพากร:
+ *   https://efiling.rd.go.th/rd-cms/api
+ *
+ *   POST /oapi/submit-filing-auth  ยืนยันตัวตน → tokenId + sender.id
+ *   POST /oapi/submit-form         นำส่งแบบ (formType PP30 = ภ.พ.30)
+ *   POST /oapi/result-form         สอบถามสถานะแบบ (refNo / apiRefNo)
+ *   POST /oapi/receipt-form        ขอภาพแบบ / ใบแนบ / ใบเสร็จ
+ *   POST /oapi/payin-form          ขอใบ Pay-In
+ *   POST /oapi/cancel-form         ยกเลิกแบบ (อันตราย — ต้องยืนยันก่อนเสมอ)
+ *
+ * ⚠️ ข้อควรระวัง (อ่านก่อนใช้งานจริง):
+ *  1. ต้องสมัคร Open API กับสรรพากร (แบบ ภ.อ.01.2 + ผู้ให้บริการตัวแทนหรือผู้เสียภาษี)
+ *     และใช้ใบรับรอง NRCA ตามที่กรมกำหนด — ถ้าไม่มี credential ฟังก์ชันทั้งหมดจะ
+ *     คืน success:false ทันที ไม่ปลอมผลสำเร็จ
+ *  2. ทุกฟังก์ชันที่ "เขียน" (submit / cancel / sync) ต้องถูกเรียกจาก user action
+ *     ที่ผู้ใช้กดยืนยันเท่านั้น — ห้ามเรียกจาก cron หรือ useEffect แบบเงียบ ๆ
+ *  3. ระบบเก็บสถานะลงตาราง tax_filing_submissions ใน DB ของแอพ (CREATE IF NOT EXISTS)
+ *     — ไม่ได้แก้ข้อมูลภาษีใน expenses/invoices
+ *  4. ผล responseCode P01001 = "กำลังประมวลผล" → ยังไม่มี refNo ต้องใช้ apiRefNo
+ *     สอบถามซ้ำผ่าน result-form (ไม่ถือว่ายื่นสำเร็จจนกว่า formStatusId ปรากฏ)
+ */
 
 import { query } from "@/lib/db";
 
-interface RDAuthConfig {
-  clientId: string;
-  clientSecret: string;
-  apiKey?: string;
+// ---------------------------------------------------------------------------
+// Constants & types
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BASE_URL = "https://efiling.rd.go.th/rd-cms";
+export const RD_SUCCESS_CODE = "I01000";
+export const RD_PROCESSING_CODE = "P01001";
+
+// spec ไม่ระบุอายุ token → ใช้ cache แบบอนุรักษ์นิยม 10 นาที + retry ครั้งเดียวถ้า 401
+const TOKEN_CACHE_MS = 10 * 60 * 1000;
+
+export type RDFormType = "PP30" | "PP36" | "PND3" | "PND53" | "PND90" | "PND91" | "PND54";
+
+export interface RDConfig {
+  username: string;
+  password: string;
+  senderId: string;
+  /** 1 = ผู้มีหน้าที่เสียอากร, 2 = ผู้ให้บริการตัวแทน (default 2 ตามตัวอย่างใน spec) */
+  role: 1 | 2;
   baseUrl: string;
+  /** version ของแบบ ภ.พ.30 — ตั้งผ่าน env ได้ถ้ากรมอัปเดตแบบฟอร์ม */
+  pp30Version: string;
 }
 
-interface RDSubmissionResult {
+export interface RDResult {
   success: boolean;
-  submissionId?: string;
-  status?: string;
+  responseCode?: string;
+  responseMessage?: string;
+  requestId?: string;
+  /** เลขอ้างอิงการนำส่ง — ใช้สอบถามสถานะต่อเมื่อระบบยังประมวลผลอยู่ */
+  apiRefNo?: string;
+  /** เลขอ้างอิงการยื่นแบบ (13 หลัก) */
+  refNo?: string;
+  formStatusId?: string;
+  statusLabel?: string;
+  totalAmount?: number;
+  totalPenalty?: number;
+  totalSurcharge?: number;
+  totalFine?: number;
+  attachedFiles?: Array<{ docType: string; fileName: string; file: string }>;
   error?: string;
-  details?: any;
+  /** เก็บ response ดิบไว้ตรวจสอบ — ห้าม log tokenId ออกมา */
+  raw?: unknown;
 }
+
+/** formStatusId ตามตารางรหัสข้อความของ RD (jsp. result-form / submit-form) */
+export const RD_FORM_STATUS_LABELS: Record<string, string> = {
+  "1": "รอการชำระเงิน",
+  "2": "ชำระภาษีสำเร็จ รอตรวจสอบ",
+  "3": "ยื่นแบบสำเร็จ รอออกใบเสร็จรับเงิน",
+  "4": "ยื่นแบบสำเร็จ ออกใบเสร็จรับเงินแล้ว",
+  "5": "เกินกำหนดชำระเงิน",
+  "6": "ยกเลิกแบบ",
+  "7": "ยื่นแบบสำเร็จ รอประมวลผล",
+  "8": "ยื่นแบบสำเร็จ",
+};
+
+// ---------------------------------------------------------------------------
+// Config (อ่าน env ตอนเรียก — ไม่ใช่ตอน import — เพื่อให้ Vercel runtime env ทำงาน)
+// ---------------------------------------------------------------------------
+
+/** config override จาก setupRDAPI() เดิม — เก็บไว้เพื่อ backward compatibility */
+let configOverride: RDConfig | null = null;
+
+export function getRDConfig(): RDConfig | null {
+  const username = process.env.RD_EFILING_USERNAME;
+  const password = process.env.RD_EFILING_PASSWORD;
+  const senderId = process.env.RD_EFILING_SENDER_ID;
+  if (!username || !password || !senderId) return null;
+  return {
+    username,
+    password,
+    senderId,
+    role: process.env.RD_EFILING_ROLE === "1" ? 1 : 2,
+    baseUrl: process.env.RD_EFILING_BASE_URL || DEFAULT_BASE_URL,
+    pp30Version: process.env.RD_EFILING_PP30_VERSION || "1.0.0",
+  };
+}
+
+/** @deprecated ใช้ env แทน — เก็บไว้ให้ setupRDAPI() เดิมยัง compile ได้ */
+export function initializeRDClient(config: Partial<RDConfig>): void {
+  const base = getRDConfig() || {
+    username: "", password: "", senderId: "",
+    role: 2, baseUrl: DEFAULT_BASE_URL, pp30Version: "1.0.0",
+  };
+  configOverride = { ...base, ...config } as RDConfig;
+}
+
+function resolveConfig(): RDConfig | null {
+  return configOverride || getRDConfig();
+}
+
+export function isRDConfigured(): boolean {
+  return Boolean(resolveConfig());
+}
+
+function notConfigured(): RDResult {
+  return {
+    success: false,
+    error: "ยังไม่ได้ตั้งค่า RD Open API — ต้องระบุ RD_EFILING_USERNAME / RD_EFILING_PASSWORD / RD_EFILING_SENDER_ID ใน environment",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** nonce ตาม spec = "YYYY-MM-DD HH:MM:SS" (เวลาท้องถิ่น) */
+function formatNonce(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/** requestId ต้องไม่ซ้ำในแต่ละ request (spec จำกัด 50 ตัวอักษร) */
+function makeRequestId(prefix = "MA"): string {
+  return `${prefix}${Date.now()}${Math.floor(Math.random() * 10000)}`.slice(0, 50);
+}
+
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+
+function parseRDResponse(json: any, httpStatus: number): RDResult {
+  const envelope = json?.eFiling;
+  const resp = envelope?.response || {};
+  const result = envelope?.result || {};
+  const code = String(resp.responseCode || "").trim();
+
+  // I01000 = สำเร็จ / P01001 = กำลังประมวลผล (ยังไม่มี refNo — ต้อง poll ต่อ)
+  const success = code === RD_SUCCESS_CODE || code === RD_PROCESSING_CODE;
+  const formStatusId = result.formStatusId != null ? String(result.formStatusId) : undefined;
+
+  const num = (v: unknown) => (v == null ? undefined : Number(v));
+  return {
+    success,
+    responseCode: code || undefined,
+    responseMessage: resp.responseMessage || resp.responseMsg || undefined,
+    requestId: result.requestId || undefined,
+    apiRefNo: result.apiRefNo || undefined,
+    refNo: result.refNo || undefined,
+    formStatusId,
+    statusLabel: formStatusId ? RD_FORM_STATUS_LABELS[formStatusId] : undefined,
+    totalAmount: num(result.totalAmount),
+    totalPenalty: num(result.totalPenalty),
+    totalSurcharge: num(result.totalSurcharge),
+    totalFine: num(result.totalFine),
+    attachedFiles: Array.isArray(result.attachedFiles) ? result.attachedFiles : undefined,
+    error: success
+      ? undefined
+      : resp.responseMessage || resp.responseMsg || code || `RD API ตอบ HTTP ${httpStatus}`,
+    raw: json,
+  };
+}
+
+/** อนุมาน formType จาก refNo เฉพาะสำหรับเก็บประวัติ — ไม่ใช้ตัดสินใจทางภาษี */
+function inferFormType(refNo?: string): string {
+  if (!refNo) return "UNKNOWN";
+  if (refNo.startsWith("P3")) return "PP30";
+  if (refNo.startsWith("P5")) return "PND";
+  return "UNKNOWN";
+}
+
+// ---------------------------------------------------------------------------
+// PP30 payload
+// ---------------------------------------------------------------------------
+
+/**
+ * สร้าง formData ของ ภ.พ.30 ตามตัวอย่างใน spec (formType PP30, version 1.0.0)
+ *
+ * ⚠️ สำคัญ: โครงสร้างนี้ internal มาจาก "ตัวอย่าง Request Body" ที่กรมเผยแพร่
+ * ไม่ใช่ technical spec ฉบับเต็ม (ต้องดาวน์โหลด "การสร้างข้อมูลแบบแสดงรายการภาษี
+ * สำหรับนำส่งผ่านอินเทอร์เน็ตทาง API" จากหน้าเดียวกันมาทียบก่อนยื่นจริง)
+ * โดยเฉพาะ formAttach.attachDet — ต้องตรวจกับ RD Prep V รุ่นปรับปรุง
+ * (แบบปรับปรุงเริ่ม 1 มี.ค. 2569) ก่อนใช้งานกับงวดหลังจากนั้น
+ */
+export function buildPP30FormData(input: {
+  taxId: string;
+  branchNo?: number;
+  taxMonth: number;
+  taxYear: number;
+  salesTaxable: number;
+  salesVat: number;
+  purchaseTaxable: number;
+  purchaseVat: number;
+}) {
+  const salesBase = round2(input.salesTaxable);
+  const salesVat = round2(input.salesVat);
+  const purchaseBase = round2(input.purchaseTaxable);
+  const purchaseVat = round2(input.purchaseVat);
+  const netVat = round2(salesVat - purchaseVat);
+  const due = netVat > 0 ? netVat : 0;
+  const branchNo = input.branchNo ?? 0;
+
+  const saleTax = {
+    amt: salesBase,
+    extra: { amtS: null, amtB: null },
+    expAmt: null,
+    exeAmt: null,
+    vatAmt: salesVat,
+    monTax: salesVat,
+  };
+  const purchaseTax = {
+    amt: purchaseBase,
+    extra: { amtB: null, amtS: null },
+    monTax: purchaseVat,
+  };
+
+  return {
+    taxPayer: {
+      specifiedTaxRegistration: { id: input.taxId },
+      branchNo,
+      branchType: "V",
+    },
+    taxForm: {
+      taxPeriod: {
+        taxMonth: input.taxMonth,
+        // spec ใช้ปี พ.ศ. (ตัวอย่าง 2566) — ไม่ใช่ ค.ศ.
+        taxYear: input.taxYear,
+      },
+      filing: { filingType: "0", filingNo: 0, filingCase: "1" },
+      // สะกดตาม spec ("consolidatiton") — อย่าแก้เป็น consolidation
+      consolidatitonFilingStatus: 1,
+    },
+    taxFormDetail: {
+      detail: {
+        saleTax,
+        purchaseTax,
+        calculate: {
+          diffTaxAmtU: due,
+          diffTaxAmtO: null,
+          oldFwdTax: 0,
+          diffTotTaxAmtU: due,
+          diffTotTaxAmtO: null,
+          diffTotAmtU: due,
+          diffTotAmtO: null,
+          refundType: 1,
+          vatRate: 0.07,
+        },
+      },
+    },
+    formAttach: {
+      attachDet: [
+        {
+          seq: 1,
+          taxPayer: {
+            branchNo,
+            address: { buildingNumber: "", postCode: "" },
+            taxDetail: {
+              diffTaxAmtU: due,
+              diffTaxAmtO: null,
+              saleTax,
+              purchaseTax,
+            },
+          },
+        },
+      ],
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Low-level client
+// ---------------------------------------------------------------------------
 
 class RDAPIClient {
-  private config: RDAuthConfig;
-  private accessToken: string | null = null;
+  private config: RDConfig;
+  private tokenId: string | null = null;
+  private senderId: string;
   private tokenExpiry: Date | null = null;
 
-  constructor(config: RDAuthConfig) {
+  constructor(config: RDConfig) {
     this.config = config;
+    this.senderId = config.senderId;
   }
 
-  // Authenticate with RD API Portal
   private async authenticate(): Promise<void> {
-    try {
-      const response = await fetch(`${this.config.baseUrl}/oauth/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64')}`
+    const res = await fetch(`${this.config.baseUrl}/oapi/submit-filing-auth`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      // ⚠️ ไม่ log body — มี password อยู่ข้างใน
+      body: JSON.stringify({
+        eFiling: {
+          username: this.config.username,
+          password: this.config.password,
+          nonce: formatNonce(new Date()),
         },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          scope: 'tax_submission'
-        })
-      });
+      }),
+      cache: "no-store",
+    });
 
-      if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      this.accessToken = data.access_token;
-      this.tokenExpiry = new Date(Date.now() + (data.expires_in * 1000));
-    } catch (error: any) {
-      throw new Error(`RD API Authentication failed: ${error.message}`);
+    const text = await res.text();
+    let json: any;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`RD auth ตอบไม่ใช่ JSON (HTTP ${res.status})`);
     }
+
+    const parsed = parseRDResponse(json, res.status);
+    if (!parsed.success) {
+      throw new Error(
+        `RD auth ไม่สำเร็จ [${parsed.responseCode || "?"}] ${parsed.responseMessage || parsed.error || ""}`.trim()
+      );
+    }
+    // กรณี P01001 ตอน auth ไม่คาดคิด — ไม่มี token → ให้ error ชัดเจน
+    const token = json?.eFiling?.result?.tokenId;
+    if (!token) {
+      throw new Error(`RD auth ไม่ส่ง tokenId มา [${parsed.responseCode}]`);
+    }
+    this.tokenId = token;
+    this.senderId = json?.eFiling?.result?.sender?.id || this.senderId;
+    this.tokenExpiry = new Date(Date.now() + TOKEN_CACHE_MS);
   }
 
-  // Ensure we have a valid token
   private async ensureAuthenticated(): Promise<void> {
-    if (!this.accessToken || !this.tokenExpiry || this.tokenExpiry <= new Date()) {
+    if (!this.tokenId || !this.tokenExpiry || this.tokenExpiry <= new Date()) {
       await this.authenticate();
     }
   }
 
-  // Submit e-Tax Invoice (ภ.พ. 30)
-  async submitETaxInvoice(invoiceData: {
-    taxId: string;
-    branchCode: string;
-    invoiceNumber: string;
-    invoiceDate: string;
-    customerTaxId: string;
-    customerName: string;
-    amount: number;
-    vatAmount: number;
-    totalAmount: number;
-    items: Array<{
-      description: string;
-      quantity: number;
-      unitPrice: number;
-      amount: number;
-    }>;
-  }): Promise<RDSubmissionResult> {
-    try {
+  /** POST พร้อม Bearer token; retry ครั้งเดียวถ้า 401/403 (token เก่า) */
+  private async post(path: string, body: unknown): Promise<{ json: any; status: number }> {
+    const doFetch = async (): Promise<{ res: Response; json: any }> => {
       await this.ensureAuthenticated();
-
-      const payload = {
-        taxpayerId: invoiceData.taxId,
-        branchCode: invoiceData.branchCode,
-        documentType: "TAX_INVOICE",
-        documentNumber: invoiceData.invoiceNumber,
-        documentDate: invoiceData.invoiceDate,
-        buyerTaxId: invoiceData.customerTaxId,
-        buyerName: invoiceData.customerName,
-        totalAmount: invoiceData.totalAmount,
-        vatAmount: invoiceData.vatAmount,
-        netAmount: invoiceData.amount,
-        items: invoiceData.items
-      };
-
-      const response = await fetch(`${this.config.baseUrl}/api/v1/tax-documents/etax-invoice`, {
-        method: 'POST',
+      const res = await fetch(`${this.config.baseUrl}${path}`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.accessToken}`,
-          'X-API-Key': this.config.apiKey || ''
+          "content-type": "application/json",
+          authorization: `Bearer ${this.tokenId}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(body),
+        cache: "no-store",
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        return {
-          success: true,
-          submissionId: result.submissionId,
-          status: result.status,
-          details: result
-        };
-      } else {
-        return {
-          success: false,
-          error: result.message || `Submission failed: ${response.status}`,
-          details: result
-        };
+      const text = await res.text();
+      let json: any;
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`RD ${path} ตอบไม่ใช่ JSON (HTTP ${res.status})`);
       }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: `Network error: ${error.message}`
-      };
+      return { res, json };
+    };
+
+    let { res, json } = await doFetch();
+    if ((res.status === 401 || res.status === 403) && this.tokenId) {
+      // token หมดอายุก่อนที่เราจะคิด → ล้างแล้วลองใหม่ครั้งเดียว
+      this.tokenId = null;
+      this.tokenExpiry = null;
+      ({ res, json } = await doFetch());
     }
+    return { json, status: res.status };
   }
 
-  // Submit Withholding Tax (ภ.ง.ด. 53)
-  async submitWithholdingTax(whtData: {
-    taxId: string;
-    recipientTaxId: string;
-    recipientName: string;
-    paymentDate: string;
-    incomeType: string;
-    taxRate: number;
-    grossAmount: number;
-    taxAmount: number;
-    netAmount: number;
-    description: string;
-  }): Promise<RDSubmissionResult> {
+  /** ส่งแบบภาษีผ่าน /oapi/submit-form */
+  async submitForm(formType: RDFormType, formData: unknown, version: string): Promise<RDResult> {
     try {
-      await this.ensureAuthenticated();
-
-      const payload = {
-        taxpayerId: whtData.taxId,
-        recipientTaxId: whtData.recipientTaxId,
-        recipientName: whtData.recipientName,
-        paymentDate: whtData.paymentDate,
-        incomeType: whtData.incomeType,
-        taxRate: whtData.taxRate,
-        grossAmount: whtData.grossAmount,
-        taxWithheld: whtData.taxAmount,
-        netAmount: whtData.netAmount,
-        description: whtData.description
-      };
-
-      const response = await fetch(`${this.config.baseUrl}/api/v1/tax-documents/withholding-tax`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.accessToken}`,
-          'X-API-Key': this.config.apiKey || ''
+      const body = {
+        eFiling: {
+          sender: { id: this.senderId, role: this.config.role },
+          requestId: makeRequestId(),
+          rdForm: {
+            exchangeDocument: { formType, version },
+            formData: Array.isArray(formData) ? formData : [formData],
+          },
         },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        return {
-          success: true,
-          submissionId: result.submissionId,
-          status: result.status,
-          details: result
-        };
-      } else {
-        return {
-          success: false,
-          error: result.message || `Submission failed: ${response.status}`,
-          details: result
-        };
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: `Network error: ${error.message}`
       };
+      const { json, status } = await this.post("/oapi/submit-form", body);
+      return parseRDResponse(json, status);
+    } catch (error: any) {
+      return { success: false, error: `Network error: ${error.message}` };
     }
   }
 
-  // Check submission status
-  async checkSubmissionStatus(submissionId: string): Promise<RDSubmissionResult> {
+  /** สอบถามสถานะแบบ (/oapi/result-form) — READ-ONLY ต่อ RD */
+  async queryStatus(refNo?: string, apiRefNo?: string): Promise<RDResult> {
     try {
-      await this.ensureAuthenticated();
-
-      const response = await fetch(`${this.config.baseUrl}/api/v1/submissions/${submissionId}/status`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-          'X-API-Key': this.config.apiKey || ''
-        }
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        return {
-          success: true,
-          status: result.status,
-          details: result
-        };
-      } else {
-        return {
-          success: false,
-          error: result.message || `Status check failed: ${response.status}`,
-          details: result
-        };
+      const rdForm: Record<string, string> = {};
+      if (refNo) rdForm.refNo = refNo;
+      if (apiRefNo) rdForm.apiRefNo = apiRefNo;
+      if (!rdForm.refNo && !rdForm.apiRefNo) {
+        return { success: false, error: "ต้องระบุ refNo หรือ apiRefNo เพื่อสอบถามสถานะ" };
       }
+      const { json, status } = await this.post("/oapi/result-form", {
+        eFiling: { sender: { id: this.senderId }, rdForm },
+      });
+      return parseRDResponse(json, status);
     } catch (error: any) {
-      return {
-        success: false,
-        error: `Network error: ${error.message}`
-      };
+      return { success: false, error: `Network error: ${error.message}` };
+    }
+  }
+
+  /** ขอภาพแบบ/ใบแนบ/ใบเสร็จ (/oapi/receipt-form) — READ-ONLY ต่อ RD */
+  async requestReceipt(refNo: string, requestType: 1 | 2 | 3): Promise<RDResult> {
+    try {
+      const { json, status } = await this.post("/oapi/receipt-form", {
+        eFiling: {
+          sender: { id: this.senderId },
+          rdForm: { refNo, requestType: String(requestType) },
+        },
+      });
+      return parseRDResponse(json, status);
+    } catch (error: any) {
+      return { success: false, error: `Network error: ${error.message}` };
+    }
+  }
+
+  /** ขอใบ Pay-In (/oapi/payin-form) */
+  async requestPayin(refNos: string[], requestType: 1 | 2 | 3 = 1, paymentCode?: string): Promise<RDResult> {
+    try {
+      const rdForm: Record<string, unknown> = { requestType: String(requestType) };
+      if (refNos.length) rdForm.refNo = refNos;
+      if (paymentCode) rdForm.paymentCode = paymentCode;
+      const { json, status } = await this.post("/oapi/payin-form", {
+        eFiling: { sender: { id: this.senderId }, rdForm },
+      });
+      return parseRDResponse(json, status);
+    } catch (error: any) {
+      return { success: false, error: `Network error: ${error.message}` };
+    }
+  }
+
+  /** ยกเลิกแบบ (/oapi/cancel-form) — เรียกได้เฉพาะหลังผู้ใช้ยืนยันชัดเจน */
+  async cancelFiling(refNo: string, formType: string): Promise<RDResult> {
+    try {
+      const { json, status } = await this.post("/oapi/cancel-form", {
+        eFiling: {
+          sender: { id: this.senderId },
+          requestId: makeRequestId(),
+          rdForm: {
+            exchangeDocument: { formType },
+            refNo,
+          },
+        },
+      });
+      return parseRDResponse(json, status);
+    } catch (error: any) {
+      return { success: false, error: `Network error: ${error.message}` };
     }
   }
 }
 
-// Global RD API Client instance
-let rdClient: RDAPIClient | null = null;
+// ---------------------------------------------------------------------------
+// Local status store (tax_filing_submissions)
+// ---------------------------------------------------------------------------
 
-// Initialize RD API Client
-export function initializeRDClient(config: RDAuthConfig): void {
-  rdClient = new RDAPIClient(config);
+async function ensureFilingSubmissionsTable(): Promise<void> {
+  // CREATE IF NOT EXISTS → ปลอดภัยกับ production ที่มีตารางอยู่แล้ว
+  await query(`
+    CREATE TABLE IF NOT EXISTS tax_filing_submissions (
+      id SERIAL PRIMARY KEY,
+      lookup_key VARCHAR(64) NOT NULL UNIQUE,
+      form_type VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
+      tax_month INTEGER,
+      tax_year INTEGER,
+      request_id VARCHAR(50),
+      api_ref_no VARCHAR(20),
+      ref_no VARCHAR(13),
+      form_status_id VARCHAR(2),
+      status_label TEXT,
+      total_amount NUMERIC(13,2) DEFAULT 0,
+      total_penalty NUMERIC(13,2) DEFAULT 0,
+      total_surcharge NUMERIC(13,2) DEFAULT 0,
+      total_fine NUMERIC(13,2) DEFAULT 0,
+      raw_response JSONB,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
-// Submit e-Tax Invoice from invoice data
-export async function submitInvoiceToRD(invoiceId: string): Promise<RDSubmissionResult> {
-  if (!rdClient) {
-    return { success: false, error: "RD API client not initialized" };
+async function upsertFilingStatus(data: {
+  formType?: string;
+  taxMonth?: number;
+  taxYear?: number;
+  result: RDResult;
+}): Promise<void> {
+  // ต้องมี identifier สักอย่างก่อนถึงจะ upsert ได้ (ไม่งั้นจะไปทับ key ว่าง)
+  const lookupKey = data.result.apiRefNo || data.result.refNo || data.result.requestId;
+  if (!lookupKey) return;
+
+  await ensureFilingSubmissionsTable();
+  await query(
+    `INSERT INTO tax_filing_submissions (
+       lookup_key, form_type, tax_month, tax_year, request_id, api_ref_no, ref_no,
+       form_status_id, status_label, total_amount, total_penalty, total_surcharge,
+       total_fine, raw_response, updated_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb, CURRENT_TIMESTAMP)
+     ON CONFLICT (lookup_key) DO UPDATE SET
+       form_type = EXCLUDED.form_type,
+       tax_month = COALESCE(EXCLUDED.tax_month, tax_filing_submissions.tax_month),
+       tax_year = COALESCE(EXCLUDED.tax_year, tax_filing_submissions.tax_year),
+       form_status_id = EXCLUDED.form_status_id,
+       status_label = EXCLUDED.status_label,
+       total_amount = EXCLUDED.total_amount,
+       total_penalty = EXCLUDED.total_penalty,
+       total_surcharge = EXCLUDED.total_surcharge,
+       total_fine = EXCLUDED.total_fine,
+       raw_response = EXCLUDED.raw_response,
+       updated_at = CURRENT_TIMESTAMP`,
+    [
+      lookupKey,
+      data.formType || inferFormType(data.result.refNo),
+      data.taxMonth ?? null,
+      data.taxYear ?? null,
+      data.result.requestId || null,
+      data.result.apiRefNo || null,
+      data.result.refNo || null,
+      data.result.formStatusId || null,
+      data.result.statusLabel || null,
+      data.result.totalAmount ?? 0,
+      data.result.totalPenalty ?? 0,
+      data.result.totalSurcharge ?? 0,
+      data.result.totalFine ?? 0,
+      JSON.stringify(data.result.raw ?? null),
+    ]
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public API — ใช้จาก server actions เท่านั้น
+// ---------------------------------------------------------------------------
+
+/**
+ * ยื่น ภ.พ.30 ผ่าน RD Open API + บันทึกผลลง tax_filing_submissions
+ * ⚠️ เรียกได้เฉพาะหลังผู้ใช้กดยืนยัน (ห้ามเรียกจาก cron / effect อัตโนมัติ)
+ */
+export async function submitPP30ToRD(input: {
+  taxId: string;
+  taxMonth: number;
+  taxYear: number;
+  salesTaxable: number;
+  salesVat: number;
+  purchaseTaxable: number;
+  purchaseVat: number;
+  branchNo?: number;
+}): Promise<RDResult> {
+  const config = resolveConfig();
+  if (!config) return notConfigured();
+
+  if (!/^\d{13}$/.test(input.taxId)) {
+    return { success: false, error: "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก" };
+  }
+  if (input.taxMonth < 1 || input.taxMonth > 12) {
+    return { success: false, error: "เดือนภาษีไม่ถูกต้อง (1-12)" };
   }
 
+  const client = new RDAPIClient(config);
+  const result = await client.submitForm(
+    "PP30",
+    buildPP30FormData(input),
+    config.pp30Version
+  );
+
+  // บันทึกเฉพาะกรณี RD รับเรื่องแล้ว (มี requestId/refNo/apiRefNo)
+  if (result.success && (result.refNo || result.apiRefNo || result.requestId)) {
+    try {
+      await upsertFilingStatus({
+        formType: "PP30",
+        taxMonth: input.taxMonth,
+        taxYear: input.taxYear,
+        result,
+      });
+    } catch (error: any) {
+      // ไม่ทำให้การยื่นดูเหมือนล้มเหลว — แต่ต้องเตือนให้เช็กประวัติ
+      result.responseMessage = `${result.responseMessage || ""} (เตือน: บันทึกสถานะในแอพไม่สำเร็จ: ${error.message})`.trim();
+    }
+  }
+  return result;
+}
+
+/** สอบถามสถานะจาก RD แบบ READ-ONLY (ไม่เขียน DB) */
+export async function queryRDStatus(input: { refNo?: string; apiRefNo?: string }): Promise<RDResult> {
+  const config = resolveConfig();
+  if (!config) return notConfigured();
+  return new RDAPIClient(config).queryStatus(input.refNo, input.apiRefNo);
+}
+
+/**
+ * ซิงค์สถานะจาก RD มาบันทึกในแอพ
+ * — write เฉพาะตาราง tax_filing_submissions (ไม่แตะ expenses/invoices)
+ */
+export async function syncRDFilingStatus(input: {
+  refNo?: string;
+  apiRefNo?: string;
+  formType?: string;
+}): Promise<RDResult> {
+  const result = await queryRDStatus(input);
+  if (result.success) {
+    try {
+      await upsertFilingStatus({
+        formType: input.formType,
+        result,
+      });
+    } catch (error: any) {
+      result.responseMessage = `${result.responseMessage || ""} (เตือน: บันทึกสถานะในแอพไม่สำเร็จ: ${error.message})`.trim();
+    }
+  }
+  return result;
+}
+
+/**
+ * ประวัติสถานะที่ซิงค์ไว้ (อ่านจาก DB ของแอพ)
+ * — ไม่สร้างตารางที่นี่: หน้า /tax-reports เป็น read-only ตอน render
+ * — ตารางจะถูกสร้างตอนผู้ใช้กดซิงค์/ยื่นครั้งแรกเท่านั้น
+ */
+export async function getRDFilingHistory(limit = 10): Promise<any[]> {
   try {
-    // Get invoice data from database
-    const invoiceRes = await query(`
-      SELECT i.*, c.name as customer_name, c.tax_id as customer_tax_id
-      FROM invoices i
-      JOIN contacts c ON i.contact_id::text = c.id::text
-      WHERE i.id = $1
-    `, [invoiceId]);
-
-    if (invoiceRes.rows.length === 0) {
-      return { success: false, error: "Invoice not found" };
-    }
-
-    const invoice = invoiceRes.rows[0];
-
-    // Get company settings for taxpayer info
-    const companyRes = await query("SELECT * FROM company_settings LIMIT 1");
-    const company = companyRes.rows[0];
-
-    if (!company?.tax_id) {
-      return { success: false, error: "Company tax ID not configured" };
-    }
-
-    // Get invoice items (if available)
-    const itemsRes = await query(`
-      SELECT description, quantity, unit_price, total_price
-      FROM invoice_items
-      WHERE invoice_id = $1
-    `, [invoiceId]);
-
-    const items = itemsRes.rows.map((item: any) => ({
-      description: item.description || "Service/Item",
-      quantity: Number(item.quantity) || 1,
-      unitPrice: Number(item.unit_price) || 0,
-      amount: Number(item.total_price) || 0
-    }));
-
-    // Submit to RD
-    const result = await rdClient.submitETaxInvoice({
-      taxId: company.tax_id,
-      branchCode: "00000", // Main branch
-      invoiceNumber: invoice.invoice_number,
-      invoiceDate: new Date(invoice.created_at || invoice.created_on).toISOString().split('T')[0],
-      customerTaxId: invoice.customer_tax_id || "0000000000000",
-      customerName: invoice.customer_name,
-      amount: Number(invoice.net_amount),
-      vatAmount: Number(invoice.vat_amount),
-      totalAmount: Number(invoice.net_amount) + Number(invoice.vat_amount),
-      items: items
-    });
-
-    // Update invoice with submission status
-    if (result.success && result.submissionId) {
-      await query(`
-        UPDATE invoices
-        SET rd_submission_id = $1, rd_status = $2, rd_submitted_at = NOW()
-        WHERE id = $3
-      `, [result.submissionId, result.status, invoiceId]);
-    }
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: `Database error: ${error.message}` };
+    const res = await query(
+      `SELECT id, form_type, tax_month, tax_year, ref_no, api_ref_no, form_status_id,
+              status_label, total_amount, total_penalty, total_surcharge, total_fine,
+              created_at, updated_at
+       FROM tax_filing_submissions ORDER BY updated_at DESC LIMIT $1`,
+      [limit]
+    );
+    return res.rows;
+  } catch {
+    // ยังไม่เคยซิงค์ → ตารางยังไม่มี — ไม่ใช่ error
+    return [];
   }
 }
 
-// Submit Withholding Tax from payment voucher
-export async function submitWHTToRD(voucherId: string): Promise<RDSubmissionResult> {
-  if (!rdClient) {
-    return { success: false, error: "RD API client not initialized" };
-  }
-
-  try {
-    // Get voucher data
-    const voucherRes = await query(`
-      SELECT v.*, c.tax_id as recipient_tax_id, c.name as recipient_name
-      FROM payment_vouchers v
-      LEFT JOIN contacts c ON v.payee_name = c.name
-      WHERE v.id = $1
-    `, [voucherId]);
-
-    if (voucherRes.rows.length === 0) {
-      return { success: false, error: "Payment voucher not found" };
-    }
-
-    const voucher = voucherRes.rows[0];
-
-    // Get company settings
-    const companyRes = await query("SELECT * FROM company_settings LIMIT 1");
-    const company = companyRes.rows[0];
-
-    if (!company?.tax_id) {
-      return { success: false, error: "Company tax ID not configured" };
-    }
-
-    // Get WHT amount from journal entries
-    const whtRes = await query(`
-      SELECT credit as wht_amount
-      FROM journal_entries
-      WHERE reference_no = $1 AND account_name ILIKE '%หัก ณ ที่จ่าย%'
-      LIMIT 1
-    `, [voucher.voucher_no]);
-
-    const whtAmount = Number(whtRes.rows[0]?.wht_amount || 0);
-
-    if (whtAmount === 0) {
-      return { success: false, error: "No withholding tax found for this voucher" };
-    }
-
-    // Submit to RD
-    const result = await rdClient.submitWithholdingTax({
-      taxId: company.tax_id,
-      recipientTaxId: voucher.recipient_tax_id || "0000000000000",
-      recipientName: voucher.payee_name,
-      paymentDate: new Date(voucher.issue_date).toISOString().split('T')[0],
-      incomeType: "SERVICE", // License/Software service
-      taxRate: 5, // Standard rate for services
-      grossAmount: Number(voucher.amount),
-      taxAmount: whtAmount,
-      netAmount: Number(voucher.amount) - whtAmount,
-      description: `Payment to ${voucher.payee_name} - ${voucher.voucher_no}`
-    });
-
-    // Update voucher with submission status
-    if (result.success && result.submissionId) {
-      await query(`
-        UPDATE payment_vouchers
-        SET rd_submission_id = $1, rd_status = $2, rd_submitted_at = NOW()
-        WHERE id = $3
-      `, [result.submissionId, result.status, voucherId]);
-    }
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: `Database error: ${error.message}` };
-  }
+/** ขอใบเสร็จ/ภาพแบบ (READ-ONLY) */
+export async function getRDReceipt(refNo: string, requestType: 1 | 2 | 3 = 3): Promise<RDResult> {
+  const config = resolveConfig();
+  if (!config) return notConfigured();
+  return new RDAPIClient(config).requestReceipt(refNo, requestType);
 }
 
-// Check RD submission status
-export async function checkRDSubmissionStatus(submissionId: string): Promise<RDSubmissionResult> {
-  if (!rdClient) {
-    return { success: false, error: "RD API client not initialized" };
-  }
-
-  return await rdClient.checkSubmissionStatus(submissionId);
+/** ขอใบ Pay-In */
+export async function getRDPayin(refNos: string[]): Promise<RDResult> {
+  const config = resolveConfig();
+  if (!config) return notConfigured();
+  return new RDAPIClient(config).requestPayin(refNos);
 }
 
-// Batch submit multiple documents
-export async function batchSubmitToRD(documentIds: string[], type: 'invoice' | 'wht'): Promise<{
+/**
+ * ยกเลิกแบบที่ยื่นไปแล้ว — อันตรายมาก
+ * ต้องส่ง confirmText ที่ตรงกับ "ยกเลิกแบบ" ทุกครั้ง (ป้องกันการเรียกผิดโดยอัตโนมัติ)
+ */
+export async function cancelRDFiling(
+  refNo: string,
+  formType: string,
+  confirmText: string
+): Promise<RDResult> {
+  if (confirmText !== "ยกเลิกแบบ") {
+    return { success: false, error: "ต้องยืนยันการยกเลิกด้วยข้อความ 'ยกเลิกแบบ'" };
+  }
+  const config = resolveConfig();
+  if (!config) return notConfigured();
+  const result = await new RDAPIClient(config).cancelFiling(refNo, formType);
+  if (result.success) {
+    await upsertFilingStatus({ formType, result });
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Deprecated shims — ปิดช่องทาง "success ปลอม" ของโค้ดเก่า
+// ---------------------------------------------------------------------------
+
+/**
+ * @deprecated RD Open API ชุดนี้เป็น endpoint สำหรับ "ยื่นแบบภาษี" เท่านั้น
+ * ไม่รองรับการส่ง e-Tax Invoice รายใบ (คนละระบบกับ e-Tax Invoice & e-Receipt)
+ */
+export async function submitInvoiceToRD(_invoiceId: string): Promise<RDResult> {
+  return {
+    success: false,
+    error: "RD Open API ไม่รองรับการยื่น e-Tax Invoice รายใบผ่าน endpoint นี้ — ใช้ submitPP30ToRD สำหรับ ภ.พ.30",
+  };
+}
+
+/** @deprecated ดู submitInvoiceToRD — ต้องใช้ช่องทาง ภ.ง.ด.53 แบบฟอร์มแยก (ยังไม่ได้ implements) */
+export async function submitWHTToRD(_voucherId: string): Promise<RDResult> {
+  return {
+    success: false,
+    error: "การยื่น ภ.ง.ด.53 ผ่าน Open API ยังไม่ได้เปิดใช้งาน — กรุณายื่นผ่าน e-Filing ของสรรพากร",
+  };
+}
+
+/** @deprecated ใช้ queryRDStatus() แทน (READ-ONLY, ไม่เขียน DB) */
+export async function checkRDSubmissionStatus(submissionId: string): Promise<RDResult> {
+  return queryRDStatus({ apiRefNo: submissionId });
+}
+
+/** @deprecated ห้ามส่ง success ปลอม — ใช้ submitPP30ToRD ต่อรายการแทน */
+export async function batchSubmitToRD(
+  ids: string[],
+  _type: "invoice" | "wht"
+): Promise<{
   success: boolean;
-  results: Array<{ id: string; result: RDSubmissionResult }>;
+  error?: string;
+  results: Array<{ id: string; result: RDResult }>;
   summary: { total: number; successful: number; failed: number };
 }> {
-  const results: Array<{ id: string; result: RDSubmissionResult }> = [];
-  let successful = 0;
-  let failed = 0;
-
-  for (const id of documentIds) {
-    let result: RDSubmissionResult;
-
-    if (type === 'invoice') {
-      result = await submitInvoiceToRD(id);
-    } else {
-      result = await submitWHTToRD(id);
-    }
-
-    results.push({ id, result });
-
-    if (result.success) {
-      successful++;
-    } else {
-      failed++;
-    }
-
-    // Add small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-
+  const message =
+    "การส่งแบบภาษีต้องระบุงวดภาษีและข้อมูลจริงต่อครั้ง — ใช้ submitPP30ToRD(month, year) แทน";
   return {
-    success: failed === 0,
-    results,
-    summary: {
-      total: documentIds.length,
-      successful,
-      failed
-    }
+    success: false,
+    error: message,
+    results: ids.map((id) => ({ id, result: { success: false, error: message } })),
+    summary: { total: ids.length, successful: 0, failed: ids.length },
   };
 }

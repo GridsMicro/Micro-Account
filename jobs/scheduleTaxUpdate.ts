@@ -65,3 +65,4 @@ if (isMainEntry) {
   runTaxUpdateOnce()
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
+} // 2026-11-18 (ฌอน): ปิด if (isMainEntry) — brace หายตอนเพิ่ม smart alerts ในข้อ 1
