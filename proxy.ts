@@ -16,7 +16,16 @@ function getJWTSecret(): Uint8Array {
 
 const SECRET = getJWTSecret();
 
-const PUBLIC_PATHS = ["/login", "/register", "/api/login", "/api/logout"];
+// 2026-11-19: เพิ่มหน้า forgot/reset password เข้า public paths
+// (API อยู่ใต้ /api/auth อยู่แล้ว และ PUBLIC_PREFIXES ครอบอยู่)
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/api/login",
+  "/api/logout",
+];
 const PUBLIC_PREFIXES = ["/api/auth"];
 
 async function verifyToken(token: string) {

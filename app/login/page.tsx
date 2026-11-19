@@ -110,7 +110,13 @@ export default function LoginPage() {
                     <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" disabled={isLoading} />
                     จดจำฉัน
                  </label>
-                 <button type="button" className="text-blue-600 font-bold hover:underline disabled:opacity-50" disabled={isLoading}>ลืมรหัสผ่าน?</button>
+                 {/* 2026-11-19: เปลี่ยนจากปุ่มเปล่า (ไม่มี onClick/handler) เป็นลิงก์ไปหน้า forgot-password */}
+                 <Link
+                   href="/forgot-password"
+                   className={`text-blue-600 font-bold hover:underline ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                 >
+                   ลืมรหัสผ่าน?
+                 </Link>
               </div>
 
               <button 

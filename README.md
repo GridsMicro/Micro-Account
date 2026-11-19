@@ -42,6 +42,7 @@
 - รายการแอพในสิทธิ์ + แผนใช้ประโยชน์: `docs/GWS_APPS_INVENTORY.md`
 
 ### การจัดการ (Admin)
+- **ลืมรหัสผ่าน / Reset Password** — ปุ่มบน `/login` ทำงานแล้ว: ขอลิงก์ผ่าน `/forgot-password` → ตั้งรหัสใหม่ผ่าน `/reset-password?token=...`; token hash หมดอายุ 30 นาที ใช้ครั้งเดียว และ revoke หลังสำเร็จ — ดู `docs/PASSWORD_RESET.md` (ต้องรัน migration `scripts/migrations/001_password_reset_tokens.sql` + ตั้ง `GMAIL_FROM` / `GMAIL_APP_PASSWORD` โดยผู้ดูแลก่อนใช้งานจริง)
 - จัดการสมาชิก / บทบาท (RBAC) ตาม `docs/RBAC_STANDARD.md`
 - จัดการกลุ่ม / สิทธิ์เข้าถึงรายโมดูล
 - เปิด-ปิดโมดูลได้ (ตั้งค่าผ่านหน้า /admin/modules หรือ env `NEXT_PUBLIC_MODULE_*`)

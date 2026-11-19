@@ -2,6 +2,13 @@
 
 Tracks meaningful behavior/architecture changes (not every small code diff).
 
+## [2026-11-19]
+
+- Fixed the inactive "ลืมรหัสผ่าน?" button on `/login` (was a plain `<button>` with no handler): now links to a full forgot/reset password flow
+- Added `/forgot-password` + `/reset-password` pages and `POST /api/auth/forgot-password` / `POST /api/auth/reset-password` (SHA-256 token hash, 30-minute expiry, single-use, transactional password update, anti-enumeration responses, 3 requests/minute guard)
+- Added `lib/mailer.ts` — minimal Gmail SMTP (port 465, implicit TLS) via Node built-in `tls`, no new npm dependency; `lib/passwordReset.ts` for token helpers and read-only schema check
+- Added `scripts/migrations/001_password_reset_tokens.sql`, public paths in `proxy.ts`, `.env.example` notes, and `docs/PASSWORD_RESET.md` — operator approval required before running the migration or sending real email
+
 ## [2026-11-18]
 
 - Added read-only smart tax alerts (`lib/taxNotifications.ts`) shown on `/calendar`, in AI audit, and via optional LINE Notify (`TAX_LINE_TOKEN`); cron `tax:update` no longer has an empty notification TODO
