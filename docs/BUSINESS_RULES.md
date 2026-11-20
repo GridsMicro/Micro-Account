@@ -39,6 +39,7 @@
 - route ต้องมี `CRON_SECRET` ใน Authorization header (fail-closed ถ้าไม่ตั้ง) และ `TAX_LINE_CRON_ENABLED=true` ถึงจะส่ง
 - cron รันเฉพาะ production; ทดสอบเรียก endpoint ได้ตรง ๆ ด้วย `?dry=1` / `?force=1` ไม่ต้องรอรอบ
 - Vercel **ไม่ retry** และอาจ invoke ซ้ำ → ต้องเขียนให้ทนต่อ duplicate (ห้ามใช้ in-process node-cron บน serverless เพราะจะซ้ำกับ Vercel cron)
+- `instrumentation.ts` ต้อง guard โค้ดที่ใช้ Node API (`node-cron`, `child_process`) ด้วย `process.env.NEXT_RUNTIME === "nodejs"` — มิเช่นนั้น Next.js bundle เข้า Edge runtime แล้วเตือน `process.cwd is not supported in the Edge Runtime` (ตรวจแล้ว guard แล้ว warning หาย)
 
 ## Expense Recording Rule (PDF Evidence First)
 
