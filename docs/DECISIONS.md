@@ -14,6 +14,16 @@ Use this file to record important decisions and their rationale.
 
 ---
 
+### [2026-11-20] แจ้งเตือนภาษีรายเดือนผ่าน LINE Messaging API
+
+- Context: โค้ดเดิม (`lib/taxNotifications.ts`) ใช้ LINE Notify + `TAX_LINE_TOKEN` ที่ยุติบริการ 31 มี.ค. 2025 และ hardcode วันครบกำหนด 15 ทั้งที่ยื่น e-Filing จริงได้ถึงวันที่ 23 (ตามประกาศกรมสรรพากร)
+- Decision: ใช้ LINE Messaging API push · มาตรฐานเดียวคือ `LINE_CHANNEL_ID` + `LINE_CHANNEL_ACCESS_TOKEN` (ตามที่พี่ฆังใช้ — ไม่มี `LINE_TO_ID`) · **Discord webhook (`DISCORD_WEBHOOK_URL`) เป็นทางสำรองเมื่อ LINE fail** · งวด = เดือนก่อนหน้า · วันยื่นในข้อความ = 23 (e-Filing) · ยอดภาษีอ่านจาก SELECT เท่านั้น · ตั้ง cron ผ่าน `vercel.json` วันละครั้ง (`0 2 * * *` UTC) เรียก `/api/cron/tax-line` · route ตรวจ `CRON_SECRET` + `TAX_LINE_CRON_ENABLED` · dry-run ด้วย `pnpm tax:notify:dry`
+- Vercel fact (ตรวจ docs ทางการ 2026-11-20): Hobby จำกัด cron วันละครั้ง (ถี่กว่านั้น deploy fail) · precision ±59 นาที · cron เฉพาะ production · ไม่ retry และอาจซ้ำ · timezone UTC เสมอ
+- Alternatives considered: คง LINE Notify (บริการยุติแล้ว) / ใช้วันที่ 15 (ตรงกระดาษแต่ไม่ตรง e-Filing) / ตัดสินภาษีซื้อตามชื่อ supplier (ขัดกฎหมาย) / ใช้หลาย cron ต่อวัน ( deploy fail บน Hobby) / ใช้ in-process node-cron บน serverless (ไม่รับประกันและเสี่ยงส่งซ้ำ)
+- Why this was chosen: ตรงกับช่องทางที่บริษัทใช้อยู่ (e-Filing) และมาตรฐาน env ที่พี่ฆังใช้จริง · ไม่กระทบ production DB · มีทางสำรองลดความเสี่ยง "พลาดรอบเดียวแล้วรอนาน" · ส่งจริงได้เฉพาะเมื่อพี่ฆังสั่ง
+- Impacted files/modules: `lib/lineClient.ts`, `lib/notificationClient.ts`, `lib/taxMonthlySummary.ts`, `jobs/sendTaxLineReminder.ts`, `app/api/cron/tax-line/route.ts`, `vercel.json`, `lib/taxNotifications.ts`, `instrumentation.ts`, `package.json`, `.env.example`, `docs/BUSINESS_RULES.md`, `README.md` (ลบ `jobs/taxLineCron.ts` ที่ไม่ใช้แล้ว)
+- Rollback plan: ตั้ง `TAX_LINE_CRON_ENABLED=false` หรือลบ cron ใน `vercel.json` เพื่อหยุด · โค้ดใหม่เป็น READ-ONLY ต่อ DB จึงไม่ต้อง rollback schema
+
 ### [2026-04-09] Canonical RBAC + Role Standard
 - Context: Role labels and access checks were inconsistent across UI/API.
 - Decision: Standardize to `superadmin/admin/user` + group-based RBAC permissions.

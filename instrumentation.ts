@@ -7,4 +7,6 @@ export async function register() {
     const { registerMaintenance } = await import("@/jobs/scheduleMaintenance");
     registerMaintenance();
   }
+  // การแจ้งเตือนภาษีใช้ Vercel Cron (/api/cron/tax-line) ผ่าน vercel.json
+  // ห้าม register node-cron ที่นี่ — serverless อาจเรียกซ้ำกับ Vercel cron
 }

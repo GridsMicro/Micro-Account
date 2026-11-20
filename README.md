@@ -33,6 +33,7 @@
 - ผู้ช่วย AI ถาม-ตอบด้านบัญชี (`/ai`) + AI Chat ทั่วแอพ
 - **AI Auditor** — ตรวจสอบความผิดปกติของข้อมูลและกระเปาะแจ้งเตือน + job รายงานอัตโนมัติ (`npm run ai:audit`)
 - **Tax Automator** — เตรียม/ประมวลผลยอดภาษีจากข้อมูลจริง (`npm run tax:update`)
+- **Tax LINE Reminder** — แจ้งสรุปภาษีรายเดือน (ภาษีขาย/ซื้อ/วันยื่น/ลิงก์ e-Filing) ผ่าน LINE Messaging API มี Discord webhook เป็นทางสำรอง (`pnpm tax:notify:dry` ดูก่อนส่งจริง, `pnpm tax:notify` ส่งจริง) · ตั้ง cron ใน `vercel.json` เรียก `GET /api/cron/tax-line` พร้อม `Authorization: Bearer <CRON_SECRET>` (Hobby ได้วันละครั้ง)
 
 ### คลาวด์ & ระบบอัตโนมัติ Google (Google-First)
 - ปุ่มสรุปยอดรายเดือนส่งขึ้น **Google Drive**
@@ -64,7 +65,7 @@ cp .env.example .env.local   # ตั้งค่า DATABASE_URL + Secrets
 npm run dev
 ```
 
-Scripts ที่ใช้ได้: `npm test` (รัน `tests/*.test.mjs`), `npm run lint`, `npm run tax:update`, `npm run ai:audit`, `npm run check:knowledge`, `npm run check:consistency`
+Scripts ที่ใช้ได้: `npm test` (รัน `tests/*.test.mjs`), `npm run lint`, `npm run tax:update`, `npm run ai:audit`, `npm run check:knowledge`, `npm run check:consistency`, `pnpm tax:notify:dry` (แสดงข้อความโดยไม่ส่ง LINE/Discord), `pnpm tax:notify` (ส่งจริง), `pnpm tax:notify --force` (ข้ามวันที่)
 
 cron ภายนอก (ตั้งแล้วบนเครื่องพี่): `scripts/auto-backup.mjs` 02:00 น. + `scripts/dashboard-sheet.mjs` 02:05 น.
 

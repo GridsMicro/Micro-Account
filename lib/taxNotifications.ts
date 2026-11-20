@@ -5,8 +5,9 @@
  * - ทุกฟังก์ชันในไฟล์นี้เป็น READ-ONLY (SELECT เท่านั้น) — ห้าม UPDATE/DELETE
  *   เพราะ production DB ใช้งานจริง ห้ามกระทบยอด/ใบกำกับภาษีโดยอัตโนมัติ
  * - แจ้งเตือนอย่างเดียว ให้มนุษย์เป็นคนตัดสินใจแก้ข้อมูล/ยื่นภาษี
- * - ใช้ LINE Notify ผ่าน fetch ตรง ๆ (ไม่เพิ่ม dependency) ถ้ามี TAX_LINE_TOKEN
- * - ถ้าไม่มี token → log ออกทาง console อย่างเดียว (ไม่ throw ให้ cron ล้มเหลว)
+ * - ใช้ LINE Messaging API ผ่าน lib/lineClient (LINE Notify ยุติ 31 มี.ค. 2025)
+ * - ถ้าไม่มี credential → log ออกทาง console อย่างเดียว (ไม่ throw ให้ cron ล้มเหลว)
+ * - 2026-11-20: วันยื่น ภ.พ.30 แก้ 15 → 23 สำหรับ e-Filing (ตาม rd.go.th/31094.html)
  *
  * อ้างอิง: lib/taxAutomator.ts (TaxCalendarAlerts — แจ้งตามวันอย่างเดียว)
  *          app/actions/tax-reports.ts (getPP30Draft / getPP36Draft — แหล่งยอดจริง)
@@ -108,16 +109,16 @@ export async function getSmartTaxAlerts(
       });
     }
 
-    // 4) ใกล้/เกินกำหนดยื่น ภ.พ.30 (วันที่ 15 ของเดือนถัดไป)
+    // 4) ใกล้/เกินกำหนดยื่น ภ.พ.30 (วันที่ 23 ของเดือนถัดไปสำหรับ e-Filing)
     const now = new Date();
-    const deadline = new Date(year, month, 15, 23, 59, 59);
+    const deadline = new Date(year, month, 23, 23, 59, 59);
     const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / 86400000);
     if (daysLeft >= 0 && daysLeft <= 7) {
       alerts.push({
         code: "PP30_DEADLINE_NEAR",
         severity: daysLeft <= 3 ? "critical" : "warning",
         title: "ใกล้กำหนดยื่น ภ.พ.30",
-        detail: `อีก ${daysLeft} วันถึงกำหนดยื่น ภ.พ.30 งวด ${String(month).padStart(2, "0")}/${year} (ภายในวันที่ 15 ของเดือนถัดไป) — ตรวจยอดแล้วเตรียมยื่นได้ที่ e-Filing`,
+        detail: `อีก ${daysLeft} วันถึงกำหนดยื่น ภ.พ.30 งวด ${String(month).padStart(2, "0")}/${year} (ภายในวันที่ 23 ของเดือนถัดไปสำหรับ e-Filing; กระดาษวันที่ 15) — ตรวจยอดแล้วเตรียมยื่นได้ที่ e-Filing`,
         actionUrl: RD_EFILING_URL,
       });
     } else if (daysLeft < 0) {
@@ -129,13 +130,13 @@ export async function getSmartTaxAlerts(
         actionUrl: RD_EFILING_URL,
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     // ไม่ให้แจ้งเตือนล้มเหลวทั้งระบบจาก DB ชั่วคราว
     alerts.push({
       code: "ALERT_ENGINE_ERROR",
       severity: "warning",
       title: "ตรวจสอบข้อมูลภาษีไม่สำเร็จ",
-      detail: `getSmartTaxAlerts error: ${err?.message || String(err)}`,
+      detail: `getSmartTaxAlerts error: ${err instanceof Error ? err.message : String(err)}`,
       actionUrl: TAX_REPORTS_URL,
     });
   }
@@ -160,31 +161,18 @@ export function formatAlertsAsText(
 }
 
 /**
- * ส่งแจ้งเตือนผ่าน LINE Notify
- * - ต้องตั้ง TAX_LINE_TOKEN ใน .env.local เท่านั้น (ห้าม hardcode)
- * - ไม่มี token → คืน { sent:false, reason:"..." } และ log ข้อความแทน
+ * ส่งแจ้งเตือนผ่าน LINE Messaging API (แทน LINE Notify ที่ยุติบริการแล้ว)
+ * - credential มาตรฐานเดียว: LINE_CHANNEL_ACCESS_TOKEN + LINE_CHANNEL_ID
+ * - ไม่มี credential → คืน { sent:false, reason } และ log ข้อความแทน
  */
 export async function sendTaxLineNotification(
   alerts: TaxAlert[],
   month: number,
   year: number
 ): Promise<{ sent: boolean; reason?: string }> {
+  const { sendLinePush } = await import("./lineClient");
   const text = formatAlertsAsText(alerts, month, year);
   console.log("[tax-notify]\n" + text);
-  const token = process.env.TAX_LINE_TOKEN;
-  if (!token) return { sent: false, reason: "TAX_LINE_TOKEN not configured" };
-  try {
-    const res = await fetch("https://notify-api.line.me/api/notify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Bearer ${token}`,
-      },
-      body: new URLSearchParams({ message: text.slice(0, 1000) }),
-    });
-    if (!res.ok) return { sent: false, reason: `LINE responded ${res.status}` };
-    return { sent: true };
-  } catch (err: any) {
-    return { sent: false, reason: err?.message || String(err) };
-  }
+  const delivery = await sendLinePush(text);
+  return { sent: delivery.sent, reason: delivery.reason };
 }
