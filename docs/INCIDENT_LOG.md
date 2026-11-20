@@ -45,3 +45,14 @@ Use this file for production incidents, root cause, and recovery notes.
   - Root cause ย่อย: Drive API ยังไม่ถูก Enable ในโปรเจกต์ → enable แล้ว (403 หาย)
 - Follow-up actions: ทดสอบ upload ใบเสร็จจริงผ่านหน้า Expenses UI / ลบไฟล์ทดสอบ auth-test.txt ออกจาก Drive folder "Micro Account Documents" / Google Sheets API v4 ต้อง Enable แยกก่อนฟีเจอร์ export sheets
 
+---
+
+### [2026-11-20] Vim swap file of `.env` committed and pushed to GitHub
+- Severity: High (potential secret exposure — ต้องrotate)
+- Impact: `..env.swp` (vim swap ของ `.env`, 1024 bytes) ถูก track และ push ขึ้น `origin/main` (commit `c95deb2`, อยู่ใน `7db46bb` ที่ Vercel deploy) — อาจมีเศษค่าความลับ เช่น DATABASE_URL / Gmail app password / Google OAuth secret ฝังอยู่ ผม**ไม่เปิด/ไม่ print เนื้อหา**
+- Detection: ตรวจ `git ls-tree -r HEAD` เจอ `..env.swp`; `git check-ignore` ยืนยันว่าไม่ได้อยู่ใน `.gitignore` ตอนนั้น
+- Root cause: commit `c95deb2` ("update notification") staging โดยไม่กรอง editor swap file (`.gitignore` มี `.env*` แต่ไม่มี `*.swp`)
+- Mitigation [2026-11-20]: `git rm --cached ..env.swp` (เลิก track แต่เก็บไฟล์จริงไว้เป็น backup ไม่ลบข้อมูล) + เพิ่ม `*.swp` / `*.swo` ใน `.gitignore` → `git check-ignore` ยืนยันถูกกันแล้ว
+- Recovery verification: ไฟล์หายจาก index แล้ว (`git ls-files` ไม่เจอ) · `git check-ignore -v ..env.swp` → `.gitignore:36:*.swp`
+- Follow-up actions: **(1)** การลบจาก HEAD ไม่ลบจาก history — ต้อง rotate secret ที่เคยอยู่ใน `.env` ทุกตัว (DATABASE_URL, Gmail app password, Google OAuth client secret ฯลฯ) และพิจารณา `git filter-repo`/BFG ล้าง history (ต้องพี่ฆังสั่งก่อน) **(2)** ตรวจ GitHub Secret Scanning / push protection ว่ามี alert หรือไม่
+

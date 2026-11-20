@@ -32,6 +32,9 @@ client_secret_*.json
 .env.local
 .env.test
 .env*.local
+# Vim/editor swap files — อาจมีเศษ secret จากไฟล์ .env (ห้าม commit)
+*.swp
+*.swo
 secret.txt
 *.key
 *.pem
