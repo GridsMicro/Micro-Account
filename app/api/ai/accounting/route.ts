@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { askGemini } from '../../../../services/aiAssistant';
 import fs from 'fs';
 import path from 'path';
+import { requirePermission, authErrorResponse } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
+  // P0-1: route นี้เรียก Gemini (มีค่าใช้จ่าย) + อ่านเอกสารภายใน
+  const guard = await requirePermission('reports', 'create');
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const { prompt } = await request.json();
     if (typeof prompt !== 'string' || !prompt.trim()) {

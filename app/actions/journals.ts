@@ -1,4 +1,6 @@
 "use server";
+import { requireActionPermission } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -86,6 +88,9 @@ async function hasJournalAccountMappingColumns() {
 }
 
 export async function getJournalEntries() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (journals:read)
+  const __guard = await requireActionPermission("journals", "read");
+  if (__guard) return __guard;
   try {
     return { success: true, data: await getJournalRowsForPresentation() };
   } catch (error: any) {
@@ -94,6 +99,9 @@ export async function getJournalEntries() {
 }
 
 export async function createJournalEntry(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (journals:create)
+  const __guard = await requireActionPermission("journals", "create");
+  if (__guard) return __guard;
   try {
     const account = await resolveChartAccount(data.account_name);
     const supportsMapping = await hasJournalAccountMappingColumns();
@@ -148,6 +156,9 @@ export async function createJournalEntry(data: any) {
 }
 
 export async function updateJournalEntry(id: number | string, data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (journals:update)
+  const __guard = await requireActionPermission("journals", "update");
+  if (__guard) return __guard;
   try {
     const account = await resolveChartAccount(data.account_name);
     const supportsMapping = await hasJournalAccountMappingColumns();
@@ -203,6 +214,9 @@ export async function updateJournalEntry(id: number | string, data: any) {
 }
 
 export async function deleteJournalEntry(id: number | string) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (journals:delete)
+  const __guard = await requireActionPermission("journals", "delete");
+  if (__guard) return __guard;
   try {
     await query("DELETE FROM journal_entries WHERE id = $1", [id]);
     revalidatePath("/journals");
@@ -213,6 +227,9 @@ export async function deleteJournalEntry(id: number | string) {
 }
 
 export async function exportJournalsToExcel() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (journals:export)
+  const __guard = await requireActionPermission("journals", "export");
+  if (__guard) return __guard;
   try {
     const entries = await getJournalRowsForPresentation();
     if (entries.length === 0) throw new Error("No data to export");

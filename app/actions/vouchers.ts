@@ -1,10 +1,15 @@
 "use server";
+import { requireActionPermission } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createExpenseJournalEntry, createReceiptJournalEntry } from "@/lib/journaling";
 
 export async function createPaymentVoucher(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (vouchers:create)
+  const __guard = await requireActionPermission("vouchers", "create");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -67,6 +72,9 @@ export async function createPaymentVoucher(data: any) {
 }
 
 export async function createPayment(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (payments:create)
+  const __guard = await requireActionPermission("payments", "create");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -147,6 +155,9 @@ export async function createPayment(data: any) {
 }
 
 export async function markInvoiceAsPaid(id: number | string) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (invoices:update)
+  const __guard = await requireActionPermission("invoices", "update");
+  if (__guard) return __guard;
   try {
     await query("UPDATE invoices SET status = 'paid' WHERE id = $1", [id]);
     revalidatePath("/invoices");
@@ -157,6 +168,9 @@ export async function markInvoiceAsPaid(id: number | string) {
 }
 
 export async function getPaymentVouchers() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (vouchers:read)
+  const __guard = await requireActionPermission("vouchers", "read");
+  if (__guard) return __guard;
   try {
     const { rows } = await query(`SELECT * FROM payment_vouchers ORDER BY issue_date DESC`);
     return { success: true, data: rows };
@@ -166,6 +180,9 @@ export async function getPaymentVouchers() {
 }
 
 export async function getInvoiceItems(id: string | number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (invoices:read)
+  const __guard = await requireActionPermission("invoices", "read");
+  if (__guard) return __guard;
   try {
     const { rows } = await query(`SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY id ASC`, [id]);
     return { success: true, data: rows };

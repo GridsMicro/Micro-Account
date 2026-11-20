@@ -18,6 +18,7 @@ import {
   type ModuleName,
   type PermissionAction,
 } from "@/lib/permissions";
+import { isActiveStatus } from "@/lib/security-rules";
 
 export type ServerAuthResult =
   | { ok: true; userId: string; email: string | null; role: string }
@@ -55,7 +56,7 @@ export async function requireActiveUser(): Promise<ServerAuthResult> {
   if (!user) {
     return denied(401, "Unauthorized — account not found");
   }
-  if (String(user.status || "").trim().toLowerCase() !== "active") {
+  if (!isActiveStatus(user.status)) {
     return denied(403, "Forbidden — account is not active");
   }
 
@@ -103,4 +104,25 @@ export function authErrorResponse(guard: Exclude<ServerAuthResult, { ok: true }>
 /** แปลงผล guard เป็น result รูปแบบ { success:false, error } สำหรับ Server Action */
 export function authActionError(guard: Exclude<ServerAuthResult, { ok: true }>) {
   return { success: false as const, error: guard.error };
+}
+
+/**
+ * helper สำหรับ Server Action: คืน null เมื่อผ่าน หรือ result {success:false}
+ * ที่เอาไป `return` ได้ทันทีเมื่อไม่ผ่าน
+ *
+ *   const denied = await requireActionPermission("invoices", "create");
+ *   if (denied) return denied;
+ */
+export async function requireActionPermission(
+  module: ModuleName | string,
+  action: PermissionAction
+): Promise<{ success: false; error: string } | null> {
+  const guard = await requirePermission(module, action);
+  return guard.ok ? null : authActionError(guard);
+}
+
+/** helper สำหรับ Server Action ที่ต้องการแค่ผู้ใช้ Active (หน้าฟอร์ม/ข้อมูลพื้นฐาน) */
+export async function requireActiveAction(): Promise<{ success: false; error: string } | null> {
+  const guard = await requireActiveUser();
+  return guard.ok ? null : authActionError(guard);
 }

@@ -6,7 +6,19 @@ export const dynamic = 'force-dynamic';
 async function getCompanyData() {
   try {
     const res = await query('SELECT * FROM company_settings LIMIT 1');
-    return res.rows[0];
+    const row = res.rows[0];
+    if (!row) return null;
+
+    // P0-1: props ของ Client Component ถูก serialize ลง RSC payload — ห้ามส่ง secret ค่าจริงไป
+    // ส่งเฉพาะ flag ว่ามีการตั้งค่าไว้แล้ว or ไม่ เพื่อให้ UI แสดงเครื่องหมาย •••• ได้
+    const safe: Record<string, unknown> = { ...row };
+    for (const key of Object.keys(row)) {
+      if (/(secret|token|password|api_key)$/i.test(key)) {
+        safe[`${key}_present`] = Boolean(row[key]);
+        delete safe[key];
+      }
+    }
+    return safe;
   } catch (e) {
     return null;
   }

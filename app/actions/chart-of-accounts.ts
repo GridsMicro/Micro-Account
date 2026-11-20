@@ -1,9 +1,14 @@
 "use server";
+import { requireActionPermission, requireActiveAction } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export async function getAccounts(search: string = "") {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   try {
     const queryStr = search
       ? `SELECT id, account_code as code, account_name_th as name, account_name_en, account_type, account_category 
@@ -23,6 +28,9 @@ export async function getAccounts(search: string = "") {
 }
 
 export async function createAccount(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (settings:create)
+  const __guard = await requireActionPermission("settings", "create");
+  if (__guard) return __guard;
   try {
     const { rows } = await query(
       `INSERT INTO chart_of_accounts (account_code, account_name_th, account_name_en, account_type, account_category)
@@ -37,6 +45,9 @@ export async function createAccount(data: any) {
 }
 
 export async function updateAccount(id: number, data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (settings:update)
+  const __guard = await requireActionPermission("settings", "update");
+  if (__guard) return __guard;
   try {
     await query(
       `UPDATE chart_of_accounts 
@@ -52,6 +63,9 @@ export async function updateAccount(id: number, data: any) {
 }
 
 export async function deleteAccount(id: number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (settings:delete)
+  const __guard = await requireActionPermission("settings", "delete");
+  if (__guard) return __guard;
   try {
     const usage = await query(
       `SELECT id FROM journal_entries WHERE debit_account_id = $1 OR credit_account_id = $1 LIMIT 1`,

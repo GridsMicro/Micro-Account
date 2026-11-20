@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { requirePermission, authErrorResponse } from "@/lib/server-auth";
 
 export async function GET(req: NextRequest) {
+  const guard = await requirePermission("payments", "read");
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";

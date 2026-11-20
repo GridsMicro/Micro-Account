@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
-import { auth, getUserCompanyId } from "@/lib/auth";
+import { getUserCompanyId } from "@/lib/auth";
 import { applyModuleOverrides, getEnabledModules, MODULE_CATEGORIES, getPermissionModules } from "@/lib/module-registry";
 import { getCompanyModuleOverrides } from "@/lib/module-config";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 
 export async function GET() {
-  const baseModules = getEnabledModules();
-  let modules = baseModules;
+  const guard = await requireActiveUser();
+  if (!guard.ok) return authErrorResponse(guard);
 
-  const session = await auth();
-  if (session?.user?.id) {
-    const companyId = await getUserCompanyId(session.user.id);
-    const overrides = await getCompanyModuleOverrides(companyId);
-    modules = applyModuleOverrides(baseModules, overrides);
-  }
+  const baseModules = getEnabledModules();
+  const companyId = await getUserCompanyId(guard.userId);
+  const overrides = await getCompanyModuleOverrides(companyId);
+  const modules = applyModuleOverrides(baseModules, overrides);
 
   return NextResponse.json({
     modules,

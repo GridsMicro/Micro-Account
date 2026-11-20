@@ -1,19 +1,29 @@
 "use server";
+import { requireActionPermission, requireActiveAction } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSalesJournalEntry } from "@/lib/journaling";
+import { getPublicCompanySettings } from "@/lib/company-public";
 
 export async function getCompanySettings() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   try {
-    const { rows } = await query(`SELECT * FROM company_settings LIMIT 1`);
-    return { success: true, data: rows[0] };
+    // P0-1: ใช้ allowlist — ห้าม SELECT * ที่มี google/rd secret กลับไปหา client
+    const company = await getPublicCompanySettings();
+    return { success: true, data: company };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
 export async function getNextInvoiceNumber() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   let prefix = "INV";
   try {
     const sRes = await query(`SELECT invoice_prefix FROM company_settings LIMIT 1`);
@@ -97,6 +107,9 @@ async function assertStableInvoiceJournal(
 }
 
 export async function createInvoice(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (invoices:create)
+  const __guard = await requireActionPermission("invoices", "create");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -177,6 +190,9 @@ export async function createInvoice(data: any) {
 export async function createInvoiceRecord(data: any) { return createInvoice(data); }
 
 export async function updateInvoice(id: string | number, data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (invoices:update)
+  const __guard = await requireActionPermission("invoices", "update");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -232,6 +248,9 @@ export async function updateInvoice(id: string | number, data: any) {
 }
 
 export async function deleteInvoice(id: string | number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (invoices:delete)
+  const __guard = await requireActionPermission("invoices", "delete");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -255,6 +274,9 @@ export async function deleteInvoice(id: string | number) {
 }
 
 export async function getInvoiceItems(id: string | number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (invoices:read)
+  const __guard = await requireActionPermission("invoices", "read");
+  if (__guard) return __guard;
   try {
     const { rows } = await query(`SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY id ASC`, [id]);
     return { success: true, data: rows };

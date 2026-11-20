@@ -5,8 +5,9 @@
 // =====================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { withTransaction } from '@/lib/db';
 import { createExpenseJournalEntry } from '@/lib/journaling';
+import { parseExpenseCsv, importExpenseRows } from '@/lib/csv-import';
 import { requirePermission, authErrorResponse } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
@@ -14,101 +15,53 @@ export async function POST(request: NextRequest) {
   if (!guard.ok) return authErrorResponse(guard);
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
-    
+    const file = formData.get('file') as File | null;
+
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
     const text = await file.text();
-    const lines = text.split('\n').filter(line => line.trim());
-    
-    if (lines.length < 2) {
+    const { rows, errors, total } = parseExpenseCsv(text);
+
+    if (total === 0) {
       return NextResponse.json(
         { error: 'CSV file is empty or invalid' },
         { status: 400 }
       );
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    const dataLines = lines.slice(1);
-    
-    let imported = 0;
-    let errors = 0;
-    const errorDetails = [];
+    // P0-3: ทุกแถวที่ถูกต้องต้องเข้า/ออกด้วยกัน — expense กับ journal ต้องอยู่ใน transaction เดียว
+    // expenseId มาจาก RETURNING id จริง ไม่ใช่ i + 1 และเช็คผล journal ทุกครั้ง
+    try {
+      const imported = await withTransaction((client) =>
+        importExpenseRows(client, rows, (expenseId, vendorId, amount, vatAmount, category, expenseDate) =>
+          // ส่ง client เดียวกันเข้า journaling → ถ้า journal พัง ROLLBACK ทั้งไฟล์
+          createExpenseJournalEntry(
+            expenseId, vendorId, amount, vatAmount, category, expenseDate, 0, client
+          )
+        )
+      );
 
-    // Expected CSV format: title,category,amount,expense_date,reference_no,notes
-    for (let i = 0; i < dataLines.length; i++) {
-      const line = dataLines[i];
-      if (!line.trim()) continue;
-      
-      const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-      
-      if (values.length < 3) {
-        errors++;
-        errorDetails.push(`Line ${i + 2}: Insufficient columns`);
-        continue;
-      }
-
-      const [title, category, amountStr, expense_date, reference_no, notes] = values;
-      
-      // Validate required fields
-      if (!title || !category || !amountStr || !expense_date) {
-        errors++;
-        errorDetails.push(`Line ${i + 2}: Missing required fields`);
-        continue;
-      }
-
-      const amount = parseFloat(amountStr);
-      if (isNaN(amount)) {
-        errors++;
-        errorDetails.push(`Line ${i + 2}: Invalid amount format`);
-        continue;
-      }
-
-      // Validate date format
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(expense_date)) {
-        errors++;
-        errorDetails.push(`Line ${i + 2}: Invalid date format (YYYY-MM-DD)`);
-        continue;
-      }
-
-      try {
-        // Insert into expenses table
-        await query(`
-          INSERT INTO expenses (title, category, amount, expense_date, reference_no, notes, status)
-          VALUES ($1, $2, $3, $4, $5, $6, 'paid')
-        `, [title, category, amount, expense_date, reference_no, notes]);
-
-        // Create journal entry
-        await createExpenseJournalEntry(
-          i + 1, // expenseId
-          0, // vendorId (placeholder)
-          amount,
-          0, // vatAmount (placeholder)
-          category,
-          expense_date
-        );
-
-        imported++;
-      } catch (error: any) {
-        errors++;
-        errorDetails.push(`Line ${i + 2}: ${error.message}`);
-      }
+      return NextResponse.json({
+        success: true,
+        imported,
+        errors: errors.length,
+        errorDetails: errors,
+        total,
+      });
+    } catch (error: any) {
+      // fail-closed: อย่างน้อยหนึ่งแถวพัง → ไม่มีแถวไหนถูก commit
+      const reason = error?.message || 'unknown error';
+      return NextResponse.json({
+        success: false,
+        error: `Import rolled back: ${reason}`,
+        imported: 0,
+        errors: errors.length + 1,
+        errorDetails: [...errors, `Transaction: ${reason}`],
+        total,
+      }, { status: 500 });
     }
-
-    return NextResponse.json({
-      success: true,
-      imported,
-      errors,
-      errorDetails,
-      total: dataLines.length
-    });
-
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message },

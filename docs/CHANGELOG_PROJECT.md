@@ -4,6 +4,11 @@ Tracks meaningful behavior/architecture changes (not every small code diff).
 
 ## [2026-11-20]
 
+- Extended the server-side authorization boundary to **every data-bearing Server Action** (invoices, quotations, journals, contacts, products, vouchers, services, reminders, COA, AI audit, Google Drive) and to the remaining sensitive API routes (company, payments, db_schema, ai/accounting, inventory, fx-rate, modules, payroll/[id], user/permissions); member management now checks admin from the DB instead of the JWT role
+- `company_settings` is no longer read with `SELECT *` on client-facing paths: new `lib/company-public.ts` + allowlist in `lib/security-rules.ts` drop OAuth/RD/App-Password columns (new unknown columns are excluded by default); `/settings` also strips secret values before passing data into the Client Component (only `*_present` flags are serialized)
+- CSV import is atomic: validation is separated into `lib/csv-import.ts`, writes run inside `withTransaction()` using `RETURNING id` (never `i + 1`), journal failures throw and roll back the whole file
+- Added `tests/p0-behavior.test.mjs` — behavioral tests that execute the rules, CSV parser/importer (with an injected fake client) and `withTransaction()` (BEGIN/COMMIT/ROLLBACK/release); `npm test` now runs with the tsx loader (35/35 pass)
+- Refactored the pure security rules (`isActiveStatus`, company-column allowlist, `assertPeriod`) into `lib/security-rules.ts` so both production and tests share one implementation
 - Added `lib/server-auth.ts` as the single server-side authorization boundary: fresh DB status/role on every call, canonical admin bypass, fail-closed denials; applied to mutating actions (settings, tax reports, expenses) and sensitive API routes
 - Login now accepts only `Active` accounts, returns one generic error for all failures, stops logging identity/password-match details, and embeds `status: "Active"` in the JWT; `proxy.ts` and `lib/auth.ts` verify that claim; root layout withholds page content from non-Active accounts
 - Expense create/update/delete are now atomic with their journal entries via `withTransaction()`; INSERT uses the real `title` column and no longer writes a non-existent `vendor` column; all journal writes check `success`

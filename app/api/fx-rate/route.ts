@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 
 const FX_API = "https://api.frankfurter.dev/v2";
 const SOURCE_LABEL = "Bank of Thailand reference rate (BOT via frankfurter.dev)";
@@ -24,6 +25,8 @@ async function fetchJson<T>(url: string, cacheKey: string, ttlMs: number): Promi
 type FrankfurterRate = { date: string; base: string; quote: string; rate: number };
 
 export async function GET() {
+  const guard = await requireActiveUser();
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const [latest, series] = await Promise.all([
       fetchJson<FrankfurterRate>(`${FX_API}/rate/USD/THB?providers=BOT`, "latest", 6 * 60 * 60 * 1000),

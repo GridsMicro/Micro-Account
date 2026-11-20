@@ -16,16 +16,7 @@ import {
 } from "@/lib/rd-api";
 import type { RDResult } from "@/lib/rd-api";
 import { requirePermission, authActionError } from "@/lib/server-auth";
-
-/** กันงวดผิดก่อนคำนวณ/ยื่น (P0) */
-function assertPeriod(month: number, year: number) {
-  if (
-    !Number.isInteger(month) || month < 1 || month > 12 ||
-    !Number.isInteger(year) || year < 2000 || year > 2200
-  ) {
-    throw new Error("งวดเดือน/ปีไม่ถูกต้อง (month 1–12, year ค.ศ.)");
-  }
-}
+import { assertPeriod } from "@/lib/security-rules";
 
 export async function getTaxSummary() {
   const guard = await requirePermission("tax_reports", "read");

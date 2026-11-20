@@ -1,4 +1,6 @@
 "use server";
+import { requireActionPermission } from "@/lib/server-auth";
+
 
 import { revalidatePath } from "next/cache";
 import {
@@ -11,6 +13,9 @@ import {
 import { auth } from "@/lib/auth";
 
 export async function getAllAiAlerts() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (reports:read)
+  const __guard = await requireActionPermission("reports", "read");
+  if (__guard) return __guard;
   try {
     const alerts = await getOpenAiAlerts();
     return { success: true, data: alerts };
@@ -20,6 +25,9 @@ export async function getAllAiAlerts() {
 }
 
 export async function getAiAlertCount() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (reports:read)
+  const __guard = await requireActionPermission("reports", "read");
+  if (__guard) return __guard;
   try {
     const count = await getAlertCount();
     return { success: true, count };
@@ -29,6 +37,9 @@ export async function getAiAlertCount() {
 }
 
 export async function triggerAiAudit() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (reports:create)
+  const __guard = await requireActionPermission("reports", "create");
+  if (__guard) return __guard;
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -43,6 +54,9 @@ export async function triggerAiAudit() {
 }
 
 export async function resolveAiAlert(id: number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (reports:update)
+  const __guard = await requireActionPermission("reports", "update");
+  if (__guard) return __guard;
   try {
     await resolveAlert(id);
     revalidatePath("/");
@@ -53,6 +67,9 @@ export async function resolveAiAlert(id: number) {
 }
 
 export async function dismissAiAlert(id: number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (reports:update)
+  const __guard = await requireActionPermission("reports", "update");
+  if (__guard) return __guard;
   try {
     await dismissAlert(id);
     revalidatePath("/");

@@ -73,6 +73,14 @@
 
 - Preflight counters for ภ.พ.30 (undeducted VAT, incomplete tax documents) must propagate query errors. A failed query must fail closed; it must never return `0` and be read as "no problems".
 - `submitPP30ToRDPortal` validates the period (month 1–12, year ค.ศ.) and refuses to file when preflight data could not be verified.
+- Period validation lives in `lib/security-rules.ts` (`assertPeriod`) and is shared by production and behavioral tests.
+
+## Server Action & Data Exposure Rules (2026-11-20, round 2)
+
+- Hiding a button in the UI is not authorization. Every Server Action that reads or mutates business data must call `requireActionPermission(module, action)` (or `requireActiveAction()` for form lookups) at the top of the function.
+- Hiding a button in the UI is not authorization for Route Handlers either. Any API that returns financial data, company data, schema information, or calls a paid external service must call a guard from `lib/server-auth.ts` and return `authErrorResponse()` when denied.
+- `company_settings` secret columns (`google_client_secret`, `google_refresh_token`, `rd_client_secret`, `rd_api_key`, Gmail/app passwords) must never be selected or returned on a client-facing path. Client-facing code uses `getPublicCompanySettings()` from `lib/company-public.ts` with an allowlist; any newly added DB column is excluded until explicitly added to `SAFE_COMPANY_COLUMNS`.
+- CSV/bulk imports are all-or-nothing: validate first, then write inside `withTransaction()`. Use the database-generated `id` from `RETURNING` for journal references, never a row counter, and treat a failed journal write as a fatal error that rolls back the file.
 
 ## Data Protection Rules
 

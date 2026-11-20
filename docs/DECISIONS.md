@@ -105,3 +105,11 @@ Use this file to record important decisions and their rationale.
 - Impacted files/modules: งานใหม่ทุกโปรเจกต์/ฟีเจอร์ — ตรวจ `GWS_APPS_INVENTORY.md` ก่อนตัดสินใจ vendor; AGENTS.md (กฎครอบครัว)
 - Rollback plan: ถ้า Google เปลี่ยนนโยบาย/ราคา กลับมาเปรียบเทียบ vendor อื่นได้ตามปกติ (กฎนี้เป็นการเรียงลำดับ "ลองก่อน" ไม่ใช่ห้ามเปลี่ยนชั่วนิรันดร์)
 
+
+### [2026-11-20] P0 round 2: ครอบคลุม Server Action ทั้งหมด + กัน secret หลุด + CSV import atomic
+- Context: หลัง commit `4e6f13c` มีการตรวจซ้ำพบว่า (1) Server Action ของ invoices/quotations/journals/contacts/products/vouchers/services/reminders/COA/AI-audit/Google-Drive ยังเรียกตรงได้โดยไม่มี guard (2) `GET /api/company` ใช้ `SELECT * FROM company_settings` และ `GET /api/payments` ไม่มี guard (3) `POST /api/import` แยก INSERT expense ออกจาก journal, ไม่ใช้ transaction, ใช้ `i + 1` เป็น expenseId และไม่เช็คผล journal (4) test ชุดเดิมตรวจแต่รูปแบบซอร์ส ไม่ได้เรียกโค้ดจริง
+- Decision: ใช้ `lib/server-auth.ts` เป็น boundary เดียว — เพิ่ม `requireActionPermission()` / `requireActiveAction()` ให้ทุก action, ใช้ `requireAdmin()` แทน role ใน JWT ของ member actions, guard API ที่เหลือ; แยก pure rules ไป `lib/security-rules.ts` และ company selector ไป `lib/company-public.ts` (allowlist, ไม่เลือก secret column); แยก CSV parser/importer ไป `lib/csv-import.ts` แล้วรันใน `withTransaction()` ด้วย `RETURNING id`; เพิ่ม behavioral tests ที่เรียกโค้ดจริงด้วย fake client
+- Alternatives considered: แก้เฉพาะไฟล์ที่พี่ชี้ (ยังเหลือช่องโหว่ใน action อื่น) / ใช้ denylist ตอน SELECT company_settings (คอลัมน์ลับใหม่จะหลุดโดยอัตโนมัติ) / ใช้ mock.module จำลอง Next+DB ในเทสต์ (เปราะต่อ version) / แก้ import ให้insert ทีละแถวแล้วลบของเก่า (ข้อมูลค้างใน DB)
+- Why this was chosen: allowlist + information_schema ทำให้คอลัมน์ใหม่ที่เพิ่มใน DB ถูกตัดออกจนกว่าจะอนุมัติ (fail-closed); transaction เดียวทำให้ expense กับ journal ไม่มีทางค้างคนเดียว; การแยก pure module ทำให้เทสต์เรียก logic จริงได้โดยไม่ต้อง mock framework
+- Impacted files/modules: 11 action files + 9 API routes, `lib/server-auth.ts`, `lib/security-rules.ts`, `lib/company-public.ts`, `lib/csv-import.ts`, `lib/db.ts` (ไม่เปลี่ยน), `package.json`, `tests/p0-security-guards.test.mjs`, `tests/p0-behavior.test.mjs`, docs ที่เกี่ยวข้อง
+- Rollback plan: revert commit เฉพาะในเครื่อง; ไม่มี migration ใหม่ ไม่มี production schema change — ไม่ต้อง rollback DB

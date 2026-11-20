@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { requirePermission, authErrorResponse } from "@/lib/server-auth";
 
 export async function GET() {
+  const guard = await requirePermission("inventory", "read");
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const result = await query(`
       SELECT

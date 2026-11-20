@@ -1,4 +1,6 @@
 "use server";
+import { requireActionPermission } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { getGoogleDrive, getGoogleSheets } from "@/lib/google-server";
@@ -6,6 +8,9 @@ import { Readable } from "stream";
 import { getOrCreateFolder } from "@/lib/actions-helpers";
 
 export async function uploadToGoogleDrive(base64Data: string, fileName: string, mimeType: string) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (settings:create)
+  const __guard = await requireActionPermission("settings", "create");
+  if (__guard) return __guard;
   try {
     const googleDrive = await getGoogleDrive();
     const folderId = await getOrCreateFolder("Micro Account Documents");
@@ -43,6 +48,9 @@ export async function uploadToGoogleDrive(base64Data: string, fileName: string, 
 }
 
 export async function exportJournalsToSheets() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (journals:export)
+  const __guard = await requireActionPermission("journals", "export");
+  if (__guard) return __guard;
   try {
     const googleDrive = await getGoogleDrive();
     const googleSheets = await getGoogleSheets();
@@ -97,6 +105,9 @@ export async function exportJournalsToSheets() {
 }
 
 export async function exportVouchersToSheets() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (vouchers:export)
+  const __guard = await requireActionPermission("vouchers", "export");
+  if (__guard) return __guard;
   try {
     const googleSheets = await getGoogleSheets();
     const res = await query('SELECT * FROM payment_vouchers ORDER BY issue_date DESC, id ASC');

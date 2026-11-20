@@ -1,9 +1,14 @@
 "use server";
+import { requireActionPermission, requireActiveAction } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   try {
     const { rows } = await query("SELECT * FROM products ORDER BY name ASC");
     return { success: true, data: rows };
@@ -13,6 +18,9 @@ export async function getProducts() {
 }
 
 export async function getNextSkuNumber() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   try {
     const { rows } = await query(
       `SELECT sku_number FROM products WHERE sku_number LIKE 'SKU-%' ORDER BY id DESC LIMIT 1`
@@ -31,6 +39,9 @@ export async function getNextSkuNumber() {
 }
 
 export async function createProduct(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (inventory:create)
+  const __guard = await requireActionPermission("inventory", "create");
+  if (__guard) return __guard;
   try {
     const res = await query(
       `INSERT INTO products (name, category_name, type, sku_number, source_info, storage_location, stock_quantity, price, product_notes, supplier_cost, markup_rate) 
@@ -57,6 +68,9 @@ export async function createProduct(data: any) {
 }
 
 export async function updateProduct(id: string | number, data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (inventory:update)
+  const __guard = await requireActionPermission("inventory", "update");
+  if (__guard) return __guard;
   try {
     await query(
       `UPDATE products 
@@ -82,6 +96,9 @@ export async function updateProduct(id: string | number, data: any) {
 }
 
 export async function deleteProduct(id: string | number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (inventory:delete)
+  const __guard = await requireActionPermission("inventory", "delete");
+  if (__guard) return __guard;
   try {
     await query(`DELETE FROM products WHERE id = $1`, [id]);
     revalidatePath("/inventory");
@@ -92,6 +109,9 @@ export async function deleteProduct(id: string | number) {
 }
 
 export async function getCategories() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   try {
     const { rows } = await query("SELECT * FROM product_categories ORDER BY name ASC");
     return { success: true, data: rows };
@@ -101,6 +121,9 @@ export async function getCategories() {
 }
 
 export async function createCategory(name: string, description: string = "") {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (inventory:create)
+  const __guard = await requireActionPermission("inventory", "create");
+  if (__guard) return __guard;
   try {
     const { rows } = await query(
       `INSERT INTO product_categories (name, description) VALUES ($1, $2) RETURNING id`,
@@ -113,6 +136,9 @@ export async function createCategory(name: string, description: string = "") {
 }
 
 export async function updateCategory(id: number, name: string, description: string = "") {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (inventory:update)
+  const __guard = await requireActionPermission("inventory", "update");
+  if (__guard) return __guard;
   try {
     await query(
       `UPDATE product_categories SET name=$1, description=$2 WHERE id=$3`,
@@ -125,6 +151,9 @@ export async function updateCategory(id: number, name: string, description: stri
 }
 
 export async function deleteCategory(id: number) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (inventory:delete)
+  const __guard = await requireActionPermission("inventory", "delete");
+  if (__guard) return __guard;
   try {
     await query(`DELETE FROM product_categories WHERE id=$1`, [id]);
     return { success: true };

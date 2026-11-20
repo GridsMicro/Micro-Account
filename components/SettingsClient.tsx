@@ -61,9 +61,9 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
       // SECURITY: Never hydrate rd_client_secret / rd_api_key into client state
       rd_client_id: initialData?.rd_client_id || "",
       rd_client_secret: "", // Always start as empty, never expose existing secret
-      rd_client_secret_masked: initialData?.rd_client_secret ? "••••••••••••••••••••" : "",
+      rd_client_secret_masked: initialData?.rd_client_secret_present ? "••••••••••••••••••••" : "",
       rd_api_key: "", // Always start as empty, never expose existing secret
-      rd_api_key_masked: initialData?.rd_api_key ? "••••••••••••••••••••" : "",
+      rd_api_key_masked: initialData?.rd_api_key_present ? "••••••••••••••••••••" : "",
       rd_base_url: initialData?.rd_base_url || "https://api-portal.rd.go.th",
       rd_enabled: initialData?.rd_enabled ?? false,
       // Google Drive OAuth2 Settings
@@ -71,10 +71,10 @@ export default function SettingsClient({ initialData }: { initialData: any }) {
       // SECURITY: Never hydrate google_client_secret into client state
       // Only display asterisks if a secret was previously saved
       google_client_secret: "", // Always start as empty, never expose existing secret
-      google_client_secret_masked: initialData?.google_client_secret ? "••••••••••••••••••••" : "",
+      google_client_secret_masked: initialData?.google_client_secret_present ? "••••••••••••••••••••" : "",
       // SECURITY: Never hydrate google_refresh_token into client state
       google_refresh_token: "", // Always start as empty, never expose existing secret
-      google_refresh_token_masked: initialData?.google_refresh_token ? "••••••••••••••••••••" : "",
+      google_refresh_token_masked: initialData?.google_refresh_token_present ? "••••••••••••••••••••" : "",
       google_redirect_uri: initialData?.google_redirect_uri || "https://developers.google.com/oauthplayground",
       google_drive_enabled: initialData?.google_drive_enabled ?? false,
    });

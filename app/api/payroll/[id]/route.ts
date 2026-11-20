@@ -1,27 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, getUserCompanyId } from "@/lib/auth";
-import { isAdmin } from "@/lib/permissions";
+import { getUserCompanyId } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { ensurePayrollSchema } from "@/lib/payroll";
 import { validatePayrollPayload } from "@/lib/payroll-validation.mjs";
+import { requireAdmin, authErrorResponse } from "@/lib/server-auth";
 
 async function getRequestContext() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const userIsAdmin = await isAdmin(session.user.id);
-  if (!userIsAdmin) {
-    return { error: NextResponse.json({ error: "Permission denied" }, { status: 403 }) };
-  }
+  // P0-1: ใช้ server guard (อ่าน status/role จาก DB) แทน role ใน JWT
+  const guard = await requireAdmin();
+  if (!guard.ok) return { error: authErrorResponse(guard) };
 
   await ensurePayrollSchema();
-  const companyId = await getUserCompanyId(session.user.id);
-  return {
-    session,
-    companyId,
-  };
+  const companyId = await getUserCompanyId(guard.userId);
+  return { companyId };
 }
 
 // PUT /api/payroll/[id]

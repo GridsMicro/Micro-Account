@@ -3,12 +3,9 @@
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { auth, checkUserLimit, getUserCompanyId } from "@/lib/auth";
-import { canAccessAdmin, normalizeRole } from "@/lib/core-standards";
-
-function hasMemberAdminAccess(role?: string | null) {
-  return canAccessAdmin(role);
-}
+import { checkUserLimit, getUserCompanyId } from "@/lib/auth";
+import { normalizeRole } from "@/lib/core-standards";
+import { requireAdmin, authActionError } from "@/lib/server-auth";
 
 export async function createUserAction(data: {
   name: string;
@@ -17,12 +14,10 @@ export async function createUserAction(data: {
   role: string;
   status: string;
 }) {
+  // P0-1: ตรวจ admin จาก DB ทุกครั้ง (ห้ามเชื่อ role ใน JWT)
+  const guard = await requireAdmin();
+  if (!guard.ok) return authActionError(guard);
   try {
-    const session = await auth();
-    if (!session?.user || !hasMemberAdminAccess((session.user as any).role)) {
-      return { success: false, error: "Unauthorized: admin access required" };
-    }
-
     if (!data.name || !data.email || !data.password) {
       return { success: false, error: "กรุณากรอกชื่อ อีเมล และรหัสผ่านให้ครบถ้วน" };
     }
@@ -31,9 +26,9 @@ export async function createUserAction(data: {
       return { success: false, error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" };
     }
 
-    const companyId = await getUserCompanyId((session.user as any).id);
+    const companyId = await getUserCompanyId(guard.userId);
     // superadmin bypasses user seat limit
-    const isSuperAdmin = normalizeRole((session.user as any).role) === "superadmin";
+    const isSuperAdmin = normalizeRole(guard.role) === "superadmin";
     if (!isSuperAdmin) {
       const seatCheck = await checkUserLimit(companyId);
       if (!seatCheck.allowed) {
@@ -67,12 +62,10 @@ export async function createUserAction(data: {
 }
 
 export async function updateUserAction(id: string, data: { name: string, email: string, role: string, status: string }) {
+  // P0-1: ตรวจ admin จาก DB ทุกครั้ง (ห้ามเชื่อ role ใน JWT)
+  const guard = await requireAdmin();
+  if (!guard.ok) return authActionError(guard);
   try {
-    const session = await auth();
-    if (!session?.user || !hasMemberAdminAccess((session.user as any).role)) {
-      return { success: false, error: "Unauthorized: admin access required" };
-    }
-
     // 1. Update the user in the database
     await query(
       `UPDATE users SET name = $1, email = $2, role = $3, status = $4 WHERE id = $5`,

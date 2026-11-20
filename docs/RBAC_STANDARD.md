@@ -49,7 +49,11 @@ Actions:
   - `requirePermission(module, action)` — RBAC group permission + canonical admin bypass
   - `requireAdmin()` — canonical role (`superadmin`/`admin`) or group admin
   - `authErrorResponse()` / `authActionError()` — uniform denial results for API routes / Server Actions
-  - Apply at the top of every mutating action and sensitive API route; never rely on client-side gating
-  - Regression guard: `tests/p0-security-guards.test.mjs`
+  - `requireActionPermission(module, action)` / `requireActiveAction()` — thin helpers that return `null` on success or a `{ success: false, error }` value that can be returned directly from a Server Action
+  - Apply at the top of **every** data-bearing Server Action (mutating or read) and sensitive API route; never rely on client-side gating
+  - Module mapping used by the Server Actions: `invoices`, `quotations`, `journals`, `vouchers`/`payments`, `contacts`, `inventory` (products/categories), `services`, `calendar` (reminders), `settings` (COA + document patterns + Google Drive uploads), `reports` (AI audit)
+  - Admin-only surface: `app/admin/members/actions.ts`, `GET /api/db_schema`, `PUT|DELETE /api/payroll/[id]` use `requireAdmin()` (DB-backed, not the JWT role)
+  - Company settings exposed to clients go through `lib/company-public.ts` allowlist (`lib/security-rules.ts`) — secret columns are never selected
+  - Regression guards: `tests/p0-security-guards.test.mjs` (structure) + `tests/p0-behavior.test.mjs` (executes rules, CSV import and transaction semantics)
 - Master guardrail file: `CORE_RULES.md`
 

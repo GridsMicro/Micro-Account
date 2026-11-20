@@ -20,7 +20,8 @@ test("server-auth guard rejects missing/inactive users and reads status from DB"
   const code = src("lib/server-auth.ts");
   assert.match(code, /requireActiveUser/);
   assert.match(code, /SELECT id, email, role, status FROM users WHERE id = \$1/);
-  assert.match(code, /!== "active"/);
+  assert.match(code, /isActiveStatus\(user\.status\)/);
+  assert.match(src("lib/security-rules.ts"), /=== "active"/);
   assert.match(code, /denied\(500, "Unable to verify account status"\)/);
   assert.match(code, /canAccessAdmin\(base\.role\)/);
   assert.match(code, /checkPermission\(base\.userId, module, action\)/);
@@ -145,7 +146,97 @@ test("PP30 preflight counters propagate query errors (no silent 0)", () => {
 
 test("period validation blocks malformed month/year before filing", () => {
   const code = src("app/actions/tax-reports.ts");
-  assert.match(code, /function assertPeriod/);
+  assert.match(code, /import \{ assertPeriod \} from "@\/lib\/security-rules"/);
   assert.match(code, /assertPeriod\(month, year\)/);
-  assert.match(code, /month < 1 \|\| month > 12/);
+  const rules = src("lib/security-rules.ts");
+  assert.match(rules, /export function assertPeriod/);
+  assert.match(rules, /month < 1 \|\| month > 12/);
+});
+
+// ---------- รอบที่ 2: P0-1 / P0-3 ที่พบเพิ่ม ----------
+
+test("every data-bearing Server Action has a server-side guard", () => {
+  const targets = [
+    "app/actions/invoices.ts",
+    "app/actions/quotations.ts",
+    "app/actions/journals.ts",
+    "app/actions/contacts.ts",
+    "app/actions/products.ts",
+    "app/actions/vouchers.ts",
+    "app/actions/services.ts",
+    "app/actions/reminders.ts",
+    "app/actions/chart-of-accounts.ts",
+    "app/actions/ai-audit.ts",
+    "app/actions/google-drive.ts",
+  ];
+  for (const file of targets) {
+    const code = src(file);
+    assert.match(code, /requireActionPermission|requireActiveAction/, `${file} ต้องมี guard ฝั่ง server`);
+    assert.match(code, /if \(__guard\) return __guard;/, `${file} ต้อง return ทันทีเมื่อไม่ผ่าน`);
+  }
+  // admin members ต้องตรวจจาก DB ไม่ใช่ role ใน JWT
+  const members = src("app/admin/members/actions.ts");
+  assert.match(members, /requireAdmin\(\)/);
+  assert.ok(!/hasMemberAdminAccess/.test(members));
+});
+
+test("company settings ไม่ส่ง secret column ให้ client", () => {
+  const api = src("app/api/company/route.ts");
+  assert.match(api, /requireActiveUser\(\)/);
+  assert.match(api, /getPublicCompanySettings/);
+  assert.ok(!/SELECT \* FROM company_settings/.test(api));
+
+  const action = src("app/actions/invoices.ts");
+  assert.match(action, /getPublicCompanySettings/);
+  assert.ok(!/SELECT \* FROM company_settings/.test(action));
+
+  const helper = src("lib/company-public.ts");
+  assert.match(helper, /safeCompanySettingColumns/);
+  const rules = src("lib/security-rules.ts");
+  for (const secret of ["google_client_secret", "google_refresh_token", "rd_client_secret", "rd_api_key"]) {
+    assert.ok(!new RegExp(`"${secret}"`).test(rules), `allowlist ห้ามมี ${secret}`);
+  }
+
+  // settings page ส่ง props เข้า Client Component → ต้องลบ secret ออกก่อน serialize
+  const page = src("app/settings/page.tsx");
+  assert.match(page, /delete safe\[key\]/);
+  assert.match(page, /_present/);
+  const client = src("components/SettingsClient.tsx");
+  assert.match(client, /google_client_secret_present/);
+  assert.ok(!/initialData\?\.google_client_secret \?/.test(client));
+});
+
+test("remaining sensitive API routes have guards", () => {
+  const targets = [
+    "app/api/payments/route.ts",
+    "app/api/db_schema/route.ts",
+    "app/api/ai/accounting/route.ts",
+    "app/api/inventory/route.ts",
+    "app/api/fx-rate/route.ts",
+    "app/api/modules/route.ts",
+    "app/api/payroll/[id]/route.ts",
+    "app/api/user/permissions/route.ts",
+  ];
+  for (const file of targets) {
+    const code = src(file);
+    assert.match(code, /requirePermission|requireActiveUser|requireAdmin/, `${file} ต้องมี guard`);
+    const failClosed =
+      /if \(!guard\.ok\) return authErrorResponse\(guard\)/.test(code) ||
+      /if \("error" in ctx\) return ctx\.error/.test(code); // payroll/[id] ใช้ shared context
+    assert.ok(failClosed, `${file} ต้อง fail-closed`);
+  }
+});
+
+test("CSV import atomic: transaction + RETURNING id + journal success check", () => {
+  const route = src("app/api/import/route.ts");
+  assert.match(route, /withTransaction\(/);
+  assert.match(route, /parseExpenseCsv/);
+  assert.match(route, /importExpenseRows/);
+  assert.match(route, /createExpenseJournalEntry\(/);
+  assert.match(route, /Import rolled back/);
+
+  const importer = src("lib/csv-import.ts");
+  assert.match(importer, /RETURNING id/);
+  assert.match(importer, /!journal\.success/);
+  assert.ok(!/i \+ 1/.test(importer));
 });

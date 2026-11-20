@@ -79,3 +79,15 @@ Use this file for production incidents, root cause, and recovery notes.
 - Recovery verification: `pnpm exec tsc --noEmit` exit 0 · `node --test tests/**/*.test.mjs` 20/20 (รวม `tests/p0-security-guards.test.mjs`) · `pnpm build` exit 0 · ตรวจ `git diff` ว่าทุก mutation มี guard
 - Follow-up actions: **(1)** ต้อง logout/login ใหม่เพื่อรับ JWT ที่มี claim `status` (token เก่าถูก proxy บังคับ login แล้ว) **(2)** migration `migrations/2026-11-20_expenses_title_compatibility.sql` เขียนไว้ให้พี่ฆังพิจารณา — **ยังไม่รัน** กับ production **(3)** ยังไม่ deploy — รอพี่ฆัง push/commit ตามที่เห็นสมควร **(4)** secret rotation จากเหตุ `..env.swp` ยังค้างอยู่
 
+
+---
+
+### [2026-11-20] P0 round 2: action/API authorization ที่ตกหล่น + company secret exposure + CSV import ไม่ atomic
+
+- Severity: Critical (authorization bypass + secret exposure + financial integrity)
+- Impact: (1) Server Action ที่เรียกตรงได้แม้ UI ซ่อนปุ่ม → แก้ไข invoice/quotation/journal/product/contact/voucher/service/reminder/COA ได้โดยไม่เช็คสิทธิ์; (2) `GET /api/company` คืน `SELECT *` ของ `company_settings` → เสี่ยงหลุด google/rd secret ให้ผู้ใช้ที่ล็อกอิน; `GET /api/payments` อ่านข้อมูลชำระเงินโดยไม่มี guard; (3) CSV import เขียน expense แยก journal, ใช้ `i + 1` เป็น reference_id และไม่เช็คผล journal → เอกสารค้าง/อ้างผิดได้; (4) test ชุด P0 เดิมเป็น source-pattern อย่างเดียว
+- Detection: ผู้ใช้ตรวจซ้ำหลัง commit `4e6f13c` และชี้ 3 จุดข้างต้น (143 action functions ถูกสำรวจ; พบ 11 action files และ 9 API routes ที่ยังไม่มี guard)
+- Root cause: guard ถูกใส่เฉพาะไฟล์ที่ audit รอบแรกตรวจ; ไม่มีกลไกบังคับให้ action ใหม่มี guard; company settings ถูกอ่านแบบ `SELECT *` หลายที่; bulk import ไม่มี transaction boundary; test ไม่ได้ออกกำลังโค้ดจริง
+- Mitigation: ใส่ guard ทุก action/API ที่เกี่ยวข้อง · ใช้ `lib/company-public.ts` allowlist แทน `SELECT *` · แยก `lib/csv-import.ts` + `withTransaction()` + `RETURNING id` + เช็ค `journal.success` · แยก `lib/security-rules.ts` และเพิ่ม `tests/p0-behavior.test.mjs`
+- Recovery verification: `pnpm exec tsc --noEmit` exit 0 · `npm test` 35/35 (รวม behavioral tests ที่เรียก parse/import/withTransaction จริงด้วย fake client) · `pnpm build` exit 0 · `pnpm exec eslint` บนไฟล์ใหม่ 0 error · ตรวจ `grep` ว่าไม่มี `SELECT * FROM company_settings` ในเส้นทาง client แล้ว
+- Follow-up actions: ยังไม่ deploy / ไม่ mutate production DB / ไม่มี migration ใหม่ — รอพี่ฆัง push commit ตามที่เห็นสมควร; secret rotation จากเหตุ `..env.swp` ยังค้างอยู่; ควรเพิ่ม lint rule หรือ codemod กัน action ใหม่ที่ลืม guard ในอนาคต

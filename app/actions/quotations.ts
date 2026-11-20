@@ -1,9 +1,14 @@
 "use server";
+import { requireActionPermission, requireActiveAction } from "@/lib/server-auth";
+
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export async function getQuotation(id: number | string) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (quotations:read)
+  const __guard = await requireActionPermission("quotations", "read");
+  if (__guard) return __guard;
   try {
     const qRes = await query(`SELECT * FROM quotations WHERE id = $1`, [id]);
     if (qRes.rows.length === 0) throw new Error("Quotation not found");
@@ -15,6 +20,9 @@ export async function getQuotation(id: number | string) {
 }
 
 export async function getNextQuotationNumber() {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI
+  const __guard = await requireActiveAction();
+  if (__guard) return __guard;
   const yearShort = new Date().getFullYear().toString().slice(-2);
   const prefix = `QT${yearShort}-`;
   try {
@@ -47,6 +55,9 @@ export async function getNextQuotationNumber() {
 }
 
 export async function createQuotation(data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (quotations:create)
+  const __guard = await requireActionPermission("quotations", "create");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -85,6 +96,9 @@ export async function createQuotation(data: any) {
 }
 
 export async function updateQuotation(id: number | string, data: any) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (quotations:update)
+  const __guard = await requireActionPermission("quotations", "update");
+  if (__guard) return __guard;
   const pool = (await import("@/lib/db")).default;
   const client = await pool.connect();
   try {
@@ -114,6 +128,9 @@ export async function updateQuotation(id: number | string, data: any) {
 }
 
 export async function deleteQuotation(id: number | string) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (quotations:delete)
+  const __guard = await requireActionPermission("quotations", "delete");
+  if (__guard) return __guard;
   try {
     await query(`DELETE FROM quotation_items WHERE quotation_id = $1`, [id]);
     await query(`DELETE FROM quotations WHERE id = $1`, [id]);
@@ -125,6 +142,9 @@ export async function deleteQuotation(id: number | string) {
 }
 
 export async function updateQuotationStatus(id: number | string, status: string) {
+  // P0-1: server-side authorization — ห้ามเชื่อการซ่อนปุ่มใน UI (quotations:update)
+  const __guard = await requireActionPermission("quotations", "update");
+  if (__guard) return __guard;
   try {
     await query(`UPDATE quotations SET status = $1 WHERE id = $2`, [status, id]);
     revalidatePath("/quotations");
