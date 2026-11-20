@@ -24,7 +24,7 @@
 
 ### 2. **Go-to-Market (GTM) Strategist**
    - **Purpose:** Plan market entry for new product/feature with timing, channels, messaging
-   - **Use When:** Launching Micro-Account SaaS, new GWS package, professional services
+   - **Use When:** Launching a new GWS package or professional service
    - **Key Components:**
      - Product positioning (vs. competitors)
      - Customer segmentation & targeting
@@ -95,11 +95,11 @@
 | **Decision** | Drive action | Landing page, sales | Urgency, proof, offer |
 | **Retention** | Keep engaged | Email, community | Loyalty, upsell |
 
-### Content Pillars (Example for Micro-Account SaaS)
-1. **Education:** Thai tax compliance, accounting automation how-tos
+### Content Pillars (Example for GWS resale & AI services)
+1. **Education:** Thai tax compliance, workflow automation how-tos
 2. **Social Proof:** Customer success stories, ROI calculations
-3. **Differentiation:** Why Micro-Account vs. Zoho/Wave (localization, support)
-4. **Urgency:** Tax deadline reminders, early-bird pricing
+3. **Differentiation:** Local reseller support vs. buying direct (localization, support)
+4. **Urgency:** Tax deadline reminders, limited-time offers
 
 ---
 
@@ -141,14 +141,7 @@
 **Channels:** LinkedIn, partner networks, industry events  
 **Content:** White paper on "Why Reseller vs. Direct," ROI calculator, case study (Dominick)
 
-### Campaign 2: Micro-Account SaaS Beta
-**Objective:** 5 beta customers with NPS ≥ 35  
-**Target:** SME CFOs/Bookkeepers using Zoho/Wave  
-**Message:** "Thai Tax Automation Made Easy" (PP.30, PP.36, PND53 auto-filing)  
-**Channels:** Content marketing, email, community (Thai accounting groups)  
-**Content:** Blog series on Thai tax 101, tax deadline calendar, demo video
-
-### Campaign 3: AI Transformation Services
+### Campaign 2: AI Transformation Services
 **Objective:** 1 pilot engagement, 50 qualified leads  
 **Target:** Enterprises looking to automate workflows  
 **Message:** "AI Agents for Your Business" (consulting + implementation)  
@@ -188,7 +181,7 @@
 
 **Decision Stage**
 - Conversion rate (CR), cost-per-acquisition (CPA)
-- Demo requests, free trial sign-ups, sales-qualified leads (SQLs)
+- Demo requests, sales-qualified leads (SQLs)
 
 **Retention Stage**
 - Customer retention rate, NPS (Net Promoter Score)

@@ -52,7 +52,6 @@ End-to-end campaign planning, go-to-market strategies, content calendars, and la
 
 **Microtronic-Specific Campaigns:**
 - GWS Reseller Expansion
-- Micro-Account SaaS Beta
 - AI Transformation Services
 
 ---
@@ -155,15 +154,13 @@ These skills work together:
 
 ### Strategic Goals (Next 12 Months)
 1. **Stabilize Revenue:** 10,000+ THB/month recurring (diversify customer base)
-2. **Launch SaaS:** Micro-Account as product (5 beta customers by Q1 2027)
-3. **Services:** 1 AI transformation pilot by Q2 2027
-4. **Channels:** 20% revenue from new channels by Q4 2027
+2. **Services:** 1 AI transformation pilot by Q2 2027
+3. **Channels:** 20% revenue from new channels by Q4 2027
 
 ### Key Metrics
 - Monthly recurring revenue (MRR)
 - Customer acquisition cost (CAC)
 - Customer lifetime value (LTV)
-- Product NPS
 - Campaign ROI
 
 ---

@@ -2,6 +2,8 @@
 
 Pain point this file kills: every agent/session that works in this repo re-learning who the company is, what the app does, where the truth lives, and which rules are absolute. Read this before any work here.
 
+> **ขอบเขตโปรเจกต์ (2026-11-20): ใช้ภายในเท่านั้น** — repo นี้คือระบบบัญชี/ภาษีของไมโครทรอนิก **ห้ามตีความว่าเป็นผลิตภัณฑ์ที่ให้ลูกค้าทดลองใช้งานหรือใช้งานจริง** (รวมถึงทดลองใช้ 30 วัน); ผลิตภัณฑ์สำหรับลูกค้าถูกแยกไปเป็นโปรเจกต์อื่นแล้ว งานที่เกี่ยวข้องกับลูกค้าภายนอกหรือ repo อื่นต้องรายงานก่อนเสมอ
+
 ## 1) บริษัท — ใครคือใคร (ข้อเท็จจริง อ่านจากเอกสารจริง 2026-10-06)
 
 - **บริษัท ไมโครทรอนิก (ไทยแลนด์) จำกัด** / MICROTRONIC (THAILAND) CO., LTD. (สำนักงานใหญ่)

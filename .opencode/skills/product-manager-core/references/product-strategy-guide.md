@@ -58,18 +58,7 @@
   - Price using value-based model (not hourly)
 - **Success Metric:** 1 pilot engagement by Q2 2027
 
-### Priority 3: Build Product-Led Growth with Micro-Account App
-- **Goal:** Use Micro-Account as proof-of-concept for automation product
-- **Vision:** Sell "Micro-Account for SMEs" as SaaS (accounting + tax automation)
-- **Current State:** Internal tool for MICROTRONIC books
-- **Actions:**
-  - Extract core accounting features into reusable template
-  - Add multi-company support
-  - Build Thai tax automation (PP.30, PP.36, PND53 auto-filing)
-  - Create landing page + pricing tiers
-- **Success Metric:** 5 beta customers by Q1 2027
-
-### Priority 4: Explore New Channels & Markets
+### Priority 3: Explore New Channels & Markets
 - **Goal:** Reduce dependency on single customer (Dominick)
 - **Potential Markets:**
   - E-commerce sellers (Lazada, Shopee, TikTok Shop operators)
@@ -141,17 +130,14 @@
 - Finalize pricing model + customer tiers
 
 ### Q1 2027 (Jan-Mar)
-- Pilot Micro-Account SaaS (closed beta, 3 customers)
 - Launch "AI Transformation" service offering
 - Create content marketing (blog, webinars on Thai tax automation)
 
 ### Q2 2027 (Apr-Jun)
 - Scale GWS to 3+ customers
-- Public beta launch of Micro-Account SaaS
 - Land 1st professional services contract (AI consulting)
 
 ### Q3-Q4 2027 (Jul-Dec)
-- Expand SaaS customer base to 10+ paying users
 - Build integrations (Zapier, Slack, Telegram notifications)
 - Explore acquisition by SaaS investor or SI partner
 
@@ -165,9 +151,8 @@
 3. **Product Stability:** Zero unplanned downtime; 99.5% SLA
 
 ### Company OKRs Q1 2027
-1. **SaaS Product-Market Fit:** 5 beta customers with NPS ≥ 35
-2. **Service Revenue:** 1 pilot engagement (10,000+ THB value)
-3. **Market Awareness:** 100 qualified leads via content marketing
+1. **Service Revenue:** 1 pilot engagement (10,000+ THB value)
+2. **Market Awareness:** 100 qualified leads via content marketing
 
 ---
 
