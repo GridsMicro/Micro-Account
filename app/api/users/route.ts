@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 
 // GET /api/users - List all users (Admin only)
 export async function GET() {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     

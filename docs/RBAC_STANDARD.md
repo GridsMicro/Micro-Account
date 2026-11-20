@@ -43,6 +43,13 @@ Actions:
 
 ## Implementation Notes
 
-- Standard helper file: `lib/core-standards.ts`
+- Canonical role helper file: `lib/core-standards.ts`
+- **Server-side authorization boundary (2026-11-20): `lib/server-auth.ts`**
+  - `requireActiveUser()` — verifies a real DB row with `status = "Active"` on every call (fail-closed 401/403/500)
+  - `requirePermission(module, action)` — RBAC group permission + canonical admin bypass
+  - `requireAdmin()` — canonical role (`superadmin`/`admin`) or group admin
+  - `authErrorResponse()` / `authActionError()` — uniform denial results for API routes / Server Actions
+  - Apply at the top of every mutating action and sensitive API route; never rely on client-side gating
+  - Regression guard: `tests/p0-security-guards.test.mjs`
 - Master guardrail file: `CORE_RULES.md`
 

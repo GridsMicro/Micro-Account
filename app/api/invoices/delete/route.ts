@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteInvoice } from "@/app/actions";
-import { canAccessAdmin } from "@/lib/core-standards";
+import { requirePermission, authErrorResponse } from "@/lib/server-auth";
 
 export async function POST(req: Request) {
   try {
@@ -8,16 +8,9 @@ export async function POST(req: Request) {
     const id = body?.id;
     if (!id) return NextResponse.json({ success: false, error: "Missing id" }, { status: 400 });
 
-    // Server-side authorization: ensure caller is admin
-    try {
-      const { auth } = await import('@/lib/auth');
-      const session = await auth();
-      if (!session?.user || !canAccessAdmin((session.user as any).role)) {
-        return NextResponse.json({ success: false, error: 'Unauthorized: admin access required' }, { status: 403 });
-      }
-    } catch (e) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: admin access required' }, { status: 403 });
-    }
+    // Server-side authorization: ตรวจสถานะล่าสุด + สิทธิ์ลบใบแจ้งหนี้
+    const guard = await requirePermission('invoices', 'delete');
+    if (!guard.ok) return authErrorResponse(guard);
 
     const res = await deleteInvoice(Number(id));
     if (res && res.success) {

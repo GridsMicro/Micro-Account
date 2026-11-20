@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import { createExpenseJournalEntry } from "@/lib/journaling";
+import { requirePermission, authActionError } from "@/lib/server-auth";
 
-async function deleteExpenseJournalEntries(expenseId: number) {
+async function deleteExpenseJournalEntries(
+  expenseId: number,
+  queryFn: (text: string, params?: any[]) => Promise<any> = query
+) {
   const journalReference = `EXP-${expenseId}`;
-  await query(
+  await queryFn(
     `DELETE FROM journal_entries
      WHERE (reference_type = 'expense' AND reference_id = $1)
         OR reference_no = $2
@@ -79,6 +83,8 @@ function validateInputTaxDocument(data: {
 }
 
 export async function getExpenses(year?: string, month?: string) {
+  const guard = await requirePermission("expenses", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
     await ensureExpensesTable();
     const now = new Date();
@@ -121,6 +127,8 @@ export async function getExpenses(year?: string, month?: string) {
 }
 
 export async function getExpensesYearly(year?: string) {
+  const guard = await requirePermission("expenses", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
     await ensureExpensesTable();
     const y = year ? parseInt(year, 10) : new Date().getFullYear();
@@ -177,6 +185,8 @@ export async function createExpense(data: {
   original_amount?: number;
   exchange_rate?: number;
 }) {
+  const guard = await requirePermission("expenses", "create");
+  if (!guard.ok) return authActionError(guard);
   try {
     await ensureExpensesTable();
 
@@ -188,89 +198,86 @@ export async function createExpense(data: {
     });
     if (docError) return { success: false, error: docError };
 
-    // Fetch vendor name from contacts if contact_id provided
-    let vendorName = null;
-    if (data.contact_id) {
-      const contactRes = await query(`SELECT name FROM contacts WHERE id = $1`, [data.contact_id]);
-      if (contactRes.rows.length > 0) {
-        vendorName = contactRes.rows[0].name;
-      }
-    }
+    // ชื่อผู้ขายมาจาก JOIN contacts ตอนอ่าน (getExpenses) — ไม่ต้อง duplicate ลง expenses
 
     // ถ้าเป็น foreign currency ให้ original_currency ≠ THB จะต้องมี original_amount + exchange_rate
     const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
     
-    const { rows } = await query(
-      `INSERT INTO expenses (
-         description,
-         category,
-         amount,
-         expense_date,
-         reference_no,
-         tax_invoice_no,
-         tax_invoice_date,
-         tax_deductible,
-         vat_amount,
-         wht_rate,
-         wht_amount,
-         net_amount,
-         is_service,
-         contact_id,
-         vendor,
-         classification,
-         notes,
-         receipt_url,
-         receipt_file_name,
-         receipt_mime_type,
-         original_currency,
-         original_amount,
-         exchange_rate,
-         status
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, 'paid')
-       RETURNING id`,
-      [
-        data.title,
-        data.category,
+    // P0: เอกสาร + journal ต้องสำเร็จทั้งคู่หรือไม่เลย (rollback ถ้าขั้นใดพลาด)
+    // แก้ schema mismatch: ใช้ `title` (มีจริงทั้ง master schema และ ensureExpensesTable)
+    // แทน `description` ที่ไม่ถูกสร้าง — และไม่ insert `vendor` ที่ไม่มีคอลัมน์
+    const expenseId = await withTransaction(async (client) => {
+      const db = { query: (text: string, params?: any[]) => client.query(text, params) };
+      const { rows } = await db.query(
+        `INSERT INTO expenses (
+           title,
+           category,
+           amount,
+           expense_date,
+           reference_no,
+           tax_invoice_no,
+           tax_invoice_date,
+           tax_deductible,
+           vat_amount,
+           wht_rate,
+           wht_amount,
+           net_amount,
+           is_service,
+           contact_id,
+           classification,
+           notes,
+           receipt_url,
+           receipt_file_name,
+           receipt_mime_type,
+           original_currency,
+           original_amount,
+           exchange_rate,
+           status
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'paid')
+         RETURNING id`,
+        [
+          data.title,
+          data.category,
+          data.amount,
+          data.expense_date,
+          data.reference_no || null,
+          data.tax_invoice_no || null,
+          data.tax_invoice_date || null,
+          data.tax_deductible || false,
+          data.vat_amount || 0,
+          data.wht_rate || 0,
+          data.wht_amount || 0,
+          data.net_amount || data.amount || 0,
+          data.is_service || false,
+          data.contact_id || null,
+          (data.classification || "OPEX").toUpperCase(),
+          data.notes || null,
+          data.receipt_url || null,
+          data.receipt_file_name || null,
+          data.receipt_mime_type || null,
+          isForeignCurrency ? data.original_currency : "THB",
+          isForeignCurrency ? (data.original_amount ?? null) : null,
+          isForeignCurrency ? (data.exchange_rate ?? null) : null,
+        ]
+      );
+
+      const newId = Number(rows[0].id);
+      const journalResult = await createExpenseJournalEntry(
+        newId,
+        data.contact_id || 0,
         data.amount,
-        data.expense_date,
-        data.reference_no || null,
-        data.tax_invoice_no || null,
-        data.tax_invoice_date || null,
-        // 2026-11-18 (ฌอน): ค่าเริ่มต้น false — ต้องยืนยันสิทธิหักเอง (ไม่ให้ระบบหักให้โดยอัตโนมัติ)
-        data.tax_deductible || false,
         data.vat_amount || 0,
-        data.wht_rate || 0,
+        data.category,
+        data.expense_date,
         data.wht_amount || 0,
-        data.net_amount || data.amount || 0,
-        data.is_service || false,
-        data.contact_id || null,
-        vendorName,
-        (data.classification || "OPEX").toUpperCase(),
-        data.notes || null,
-        data.receipt_url || null,
-        data.receipt_file_name || null,
-        data.receipt_mime_type || null,
-        isForeignCurrency ? data.original_currency : "THB",
-        isForeignCurrency ? (data.original_amount ?? null) : null,
-        isForeignCurrency ? (data.exchange_rate ?? null) : null,
-      ]
-    );
-
-    const expenseId = rows[0].id;
-    const journalResult = await createExpenseJournalEntry(
-      expenseId,
-      data.contact_id || 0,
-      data.amount,
-      data.vat_amount || 0,
-      data.category,
-      data.expense_date,
-      data.wht_amount || 0
-    );
-
-    if (!journalResult.success) {
-      throw new Error(`Journal entry failed: ${journalResult.error}`);
-    }
+        db
+      );
+      if (!journalResult.success) {
+        throw new Error(`Journal entry failed: ${journalResult.error}`);
+      }
+      return newId;
+    });
 
     revalidatePath("/expenses");
     revalidatePath("/reports/profit-loss");
@@ -308,6 +315,8 @@ export async function updateExpense(
     exchange_rate?: number;
   }
 ) {
+  const guard = await requirePermission("expenses", "update");
+  if (!guard.ok) return authActionError(guard);
   try {
     await ensureExpensesTable();
     // 2026-11-18 (ฌอน / ข้อ 2): บังคับเลขที่/วันที่ใบภาษีซื้อเมื่อมี VAT (server-side)
@@ -318,64 +327,70 @@ export async function updateExpense(
     });
     if (docError) return { success: false, error: docError };
     const isForeignCurrency = data.original_currency && data.original_currency !== "THB";
-    await query(
-      `UPDATE expenses
-       SET title=$1,
-           category=$2,
-           amount=$3,
-           expense_date=$4,
-           reference_no=$5,
-           tax_invoice_no=$6,
-           tax_invoice_date=$7,
-           vat_amount=$8,
-           contact_id=$9,
-           classification=$10,
-           notes=$11,
-           receipt_url=$12,
-           receipt_file_name=$13,
-           receipt_mime_type=$14,
-           original_currency=$15,
-           original_amount=$16,
-           exchange_rate=$17,
-           tax_deductible=$18,
-           updated_at=CURRENT_TIMESTAMP
-       WHERE id=$19`,
-      [
-        data.title,
-        data.category,
-        data.amount,
-        data.expense_date,
-        data.reference_no || null,
-        data.tax_invoice_no || null,
-        data.tax_invoice_date || null,
-        data.vat_amount || 0,
-        data.contact_id || null,
-        (data.classification || "OPEX").toUpperCase(),
-        data.notes || null,
-        data.receipt_url || null,
-        data.receipt_file_name || null,
-        data.receipt_mime_type || null,
-        isForeignCurrency ? data.original_currency : "THB",
-        isForeignCurrency ? (data.original_amount ?? null) : null,
-        isForeignCurrency ? (data.exchange_rate ?? null) : null,
-        data.tax_deductible || false,
+
+    // P0: update expense + ลบ journal เก่า + สร้าง journal ใหม่ ต้องเป็น transaction เดียว
+    await withTransaction(async (client) => {
+      const db = { query: (text: string, params?: any[]) => client.query(text, params) };
+      await db.query(
+        `UPDATE expenses
+         SET title=$1,
+             category=$2,
+             amount=$3,
+             expense_date=$4,
+             reference_no=$5,
+             tax_invoice_no=$6,
+             tax_invoice_date=$7,
+             vat_amount=$8,
+             contact_id=$9,
+             classification=$10,
+             notes=$11,
+             receipt_url=$12,
+             receipt_file_name=$13,
+             receipt_mime_type=$14,
+             original_currency=$15,
+             original_amount=$16,
+             exchange_rate=$17,
+             tax_deductible=$18,
+             updated_at=CURRENT_TIMESTAMP
+         WHERE id=$19`,
+        [
+          data.title,
+          data.category,
+          data.amount,
+          data.expense_date,
+          data.reference_no || null,
+          data.tax_invoice_no || null,
+          data.tax_invoice_date || null,
+          data.vat_amount || 0,
+          data.contact_id || null,
+          (data.classification || "OPEX").toUpperCase(),
+          data.notes || null,
+          data.receipt_url || null,
+          data.receipt_file_name || null,
+          data.receipt_mime_type || null,
+          isForeignCurrency ? data.original_currency : "THB",
+          isForeignCurrency ? (data.original_amount ?? null) : null,
+          isForeignCurrency ? (data.exchange_rate ?? null) : null,
+          data.tax_deductible || false,
+          id,
+        ]
+      );
+
+      await deleteExpenseJournalEntries(id, db.query);
+      const journalResult = await createExpenseJournalEntry(
         id,
-      ]
-    );
-
-    await deleteExpenseJournalEntries(id);
-    const journalResult = await createExpenseJournalEntry(
-      id,
-      data.contact_id || 0,
-      data.amount,
-      data.vat_amount || 0,
-      data.category,
-      data.expense_date
-    );
-
-    if (!journalResult.success) {
-      throw new Error(`Journal entry failed: ${journalResult.error}`);
-    }
+        data.contact_id || 0,
+        data.amount,
+        data.vat_amount || 0,
+        data.category,
+        data.expense_date,
+        0,
+        db
+      );
+      if (!journalResult.success) {
+        throw new Error(`Journal entry failed: ${journalResult.error}`);
+      }
+    });
 
     revalidatePath("/expenses");
     revalidatePath("/reports/profit-loss");
@@ -403,6 +418,8 @@ export async function updateExpenseTaxInfo(
     tax_deductible: boolean;
   }
 ) {
+  const guard = await requirePermission("expenses", "update");
+  if (!guard.ok) return authActionError(guard);
   try {
     await ensureExpensesTable();
 
@@ -448,12 +465,19 @@ export async function updateExpenseTaxInfo(
 }
 
 export async function deleteExpense(id: number) {
+  const guard = await requirePermission("expenses", "delete");
+  if (!guard.ok) return authActionError(guard);
   try {
     await ensureExpensesTable();
-    await deleteExpenseJournalEntries(id);
-    const result = await query(`DELETE FROM expenses WHERE id = $1 RETURNING id`, [id]);
+    // P0: ลบ journal + expense ต้องสำเร็จด้วยกัน
+    const deleted = await withTransaction(async (client) => {
+      const db = { query: (text: string, params?: any[]) => client.query(text, params) };
+      await deleteExpenseJournalEntries(id, db.query);
+      const result = await db.query(`DELETE FROM expenses WHERE id = $1 RETURNING id`, [id]);
+      return result.rows.length > 0;
+    });
 
-    if (result.rows.length === 0) {
+    if (!deleted) {
       return { success: false, error: "ไม่พบรายการค่าใช้จ่าย" };
     }
 

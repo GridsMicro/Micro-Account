@@ -7,8 +7,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { createExpenseJournalEntry } from '@/lib/journaling';
+import { requirePermission, authErrorResponse } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
+  const guard = await requirePermission('expenses', 'create');
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;

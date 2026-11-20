@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { requireAdmin, authErrorResponse } from "@/lib/server-auth";
 
 export const dynamic = 'force-dynamic';
 
@@ -15,29 +15,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest) {
   try {
-    // 1. Verify user is authenticated
-    const session = await auth();
-    if (!session || !session.user) {
-      console.warn(`[AUDIT] Unauthorized backup access attempt - not authenticated`);
-      return NextResponse.json(
-        { error: "Unauthorized — not authenticated" },
-        { status: 401 }
-      );
-    }
+    // 1–2. ตรวจ session + สถานะล่าสุด + สิทธิ์ admin กลาง (รองรับ superadmin)
+    const guard = await requireAdmin();
+    if (!guard.ok) return authErrorResponse(guard);
 
-    // 2. Verify user has ADMIN role
-    const userRole = session.user.role?.toUpperCase();
-    if (userRole !== "ADMIN") {
-      console.warn(`[AUDIT] Unauthorized backup access attempt - user ${session.user.email} (role: ${session.user.role}) denied`);
-      return NextResponse.json(
-        { error: "Forbidden — admin access required" },
-        { status: 403 }
-      );
-    }
-
-    // 3. Log audit trail before exporting
+    // 3. Log audit trail before exporting — ไม่แนบอีเมลลง log
     const timestamp = new Date().toISOString();
-    console.log(`[AUDIT] Database backup initiated by admin: ${session.user.email} (ID: ${session.user.id}) at ${timestamp}`);
+    console.log(`[AUDIT] Database backup initiated (ID: ${guard.userId}) at ${timestamp}`);
 
     const { searchParams } = new URL(req.url);
     const format = searchParams.get('format') || 'json';
@@ -62,17 +46,13 @@ export async function GET(req: NextRequest) {
     const backupData: Record<string, any[]> = {};
 
     for (const table of tables) {
-      try {
-        const res = await query(`SELECT * FROM ${table} ORDER BY id ASC`);
-        backupData[table] = res.rows;
-      } catch (err) {
-        console.error(`Backup error for table ${table}:`, err);
-        backupData[table] = []; // fallback for missing tables
-      }
+      // ไม่แอบใช้ [] แทนตารางที่อ่านไม่ได้ — ไม่งั้น backup จะดูสำเร็จแต่ข้อมูลหาย
+      const res = await query(`SELECT * FROM ${table} ORDER BY id ASC`);
+      backupData[table] = res.rows;
     }
 
     if (format === 'json') {
-      console.log(`[AUDIT] Backup exported as JSON by ${session.user.email}`);
+      console.log(`[AUDIT] Backup exported as JSON (ID: ${guard.userId})`);
       return new NextResponse(JSON.stringify(backupData, null, 2), {
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +61,7 @@ export async function GET(req: NextRequest) {
       });
     } else {
       // Create a simple pseudo-SQL file (INSERT INTO statements)
-      let sqlContent = `-- Micro-Account Database Backup\n-- Date: ${new Date().toISOString()}\n-- Exported by: ${session.user.email}\n\nBEGIN;\n\n`;
+      let sqlContent = `-- Micro-Account Database Backup\n-- Date: ${new Date().toISOString()}\n-- Exported by user ID: ${guard.userId}\n\nBEGIN;\n\n`;
 
       for (const table of tables) {
         if (backupData[table].length === 0) continue;
@@ -106,7 +86,7 @@ export async function GET(req: NextRequest) {
 
       sqlContent += "COMMIT;";
 
-      console.log(`[AUDIT] Backup exported as SQL by ${session.user.email}`);
+      console.log(`[AUDIT] Backup exported as SQL (ID: ${guard.userId})`);
       return new NextResponse(sqlContent, {
         headers: {
           "Content-Type": "text/sql",
@@ -115,10 +95,10 @@ export async function GET(req: NextRequest) {
       });
     }
 
-  } catch (error: any) {
-    console.error(`[ERROR] Backup operation failed:`, error);
+  } catch {
+    console.error(`[ERROR] Backup operation failed — export aborted`);
     return NextResponse.json(
-      { error: error.message },
+      { error: "Backup failed — no partial file was returned" },
       { status: 500 }
     );
   }

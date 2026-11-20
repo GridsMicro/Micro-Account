@@ -18,47 +18,47 @@ function getJWTSecret(): Uint8Array {
 
 const SECRET = getJWTSecret();
 
+const GENERIC_LOGIN_ERROR = "Invalid credentials";
+
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
-    console.log("[LOGIN API] Email:", email);
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Missing credentials" }, { status: 400 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    // Query user
+    // Query user — ไม่ log อีเมล/สถานะ/ผลเทียบรหัส (กันข้อมูลระบุตัวตนหลุดใน log)
     const res = await query(
       "SELECT id, email, password, name, role, status FROM users WHERE email = $1",
       [email]
     );
 
+    // คำตอบเดียวกันทุกกรณีที่ล็อกอินไม่ได้ → ป้องกัน user enumeration
     if (res.rows.length === 0) {
-      console.log("[LOGIN API] User not found");
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     const user = res.rows[0];
-    console.log("[LOGIN API] User found:", user.email, "Status:", user.status);
+    const status = String(user.status || "").trim().toLowerCase();
 
-    if (user.status === "Inactive") {
-      return NextResponse.json({ error: "Account suspended" }, { status: 403 });
+    // P0: เฉพาะบัญชี Active เท่านั้นที่ได้ session (Pending/Inactive/อื่น ๆ ปฏิเสธหมด)
+    if (status !== "active") {
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    // Verify password
     const match = await bcrypt.compare(password, user.password);
-    console.log("[LOGIN API] Password match:", match);
-
     if (!match) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
-    // Create JWT
+    // Create JWT — แนบ status ให้ proxy กรอง session เก่าที่ไม่ใช่ Active ได้ทันที
     const token = await new SignJWT({
       id: user.id.toString(),
       email: user.email,
       name: user.name,
       role: user.role,
+      status: "Active",
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -75,7 +75,8 @@ export async function POST(req: Request) {
       path: "/",
     });
 
-    console.log("[LOGIN API] Success");
+    // log แค่เหตุการณ์ ไม่แนบตัวตน/รายละเอียด error กลับไปหา client
+    console.log("[LOGIN API] sign-in succeeded");
     return NextResponse.json({
       success: true,
       user: {
@@ -85,8 +86,8 @@ export async function POST(req: Request) {
         role: user.role,
       },
     });
-  } catch (err: any) {
-    console.error("[LOGIN API] Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch {
+    console.error("[LOGIN API] sign-in failed");
+    return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 500 });
   }
 }

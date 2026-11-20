@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { contactMatchesUsage, normalizeContactType } from "@/lib/contacts";
+import { requirePermission, authErrorResponse } from "@/lib/server-auth";
 
 async function ensureContactsSchema() {
   await query(`
@@ -20,6 +21,9 @@ async function ensureContactsSchema() {
 }
 
 export async function GET(request: NextRequest) {
+  // GET นี้มี DDL + UPDATE (ensureContactsSchema) → ต้องตรวจสิทธิ์เขียน
+  const guard = await requirePermission("contacts", "update");
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");

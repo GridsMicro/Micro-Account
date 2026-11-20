@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth, getUserCompanyId } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 import {
   applyModuleOverrides,
   getEnabledModules,
@@ -13,6 +14,8 @@ import {
 } from "@/lib/module-config";
 
 export async function GET() {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -41,6 +44,8 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     if (!session?.user?.id) {

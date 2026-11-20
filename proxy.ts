@@ -31,6 +31,10 @@ const PUBLIC_PREFIXES = ["/api/auth"];
 async function verifyToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, SECRET);
+    // P0: token ต้องระบุ status = Active (token เก่าที่ไม่มี claim นี้จะถูกบังคับ login ใหม่)
+    if (String(payload.status || "").trim().toLowerCase() !== "active") {
+      return null;
+    }
     return payload;
   } catch {
     return null;

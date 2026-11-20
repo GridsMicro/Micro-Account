@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { isAdmin, isSuperAdmin, logActivity, clearPermissionCache } from "@/lib/permissions";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 
 // GET /api/groups - List all groups with permission counts and member counts
 export async function GET(request: NextRequest) {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     
@@ -45,6 +48,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/groups - Create new group
 export async function POST(request: NextRequest) {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     

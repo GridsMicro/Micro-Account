@@ -6,8 +6,11 @@ import {
   getAlertCount,
   resolveAlert,
 } from "@/lib/aiAudit";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -39,6 +42,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     if (!session?.user?.id) {

@@ -4,9 +4,12 @@ import { isAdmin } from "@/lib/permissions";
 import { query } from "@/lib/db";
 import { ensurePayrollSchema } from "@/lib/payroll";
 import { normalizePayrollMonth, validatePayrollPayload } from "@/lib/payroll-validation.mjs";
+import { requireActiveUser, authErrorResponse } from "@/lib/server-auth";
 
 // GET /api/payroll?month=YYYY-MM
 export async function GET(request: NextRequest) {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -62,6 +65,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/payroll
 export async function POST(request: NextRequest) {
+  const active = await requireActiveUser();
+  if (!active.ok) return authErrorResponse(active);
   try {
     const session = await auth();
     if (!session?.user?.id) {

@@ -15,8 +15,21 @@ import {
   getRDPayin,
 } from "@/lib/rd-api";
 import type { RDResult } from "@/lib/rd-api";
+import { requirePermission, authActionError } from "@/lib/server-auth";
+
+/** กันงวดผิดก่อนคำนวณ/ยื่น (P0) */
+function assertPeriod(month: number, year: number) {
+  if (
+    !Number.isInteger(month) || month < 1 || month > 12 ||
+    !Number.isInteger(year) || year < 2000 || year > 2200
+  ) {
+    throw new Error("งวดเดือน/ปีไม่ถูกต้อง (month 1–12, year ค.ศ.)");
+  }
+}
 
 export async function getTaxSummary() {
+  const guard = await requirePermission("tax_reports", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
     const now = new Date();
     const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -40,7 +53,10 @@ export async function getTaxSummary() {
 }
 
 export async function getPP30Draft(month: number, year: number) {
+  const guard = await requirePermission("tax_reports", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
+    assertPeriod(month, year);
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
     const end = new Date(year, month, 0).toISOString().split("T")[0];
     const sRes = await query(`SELECT COUNT(*)::int as c, COALESCE(SUM(net_amount),0) as s, COALESCE(SUM(vat_amount),0) as v FROM invoices WHERE status != 'cancelled' AND issue_date BETWEEN $1 AND $2`, [start, end]);
@@ -76,16 +92,15 @@ export async function getPP30Draft(month: number, year: number) {
 }
 
 async function countUndeductedVatExpenses(start: string, end: string): Promise<number> {
-  try {
-    const r = await query(
-      `SELECT COUNT(*)::int as c FROM expenses
-       WHERE expense_date BETWEEN $1 AND $2
-         AND COALESCE(vat_amount,0) > 0
-         AND COALESCE(tax_deductible, false) = false`,
-      [start, end]
-    );
-    return r.rows[0]?.c || 0;
-  } catch { return 0; }
+  // P0: query ล้มเหลวต้อง fail-closed — ห้ามคืน 0 แล้วตีความว่า "ตรวจแล้วไม่มีปัญหา"
+  const r = await query(
+    `SELECT COUNT(*)::int as c FROM expenses
+     WHERE expense_date BETWEEN $1 AND $2
+       AND COALESCE(vat_amount,0) > 0
+       AND COALESCE(tax_deductible, false) = false`,
+    [start, end]
+  );
+  return Number(r.rows[0]?.c || 0);
 }
 
 /**
@@ -93,20 +108,22 @@ async function countUndeductedVatExpenses(start: string, end: string): Promise<n
  * ใช้แจ้งเตือนเพื่อให้คนแก้ — ไม่นำไปหักอัตโนมัติ
  */
 async function countIncompleteTaxDocs(start: string, end: string): Promise<number> {
-  try {
-    const r = await query(
-      `SELECT COUNT(*)::int as c FROM expenses
-       WHERE expense_date BETWEEN $1 AND $2
-         AND COALESCE(vat_amount,0) > 0
-         AND (tax_invoice_date IS NULL OR tax_invoice_no IS NULL OR tax_invoice_no = '')`,
-      [start, end]
-    );
-    return r.rows[0]?.c || 0;
-  } catch { return 0; }
+  // P0: query ล้มเหลวต้อง fail-closed — ห้ามคืน 0 แล้วตีความว่า "ตรวจแล้วไม่มีปัญหา"
+  const r = await query(
+    `SELECT COUNT(*)::int as c FROM expenses
+     WHERE expense_date BETWEEN $1 AND $2
+       AND COALESCE(vat_amount,0) > 0
+       AND (tax_invoice_date IS NULL OR tax_invoice_no IS NULL OR tax_invoice_no = '')`,
+    [start, end]
+  );
+  return Number(r.rows[0]?.c || 0);
 }
 
 export async function getPNDReportDraft(type: string, month: number, year: number) {
+  const guard = await requirePermission("tax_reports", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
+    assertPeriod(month, year);
     // คำนวณ WHT จาก expenses โดยตรง (wht_rate เล็กน้อย) — ไม่รอ withholding_tax_amount ที่คนมักไม่กรอก
     // และไม่ผ่าน payment_vouchers เพราะบางเดือนไม่มีใบจ่ายแต่มีรายจ่ายเกิดจริง
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -133,7 +150,10 @@ export async function getPNDReportDraft(type: string, month: number, year: numbe
 }
 
 export async function getPP36Draft(month: number, year: number) {
+  const guard = await requirePermission("tax_reports", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
+    assertPeriod(month, year);
     // ต่างประเทศ = มีสกุลเงิน/อัตราแลกเปลี่ยนระบุชัดเจน (ไม่ใช่ THB)
     const start = `${year}-${String(month).padStart(2, "0")}-01`;
     const end = new Date(year, month, 0).toISOString().split("T")[0];
@@ -162,7 +182,10 @@ export async function getPP36Draft(month: number, year: number) {
 }
 
 export async function exportPP30ToTxt(month: number, year: number): Promise<{ success: boolean; data?: string; filename?: string; error?: string }> {
+  const guard = await requirePermission("tax_reports", "export");
+  if (!guard.ok) return authActionError(guard);
   try {
+    assertPeriod(month, year);
     const draft = await getPP30Draft(month, year);
     if (!draft.success || !draft.data) {
       return { success: false, error: draft.error || "ไม่พบข้อมูล ภ.พ. 30" };
@@ -182,7 +205,10 @@ export async function exportPP30ToTxt(month: number, year: number): Promise<{ su
 }
 
 export async function exportPND53ToTxt(month: number, year: number): Promise<{ success: boolean; data?: string; filename?: string; error?: string }> {
+  const guard = await requirePermission("tax_reports", "export");
+  if (!guard.ok) return authActionError(guard);
   try {
+    assertPeriod(month, year);
     const draft = await getPNDReportDraft("pnd53", month, year);
     if (!draft.success || !draft.data) {
       return { success: false, error: draft.error || "ไม่พบข้อมูล ภ.ง.ด. 53" };
@@ -206,6 +232,8 @@ export async function exportPND53ToTxt(month: number, year: number): Promise<{ s
  * ตอนนี้ delegate ไปยัง shim ที่คืน error ชัดเจน (ไม่มี credential ก็ไม่สำเร็จ)
  */
 export async function batchSubmitToRDPortal(ids: string[], type?: string): Promise<{ success: boolean; summary?: { successful: number; total: number }; results?: any[]; error?: string }> {
+  const guard = await requirePermission("tax_reports", "manage");
+  if (!guard.ok) return authActionError(guard);
   if (!Array.isArray(ids) || ids.length === 0) {
     return { success: false, error: "ไม่มีเอกสารที่เลือก", summary: { successful: 0, total: 0 }, results: [] };
   }
@@ -227,6 +255,13 @@ export async function batchSubmitToRDPortal(ids: string[], type?: string): Promi
  *  - ปีภาษีที่ส่งเป็น พ.ศ. (ค.ศ. + 543) ตาม spec ของ RD
  */
 export async function submitPP30ToRDPortal(month: number, year: number, confirmText: string): Promise<RDResult> {
+  const guard = await requirePermission("tax_reports", "manage");
+  if (!guard.ok) return authActionError(guard);
+  try {
+    assertPeriod(month, year);
+  } catch (e: any) {
+    return { success: false, error: e?.message || "งวดไม่ถูกต้อง" };
+  }
   if (confirmText !== "ยื่น ภ.พ.30") {
     return { success: false, error: "ต้องพิมพ์ยืนยัน 'ยื่น ภ.พ.30' เพื่อยื่นแบบจริง" };
   }
@@ -267,6 +302,8 @@ export async function submitPP30ToRDPortal(month: number, year: number, confirmT
 
 /** ซิงค์สถานะแบบจาก RD (/oapi/result-form) มาบันทึกในตาราง tax_filing_submissions */
 export async function syncRDStatusAction(input: { refNo?: string; apiRefNo?: string; formType?: string }): Promise<RDResult> {
+  const guard = await requirePermission("tax_reports", "update");
+  if (!guard.ok) return authActionError(guard);
   if (!input.refNo && !input.apiRefNo) {
     return { success: false, error: "กรุณาระบุเลขอ้างอิงการยื่นแบบ (refNo) หรือเลขอ้างอิงการนำส่ง (apiRefNo)" };
   }
@@ -277,6 +314,8 @@ export async function syncRDStatusAction(input: { refNo?: string; apiRefNo?: str
 
 /** อ่านประวัติสถานะที่ซิงค์ไว้ (READ-ONLY) */
 export async function getRDFilingHistoryAction(limit = 10) {
+  const guard = await requirePermission("tax_reports", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
     return { success: true, data: await getRDFilingHistory(limit) };
   } catch (err: any) {
@@ -286,21 +325,29 @@ export async function getRDFilingHistoryAction(limit = 10) {
 
 /** ขอภาพแบบ/ใบแนบ/ใบเสร็จจาก RD (READ-ONLY) */
 export async function getRDReceiptAction(refNo: string, requestType: 1 | 2 | 3 = 3): Promise<RDResult> {
+  const guard = await requirePermission("tax_reports", "read");
+  if (!guard.ok) return authActionError(guard);
   return getRDReceipt(refNo, requestType);
 }
 
 /** ขอใบ Pay-In จาก RD */
 export async function getRDPayinAction(refNos: string[]): Promise<RDResult> {
+  const guard = await requirePermission("tax_reports", "export");
+  if (!guard.ok) return authActionError(guard);
   return getRDPayin(refNos);
 }
 
 export async function setupRDAPI(config: any) {
+  const guard = await requirePermission("tax_reports", "manage");
+  if (!guard.ok) return authActionError(guard);
   // @deprecated ใช้ RD_EFILING_* ใน environment แทน
   initializeRDClient(config);
   return { success: true };
 }
 
 export async function submitInvoiceToRDPortal(id: string) {
+  const guard = await requirePermission("tax_reports", "manage");
+  if (!guard.ok) return authActionError(guard);
   // @deprecated เก็บไว้ให้เรียกได้ แต่จะคืน error ชัดเจน (ไม่มี success ปลอมอีกต่อไป)
   const res = await submitInvoiceToRD(id);
   revalidatePath("/invoices");
@@ -308,6 +355,8 @@ export async function submitInvoiceToRDPortal(id: string) {
 }
 
 export async function exportMonthlySummaryToDrive() {
+  const guard = await requirePermission("tax_reports", "export");
+  if (!guard.ok) return authActionError(guard);
   try {
     const now = new Date();
     const { getOrCreateFolder } = await import("@/lib/actions-helpers");

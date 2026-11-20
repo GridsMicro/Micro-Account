@@ -364,7 +364,7 @@ export async function createSalesJournalEntry(
     
     if (vatAmount > 0) {
       const vatAccountId = isService ? COA_ACCOUNTS.VAT_UNDUE : COA_ACCOUNTS.VAT_PAYABLE;
-      await createJournalEntry({
+      const vatEntry = await createJournalEntry({
         entry_date: invoiceDate,
         journal_type: 'sales',
         reference_type: 'invoice',
@@ -378,6 +378,7 @@ export async function createSalesJournalEntry(
         document_number: invoiceNumber,
         notes: `VAT 7% - Customer ID: ${customerId}`
       }, db);
+      if (!vatEntry.success) return vatEntry;
     }
     
     return { success: true };
@@ -412,7 +413,7 @@ export async function createReceiptJournalEntry(
     if (!cashEntry.success) return cashEntry;
 
     if (whtAmount > 0) {
-      await createJournalEntry({
+      const whtEntry = await createJournalEntry({
         entry_date: receiptDate,
         journal_type: 'receipt',
         reference_type: 'receipt',
@@ -423,10 +424,11 @@ export async function createReceiptJournalEntry(
         amount: whtAmount,
         document_number: receiptNumber,
       }, db);
+      if (!whtEntry.success) return whtEntry;
     }
 
     if (isService && vatAmount > 0) {
-      await createJournalEntry({
+      const vatEntry = await createJournalEntry({
         entry_date: receiptDate,
         journal_type: 'general',
         reference_type: 'receipt',
@@ -437,6 +439,7 @@ export async function createReceiptJournalEntry(
         amount: vatAmount,
         document_number: receiptNumber,
       }, db);
+      if (!vatEntry.success) return vatEntry;
     }
     
     return { success: true };
@@ -486,7 +489,7 @@ export async function createExpenseJournalEntry(
     if (!expenseEntry.success) return expenseEntry;
     
     if (vatAmount > 0) {
-      await createJournalEntry({
+      const vatEntry = await createJournalEntry({
         entry_date: expenseDate,
         journal_type: 'purchase',
         reference_type: 'expense',
@@ -497,10 +500,11 @@ export async function createExpenseJournalEntry(
         amount: vatAmount,
         document_number: `EXP-${expenseId}`
       }, db);
+      if (!vatEntry.success) return vatEntry;
     }
 
     if (withholdingAmount > 0) {
-      await createJournalEntry({
+      const whtEntry = await createJournalEntry({
         entry_date: expenseDate,
         journal_type: 'purchase',
         reference_type: 'expense',
@@ -511,6 +515,7 @@ export async function createExpenseJournalEntry(
         amount: withholdingAmount,
         document_number: `EXP-${expenseId}`
       }, db);
+      if (!whtEntry.success) return whtEntry;
     }
     
     return { success: true };

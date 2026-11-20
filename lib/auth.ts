@@ -144,6 +144,11 @@ export async function checkUserLimit(company_id?: string | number | null): Promi
 export async function verifyToken(token: string): Promise<UserSession | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
+    // P0: token ต้องระบุ status = Active (สอดคล้องกับ proxy.ts)
+    // การยืนยันสถานะจริงอยู่ที่ requireActiveUser() ซึ่งอ่าน DB ทุกครั้ง — นี่คือ defense-in-depth
+    if (String(payload.status || "").trim().toLowerCase() !== "active") {
+      return null;
+    }
     return {
       id: payload.id as string,
       email: payload.email as string,
@@ -172,6 +177,7 @@ export async function createToken(user: UserSession): Promise<string> {
     email: user.email,
     name: user.name,
     role: user.role,
+    status: "Active",
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

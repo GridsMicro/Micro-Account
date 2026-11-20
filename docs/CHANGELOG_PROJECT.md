@@ -2,6 +2,14 @@
 
 Tracks meaningful behavior/architecture changes (not every small code diff).
 
+## [2026-11-20]
+
+- Added `lib/server-auth.ts` as the single server-side authorization boundary: fresh DB status/role on every call, canonical admin bypass, fail-closed denials; applied to mutating actions (settings, tax reports, expenses) and sensitive API routes
+- Login now accepts only `Active` accounts, returns one generic error for all failures, stops logging identity/password-match details, and embeds `status: "Active"` in the JWT; `proxy.ts` and `lib/auth.ts` verify that claim; root layout withholds page content from non-Active accounts
+- Expense create/update/delete are now atomic with their journal entries via `withTransaction()`; INSERT uses the real `title` column and no longer writes a non-existent `vendor` column; all journal writes check `success`
+- ภ.พ.30 preflight counters propagate query errors (fail-closed) and filing validates the month/year period before submitting
+- Added read-only additive migration `migrations/2026-11-20_expenses_title_compatibility.sql` for legacy DBs (not executed) and `tests/p0-security-guards.test.mjs` regression guards
+
 ## [2026-11-19]
 
 - Fixed the inactive "ลืมรหัสผ่าน?" button on `/login` (was a plain `<button>` with no handler): now links to a full forgot/reset password flow

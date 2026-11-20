@@ -14,6 +14,20 @@ Use this file to record important decisions and their rationale.
 
 ---
 
+### [2026-11-20] P0 security hardening: RBAC boundary / Active session / atomic journal / tax fail-closed
+
+- Context: ตรวจ(read-only) พบ 4 P0 ก่อนนำระบบเข้าผลิตจริง: (1) Server Action/API หลายตัวไม่ตรวจสิทธิ์ฝั่ง server — พึ่ง pUI hide อย่างเดียว; (2) login ปฏิเสธแค่ `Inactive` → `Pending` ได้ JWT และ layout ส่ง `children` ให้เห็นข้อมูลได้; (3) `createExpense` INSERT ใช้คอลัมน์ `description`/`vendor` ที่ไม่มีใน master schema และเขียน expense กับ journal คนละขั้น → ถ้า journal พัง expense ค้างอยู่; (4) `countUndeductedVatExpenses`/`countIncompleteTaxDocs` จับ error แล้วคืน 0 → ภ.พ.30 ตีความว่า "ตรวจแล้วไม่มีปัญหา" แล้วผ่านการยื่นได้
+- Decision:
+  1. สร้าง `lib/server-auth.ts` เป็น boundary เดียว — `requireActiveUser()` อ่าน `status/role` จาก DB ทุกครั้ง (fail-closed 401/403/500) · `requirePermission(module, action)` · `requireAdmin()` (รองรับ `superadmin` ผ่าน `canAccessAdmin`) · ใช้กับ every mutating action/API ที่ระบุไว้ใน test
+  2. เฉพาะบัญชี `status = "Active"` เท่านั้นที่ได้ JWT — login คืน error เดียวกันทุกกรณี (กัน user enumeration), ลบ log อีเมล/ผลเทียบรหัส/raw error · JWT มี claim `status: "Active"` · `proxy.ts` + `lib/auth.ts` ตรวจ claim นี้ · root layout อ่าน DB แล้วไม่ส่ง `children` ให้บัญชีที่ไม่ Active (DB ล้มเหลว → แจ้งแทน ไม่ 500 ทั้งแอพ)
+  3. `lib/db.ts` มี `withTransaction()` (BEGIN/COMMIT/ROLLBACK/release) → ใช้ครอบ create/update/delete expense กับทุก journal row · แก้ INSERT ใช้ `title` (มีจริง) และเอา `vendor` ออก (ชื่อผู้ขาย JOIN จาก `contacts`) · ทุก `createJournalEntry()` ใน `lib/journaling.ts` เก็บผลและ check `success`
+  4. ตัวนับ VAT/เอกสารใน ภ.พ.30 **propagate error** (ลบ `catch { return 0 }`) และ `getPP30Draft` คืน `{success:false}` → `submitPP30ToRDPortal` fail-closed · เพิ่ม `assertPeriod(month, year)` กันงวดผิด
+- Alternatives considered: เชื่อ role จาก JWT อย่างเดียว (เสี่ยง stale privilege) / แก้ UI อย่างเดียว (เลี่ยงได้ด้วยการเรียก action ตรง) / แยก INSERT กับ journal แล้วค่อย clean-up (ไม่ atomic) / สร้าง migration ALTER production ทันที (ขัดกฎห้าม mutate production — เปลี่ยนเป็นเขียนไฟล์ additive ให้พี่ฆังพิจารณาแทน) / ให้ตัวนับคืน 0 เมื่อ query พัง (คือ fail-open ที่กำลังแก้)
+- Why this was chosen: ใช้ DB เป็นแหล่งความจริงเดียวสำหรับ status/role · ทุก mutation มี server boundary · เอกสารการเงินต้องเข้า/ออกคู่กับ journal · ข้อมูลภาษีต้อง fail-closed เสมอ
+- Impacted files/modules: `lib/server-auth.ts`, `lib/auth.ts`, `lib/db.ts`, `lib/journaling.ts`, `proxy.ts`, `app/layout.tsx`, `app/api/login/route.ts`, `app/actions/settings.ts`, `app/actions/tax-reports.ts`, `app/expense-actions.ts`, 14 API routes, `migrations/2026-11-20_expenses_title_compatibility.sql`, `tests/p0-security-guards.test.mjs`, `docs/BUSINESS_RULES.md`, `docs/RBAC_STANDARD.md`, `docs/INCIDENT_LOG.md`
+- Rollback plan: guard เป็น pure check (ไม่แตะข้อมูล) — ถ้ามี false negative ให้เพิ่ม module/action เข้า `requirePermission` ตาม RBAC · migration **ไม่ได้รัน** กับ production (มีแค่ไฟล์ให้พี่ฆังพิจารณา) · ต้อง logout/login ใหม่ครั้งเดียวเพื่อรับ JWT ที่มี claim `status` (token เก่าถูก proxy บังคับ login อยู่แล้ว)
+- Verification (2026-11-20): `pnpm exec tsc --noEmit` exit 0 · `node --test tests/**/*.test.mjs` 20/20 · `pnpm build` exit 0 — **ยังไม่ deploy / ไม่ mutate production DB / ไม่ส่งข้อความจริง**
+
 ### [2026-11-20] แจ้งเตือนภาษีรายเดือนผ่าน LINE Messaging API
 
 - Context: โค้ดเดิม (`lib/taxNotifications.ts`) ใช้ LINE Notify + `TAX_LINE_TOKEN` ที่ยุติบริการ 31 มี.ค. 2025 และ hardcode วันครบกำหนด 15 ทั้งที่ยื่น e-Filing จริงได้ถึงวันที่ 23 (ตามประกาศกรมสรรพากร)

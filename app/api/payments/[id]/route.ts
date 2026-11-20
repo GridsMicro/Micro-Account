@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { requirePermission, authErrorResponse } from "@/lib/server-auth";
 
 export async function GET(
   req: NextRequest,
@@ -41,6 +42,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requirePermission("payments", "update");
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const { id } = await params;
     const body = await req.json();
@@ -70,6 +73,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requirePermission("payments", "delete");
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const { id } = await params;
     

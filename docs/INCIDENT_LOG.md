@@ -67,3 +67,15 @@ Use this file for production incidents, root cause, and recovery notes.
 - Recovery verification: `pnpm build` exit 0 · `grep -c 'Error fetching Google settings from DB'` = 0 (ในเครื่อง — เครื่องเชื่อม DB ได้อยู่แล้ว จึงไม่ใช่หลักฐานว่า Vercel หายแล้ว) · `pnpm exec tsc --noEmit` exit 0 · `grep` ยืนยันไม่มี `initializeGoogleAuth()` ที่ module level อีก · **รอ deploy บน Vercel แล้วเช็ก log ว่าหายจริง**
 - Follow-up actions: ตรวจ RDS security group / public accessibility ให้ Vercel egress เข้าถึงได้เสถียร — ถ้า DB ช่าตอน cron ยิงจริง `/api/cron/tax-line` จะไม่มี retry (Vercel Hobby) → อาจขาดรอบแจ้งเตือน (ยังไม่แก้ฝั่ง infra)
 
+---
+
+### [2026-11-20] P0: authorization/status/journal/tax fail-open ก่อน production readiness
+
+- Severity: Critical (authorization bypass + financial integrity + tax-filing fail-open)
+- Impact: (1) mutating Server Actions/API บางตัวเชื่อแต่ UI gate → เรียกตรงได้; (2) `Pending` user ได้ JWT (login เช็คแค่ `Inactive`) และ root layout sending `children` → เห็นข้อมูลได้; (3) expense INSERT ใช้คอลัมน์ `description`/`vendor` ที่ไม่มีใน master schema + journal คนละ transaction → risk เอกสารค้างโดยไม่มี journal; (4) ตัวนับ VAT ภ.พ.30 จับ error แล้วคืน 0 → อาจยื่นทั้งที่มีภาษีซื้อยังไม่ผ่านการตรวจ
+- Detection: read-only audit ของ 52 pages / 35 API routes / 3 test files ก่อนนำเข้าผลิต (ผู้ใช้เลือก "fix all four P0")
+- Root cause: front-end-only authorization, JWT status ไม่ได้ตรวจ, schema drift ระหว่างโค้ดกับ `CURRENT_SCHEMA_MASTER.sql`, fail-open error handling
+- Mitigation: ตาม `docs/DECISIONS.md` entry `[2026-11-20] P0 security hardening` — `lib/server-auth.ts` boundary · Active-only login + DB recheck · `withTransaction` สำหรับ expense+journal · tax counters propagate error + `assertPeriod`
+- Recovery verification: `pnpm exec tsc --noEmit` exit 0 · `node --test tests/**/*.test.mjs` 20/20 (รวม `tests/p0-security-guards.test.mjs`) · `pnpm build` exit 0 · ตรวจ `git diff` ว่าทุก mutation มี guard
+- Follow-up actions: **(1)** ต้อง logout/login ใหม่เพื่อรับ JWT ที่มี claim `status` (token เก่าถูก proxy บังคับ login แล้ว) **(2)** migration `migrations/2026-11-20_expenses_title_compatibility.sql` เขียนไว้ให้พี่ฆังพิจารณา — **ยังไม่รัน** กับ production **(3)** ยังไม่ deploy — รอพี่ฆัง push/commit ตามที่เห็นสมควร **(4)** secret rotation จากเหตุ `..env.swp` ยังค้างอยู่
+

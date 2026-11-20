@@ -1,5 +1,5 @@
 import { query } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { requireAdmin, authErrorResponse } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 
 /**
@@ -13,23 +13,9 @@ import { NextResponse } from "next/server";
  */
 export async function POST(req: Request) {
   try {
-    // 1. Verify user is authenticated
-    const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized — not authenticated" },
-        { status: 401 }
-      );
-    }
-
-    // 2. Verify user has ADMIN role
-    const userRole = session.user.role?.toUpperCase();
-    if (userRole !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Forbidden — admin access required" },
-        { status: 403 }
-      );
-    }
+    // 1–2. ตรวจ session + สถานะล่าสุด + สิทธิ์ admin กลาง
+    const guard = await requireAdmin();
+    if (!guard.ok) return authErrorResponse(guard);
 
     // 3. Parse request body and verify confirmation token
     const body = await req.json().catch(() => ({}));
@@ -44,7 +30,7 @@ export async function POST(req: Request) {
     }
 
     // 4. Log audit trail before deletion
-    console.log(`[AUDIT] Admin reset_billing triggered by user: ${session.user.email} (ID: ${session.user.id})`);
+    console.log(`[AUDIT] Admin reset_billing triggered (ID: ${guard.userId})`);
 
     // 5. Perform destructive operation
     await query('DELETE FROM quotation_items');
@@ -57,7 +43,7 @@ export async function POST(req: Request) {
     try { await query('ALTER SEQUENCE invoices_id_seq RESTART WITH 1'); } catch (_) { }
     try { await query('ALTER SEQUENCE quotation_items_id_seq RESTART WITH 1'); } catch (_) { }
 
-    console.log(`[AUDIT] Admin reset_billing completed for user: ${session.user.email}`);
+    console.log(`[AUDIT] Admin reset_billing completed (ID: ${guard.userId})`);
 
     return NextResponse.json({
       success: true,

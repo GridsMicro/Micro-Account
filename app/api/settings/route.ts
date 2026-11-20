@@ -6,9 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompanySettings, updateCompanySettings } from '@/lib/settings';
+import { requirePermission, authErrorResponse } from '@/lib/server-auth';
 
 // GET company settings
 export async function GET() {
+  const guard = await requirePermission('settings', 'read');
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const result = await getCompanySettings();
     
@@ -33,6 +36,8 @@ export async function GET() {
 
 // PUT company settings
 export async function PUT(request: NextRequest) {
+  const guard = await requirePermission('settings', 'update');
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     const body = await request.json();
     const result = await updateCompanySettings(body);

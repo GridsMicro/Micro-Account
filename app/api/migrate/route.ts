@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAdmin, authErrorResponse } from '@/lib/server-auth';
 
 export async function POST() {
+  const guard = await requireAdmin();
+  if (!guard.ok) return authErrorResponse(guard);
   try {
     console.log('Running migration to add recurring columns to quotations table...');
     

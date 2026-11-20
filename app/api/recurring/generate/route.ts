@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { createInvoiceRecord, createReminder, getCompanySettings, getNextInvoiceNumber } from "@/app/actions";
 import { roundThaiTaxAmount } from "@/lib/tax";
-import { canAccessAdmin } from "@/lib/core-standards";
+import { requireAdmin } from "@/lib/server-auth";
 
 async function ensureRecurringBillingSchema() {
   await query(`
@@ -49,14 +49,10 @@ export async function POST(req: Request) {
   const targetDate = dateStr ? new Date(dateStr) : new Date();
   const targetDay = targetDate.getDate();
 
-  let isAdmin = false;
-  try {
-    const { auth } = await import("@/lib/auth");
-    const session = await auth();
-    isAdmin = Boolean(session?.user && canAccessAdmin((session.user as any).role));
-  } catch {
-    isAdmin = false;
-  }
+  // P0: admin ต้องผ่าน server guard (อ่าน status/role ล่าสุดจาก DB) — ไม่เชื่อ role ใน JWT
+  // ทาง service secret ยังใช้ได้ตามเดิมสำหรับเรียกจาก cron/ระบบภายนอก
+  const adminGuard = await requireAdmin();
+  const isAdmin = adminGuard.ok;
 
   const hasValidServiceSecret = Boolean(
     process.env.RECURRING_SECRET &&

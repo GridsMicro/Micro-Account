@@ -2,8 +2,12 @@
 
 import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { requireActiveUser, requirePermission, authActionError } from "@/lib/server-auth";
 
 export async function updateCompanySettings(data: any) {
+  // P0: ตรวจสิทธิ์ฝั่ง server — อย่าเชื่อว่า UI ซ่อนปุ่มแล้วปลอดภัย
+  const guard = await requirePermission("settings", "update");
+  if (!guard.ok) return authActionError(guard);
   try {
     // SECURITY (P1-03): never overwrite stored secrets with empty/whitespace.
     // Client sends "" for secrets it must not re-expose; a blank value means
@@ -32,6 +36,8 @@ export async function updateCompanySettings(data: any) {
 }
 
 export async function getDocumentPatterns() {
+  const guard = await requirePermission("settings", "read");
+  if (!guard.ok) return authActionError(guard);
   try {
     const res = await query("SELECT * FROM document_patterns ORDER BY id ASC");
     return { success: true, data: res.rows };
@@ -39,6 +45,8 @@ export async function getDocumentPatterns() {
 }
 
 export async function updateDocumentPattern(id: number, data: any) {
+  const guard = await requirePermission("settings", "update");
+  if (!guard.ok) return authActionError(guard);
   try {
     await query(
       `UPDATE document_patterns SET prefix=$1, include_year=$2, include_month=$3, separator=$4, digits=$5, updated_at=CURRENT_TIMESTAMP WHERE id=$6`,
@@ -50,6 +58,8 @@ export async function updateDocumentPattern(id: number, data: any) {
 }
 
 export async function getNextReferenceNo(type: string) {
+  const guard = await requireActiveUser();
+  if (!guard.ok) return authActionError(guard);
   try {
     const journalType = type.toLowerCase();
     const date = new Date();
@@ -74,6 +84,8 @@ export async function getNextReferenceNo(type: string) {
 }
 
 export async function getDashboardAlerts() {
+  const guard = await requireActiveUser();
+  if (!guard.ok) return authActionError(guard);
   try {
     const r = await query("SELECT * FROM reminders WHERE due_date >= NOW() AND status='pending' LIMIT 5");
     const i = await query("SELECT * FROM invoices WHERE status != 'paid' LIMIT 5");

@@ -58,6 +58,21 @@
 
 - Canonical roles only: `superadmin`, `admin`, `user`
 - Access rights derive from RBAC group assignment
+- **Server-side boundary is mandatory (2026-11-20):** every mutating Server Action / API route must call a guard from `lib/server-auth.ts` (`requireActiveUser` / `requirePermission` / `requireAdmin`). Hiding a button in the UI is never sufficient authorization.
+- `requireActiveUser()` reads `users.status` and `users.role` from the DB on every request and denies `Pending` / `Inactive` / missing accounts (fail-closed, never trusts the JWT alone). JWT carries `status: "Active"` only as defense-in-depth.
+- Login returns one generic error for every failure (unknown user, wrong password, non-Active status) and never logs email, password-match result, or raw error details.
+- Admin checks use `canAccessAdmin()` from `lib/core-standards.ts`, so `superadmin` is accepted everywhere `admin` is.
+
+## Financial Write Integrity (2026-11-20)
+
+- An expense and all of its journal entries must be written in one DB transaction (`lib/db.ts` → `withTransaction`). A failed journal entry rolls back the expense (no orphan documents).
+- Expense rows use the real column `title`; vendor name is resolved by joining `contacts`, never stored in a non-existent `vendor` column.
+- Every `createJournalEntry()` call must be checked for `success`; silently ignoring a failed secondary entry is prohibited.
+
+## Tax Reporting Integrity (2026-11-20)
+
+- Preflight counters for ภ.พ.30 (undeducted VAT, incomplete tax documents) must propagate query errors. A failed query must fail closed; it must never return `0` and be read as "no problems".
+- `submitPP30ToRDPortal` validates the period (month 1–12, year ค.ศ.) and refuses to file when preflight data could not be verified.
 
 ## Data Protection Rules
 

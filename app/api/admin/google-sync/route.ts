@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdmin, authErrorResponse } from "@/lib/server-auth";
 import { runGoogleScript } from "@/lib/googleScriptRunner";
 
 export const dynamic = "force-dynamic";
@@ -21,23 +21,17 @@ type TaskName = keyof typeof TASKS;
  */
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session || !session.user) {
-      console.warn(`[AUDIT] Unauthorized google-sync attempt`);
-      return NextResponse.json({ error: "Unauthorized — not authenticated" }, { status: 401 });
-    }
-
-    const userRole = session.user.role?.toUpperCase();
-    if (userRole !== "ADMIN") {
-      console.warn(`[AUDIT] google-sync denied - user ${session.user.email} (role: ${session.user.role})`);
-      return NextResponse.json({ error: "Forbidden — admin access required" }, { status: 403 });
+    const guard = await requireAdmin();
+    if (!guard.ok) {
+      console.warn(`[AUDIT] google-sync denied`);
+      return authErrorResponse(guard);
     }
 
     const body: { task?: string } | null = await req.json().catch(() => null);
     const task: TaskName = (body?.task as TaskName) || "all";
 
     console.log(
-      `[AUDIT] Google sync (${task}) initiated by admin: ${session.user.email} (ID: ${session.user.id}) at ${new Date().toISOString()}`
+      `[AUDIT] Google sync (${task}) initiated (ID: ${guard.userId}) at ${new Date().toISOString()}`
     );
 
     const results: Record<string, { ok: boolean; stderr: string }> = {};
