@@ -30,6 +30,7 @@ export async function GET(request: Request) {
   const dryRun = url.searchParams.get("dry") === "1";
   const force = url.searchParams.get("force") === "1";
 
+  // safety switch: ต้องตั้ง true ชัดเจนถึงจะส่งจริง (ห้ามเปิดเอง — กฎห้ามส่งจนกว่าพี่ฆังสั่ง)
   if (!force && process.env.TAX_LINE_CRON_ENABLED !== "true") {
     return Response.json({
       ok: true,

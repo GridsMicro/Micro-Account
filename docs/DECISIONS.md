@@ -25,6 +25,7 @@ Use this file to record important decisions and their rationale.
 - Why this was chosen: ตรงกับช่องทางที่บริษัทใช้อยู่ (e-Filing) และมาตรฐาน env ที่พี่ฆังใช้จริง · ไม่กระทบ production DB · มีทางสำรองลดความเสี่ยง "พลาดรอบเดียวแล้วรอนาน" · ส่งจริงได้เฉพาะเมื่อพี่ฆังสั่ง
 - Impacted files/modules: `lib/lineClient.ts`, `lib/notificationClient.ts`, `lib/taxMonthlySummary.ts`, `jobs/sendTaxLineReminder.ts`, `app/api/cron/tax-line/route.ts`, `vercel.json`, `lib/taxNotifications.ts`, `instrumentation.ts`, `package.json`, `.env.example`, `docs/BUSINESS_RULES.md`, `README.md` (ลบ `jobs/taxLineCron.ts` ที่ไม่ใช้แล้ว)
 - Rollback plan: ตั้ง `TAX_LINE_CRON_ENABLED=false` หรือลบ cron ใน `vercel.json` เพื่อหยุด · โค้ดใหม่เป็น READ-ONLY ต่อ DB จึงไม่ต้อง rollback schema
+- Config simplification (2026-11-20): ตรวจ docs ทางการ `vercel.json` — **ไม่มี field `env`** → ปรับค่าเริ่มต้นในโค้ด: `TAX_LINE_REMINDER_DAYS` = `1,10,14,20,22` (ตัด 15) → ไม่ต้องเพิ่ม env ตัวนี้ใน Vercel Dashboard (ตรวจแล้วไม่มี) · **`TAX_LINE_CRON_ENABLED` คง safety switch เดิม** (ต้องตั้ง `true` ชัดเจนถึงจะส่ง) เพราะกฎห้ามส่งข้อความจริงจนกว่าพี่ฆังสั่ง — พี่ฆังเป็นคนตั้งใน Dashboard เอง · `CRON_SECRET` ยัง fail-closed เหมือนเดิม (ตั้งแล้วใน Production)
 
 ### [2026-04-09] Canonical RBAC + Role Standard
 - Context: Role labels and access checks were inconsistent across UI/API.

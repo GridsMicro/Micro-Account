@@ -15,12 +15,14 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
 export function reminderDays(): number[] {
-  const raw = process.env.TAX_LINE_REMINDER_DAYS || "1,10,14,15";
+  // ค่าเริ่มต้น = 1,10,14,20,22 (ตรวจ docs: 15 = กระดาษ, 23 = e-Filing)
+  // ไม่ต้องตั้ง TAX_LINE_REMINDER_DAYS บน Vercel ก็ทำงานได้
+  const raw = process.env.TAX_LINE_REMINDER_DAYS || "1,10,14,20,22";
   const days = raw
     .split(",")
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isInteger(n) && n >= 1 && n <= 31);
-  return days.length ? days : [1, 10, 14, 15];
+  return days.length ? days : [1, 10, 14, 20, 22];
 }
 
 export async function runSendTaxLineReminderOnce(opts?: {

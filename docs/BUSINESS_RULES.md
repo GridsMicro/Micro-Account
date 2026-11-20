@@ -36,7 +36,8 @@
 
 - Hobby: cron ได้ **วันละครั้ง** เท่านั้น · expression ถี่กว่านั้นทำให้ deploy fail · ความแม่นยำ **±59 นาที** (UTC)
 - ใช้ **cron เดียว** (`0 2 * * *` UTC ≈ 09:00–09:59 Thailand) เรียก `GET /api/cron/tax-line` แล้วให้โค้ดเช็ก `TAX_LINE_REMINDER_DAYS` เอง → ไม่ผิดกฎวันละครั้ง
-- route ต้องมี `CRON_SECRET` ใน Authorization header (fail-closed ถ้าไม่ตั้ง) และ `TAX_LINE_CRON_ENABLED=true` ถึงจะส่ง
+- route ต้องมี `CRON_SECRET` ใน Authorization header (fail-closed ถ้าไม่ตั้ง) และต้องตั้ง `TAX_LINE_CRON_ENABLED=true` ใน Vercel Dashboard ถึงจะส่งจริง — **ห้ามเปลี่ยนให้เปิดเอง** (กฎห้ามส่งจนกว่าพี่ฆังสั่ง)
+- `TAX_LINE_REMINDER_DAYS` ไม่ต้องตั้งบน Vercel — ค่าเริ่มต้นในโค้ดคือ `1,10,14,20,22` (ตัด 15 ที่ตรงกำหนดกระดาษ เพราะยื่น e-Filing ได้ถึง 23)
 - cron รันเฉพาะ production; ทดสอบเรียก endpoint ได้ตรง ๆ ด้วย `?dry=1` / `?force=1` ไม่ต้องรอรอบ
 - Vercel **ไม่ retry** และอาจ invoke ซ้ำ → ต้องเขียนให้ทนต่อ duplicate (ห้ามใช้ in-process node-cron บน serverless เพราะจะซ้ำกับ Vercel cron)
 - `instrumentation.ts` ต้อง guard โค้ดที่ใช้ Node API (`node-cron`, `child_process`) ด้วย `process.env.NEXT_RUNTIME === "nodejs"` — มิเช่นนั้น Next.js bundle เข้า Edge runtime แล้วเตือน `process.cwd is not supported in the Edge Runtime` (ตรวจแล้ว guard แล้ว warning หาย)
