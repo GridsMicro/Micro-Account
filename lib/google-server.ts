@@ -161,11 +161,11 @@ export async function checkGoogleAuth() {
   }
 }
 
-// สำหรับ backward compatibility - export ที่เรียก init อัตโนโมติ
-// แต่แนะนำให้เรียก initializeGoogleAuth() ใน startup
-initializeGoogleAuth().catch(err => {
-  console.log('⚠️ Google Auth auto-init failed (will retry on first use):', err.message);
-});
-
-// Export clients สำหรับใช้งาน (จะถูก update เมื่อ init สำเร็จ)
-export { driveClient as googleDrive, sheetsClient as googleSheets };
+// ไม่ auto-init ตอน import อีกต่อไป (2026-11-20):
+// เดิม `initializeGoogleAuth()` ถูกเรียกที่ module level → ตอน next build
+// (static generation) หรือ serverless cold start จะพยายาม connect DB ทันที
+// ทำให้ log `❌ Error fetching Google settings from DB: ETIMEDOUT` ทั้งที่
+// ไม่ได้ใช้งาน Google เลย ( DB อยู่ห่างจาก Vercel → timeout บางรอบ )
+// ทุก caller ใช้ getGoogleDrive()/getGoogleSheets()/checkGoogleAuth() อยู่แล้ว
+// ซึ่ง lazy-init เอง → ลบ auto-init ออกได้ปลอดภัย (ตรวจ grep: ไม่มีใคร import
+// named export googleDrive/googleSheets)

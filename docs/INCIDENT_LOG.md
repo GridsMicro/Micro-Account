@@ -56,3 +56,14 @@ Use this file for production incidents, root cause, and recovery notes.
 - Recovery verification: ไฟล์หายจาก index แล้ว (`git ls-files` ไม่เจอ) · `git check-ignore -v ..env.swp` → `.gitignore:36:*.swp`
 - Follow-up actions: **(1)** การลบจาก HEAD ไม่ลบจาก history — ต้อง rotate secret ที่เคยอยู่ใน `.env` ทุกตัว (DATABASE_URL, Gmail app password, Google OAuth client secret ฯลฯ) และพิจารณา `git filter-repo`/BFG ล้าง history (ต้องพี่ฆังสั่งก่อน) **(2)** ตรวจ GitHub Secret Scanning / push protection ว่ามี alert หรือไม่
 
+---
+
+### [2026-11-20] Vercel log: ETIMEDOUT เชื่อม RDS 5432 ตอน build (Google auto-init)
+- Severity: Low (error ถูก catch — build/runtime ไม่ล้ม; แต่ log รบกวนและสะท้อน DB reachability ไม่เสถียร)
+- Impact: log `❌ Error fetching Google settings from DB: AggregateError ETIMEDOUT/ENETUNREACH` โผล่ตอน `next build` (static generation) หรือ serverless cold start ทั้งที่ไม่ได้ใช้ฟีเจอร์ Google; ระบบ fallback ไป `.env`/Service Account แล้วเดินต่อ
+- Detection: พี่ฆังแปะ log เวลา 18:39:43; ตรวจ `grep` พบ `initializeGoogleAuth()` ถูกเรียกที่ module level (`lib/google-server.ts:166`)
+- Root cause: (1) auto-init ตอน import → connect DB ทันที (2) Vercel (iad1/Washington) → AWS RDS ap-southeast-1 (13.228.x.x) บางรอบ timeout — build 18:16 เน็ตผ่าน (`Using OAuth2 from Database`) แต่ build 18:06 และ log 18:39 ไม่ผ่าน → ไม่เสถียร
+- Mitigation: ลบ module-level auto-init + named export ที่ไม่มีใครใช้ (lazy-init อยู่แล้วใน `getGoogleDrive()`/`getGoogleSheets()`/`checkGoogleAuth()`) → build ทดสอบ exit 0, DB error 0 บรรทัด, route `/api/cron/tax-line` ยังอยู่
+- Recovery verification: `pnpm build` exit 0 · `grep -c 'Error fetching Google settings from DB'` = 0 (ในเครื่อง — เครื่องเชื่อม DB ได้อยู่แล้ว จึงไม่ใช่หลักฐานว่า Vercel หายแล้ว) · `pnpm exec tsc --noEmit` exit 0 · `grep` ยืนยันไม่มี `initializeGoogleAuth()` ที่ module level อีก · **รอ deploy บน Vercel แล้วเช็ก log ว่าหายจริง**
+- Follow-up actions: ตรวจ RDS security group / public accessibility ให้ Vercel egress เข้าถึงได้เสถียร — ถ้า DB ช่าตอน cron ยิงจริง `/api/cron/tax-line` จะไม่มี retry (Vercel Hobby) → อาจขาดรอบแจ้งเตือน (ยังไม่แก้ฝั่ง infra)
+
